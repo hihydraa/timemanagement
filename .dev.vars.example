@@ -10,3 +10,5 @@ ALLOWED_EMAILS=you@example.com
 PUSH_MONTHLY_LIMIT=200
 MAX_UPLOAD_MB=10
 USER_STORAGE_QUOTA_MB=500
+# เปิดเฉพาะ local เพื่อ login ด้วย /auth/dev-login?email=... โดยไม่ใช้ Google (ห้ามตั้งใน production)
+# DEV_LOGIN=1

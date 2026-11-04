@@ -35,6 +35,11 @@ npm run db:migrate:local
 npm run dev        # เว็บ http://localhost:5173 , API http://localhost:8787
 ```
 
+### Login แบบ local โดยไม่ต้องมี Google
+
+ใน `.dev.vars` ตั้ง `DEV_LOGIN=1`, `ALLOWED_EMAILS=you@example.com`, `APP_BASE_URL=http://localhost:8787` แล้วรัน `npm run build && npx wrangler dev`
+เปิด `http://localhost:8787/auth/dev-login?email=you@example.com` (ห้ามตั้ง `DEV_LOGIN` ใน production)
+
 ## 4. LINE OA (Phase 3)
 
 1. สร้าง LINE Official Account → เปิด Messaging API ใน LINE Developers Console
