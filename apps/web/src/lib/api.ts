@@ -1,6 +1,8 @@
 import type {
   Attachment,
   Category,
+  GcalStatus,
+  ResyncResult,
   StorageInfo,
   Task,
   TaskPayload,
@@ -63,6 +65,11 @@ export const api = {
   lineStatus: () => req<{ linked: boolean }>('GET', '/api/line/status'),
   lineLinkCode: () => req<{ code: string; expiresAt: string }>('POST', '/api/line/link-code'),
   lineUnlink: () => req<{ ok: true }>('DELETE', '/api/line/link'),
+  gcalStatus: () => req<GcalStatus>('GET', '/api/gcal/status'),
+  gcalSettings: (p: { syncEnabled?: boolean; calendarId?: string }) =>
+    req<GcalStatus>('PATCH', '/api/gcal/settings', p),
+  gcalDisconnect: () => req<GcalStatus>('POST', '/api/gcal/disconnect', {}),
+  gcalResync: (cursor: string | null) => req<ResyncResult>('POST', '/api/gcal/resync', { cursor }),
   listAttachments: (taskId: string) =>
     req<{ attachments: Attachment[] }>('GET', `/api/tasks/${taskId}/attachments`).then(
       (r) => r.attachments,

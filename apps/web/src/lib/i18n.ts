@@ -3,11 +3,7 @@ export const t = {
   appName: 'Dobby',
   tagline: 'ผู้ช่วยจัดการเวลาของคุณ',
   loading: 'กำลังโหลด…',
-  login: {
-    title: 'เข้าสู่ระบบ',
-    google: 'เข้าสู่ระบบด้วย Google',
-    hint: 'ใช้บัญชี Google ที่ได้รับอนุญาตเท่านั้น',
-  },
+
   nav: {
     newTask: 'งานใหม่',
     logout: 'ออกจากระบบ',
@@ -105,6 +101,53 @@ export const t = {
     expired: 'รหัสหมดอายุแล้ว กรุณาขอรหัสใหม่',
     waiting: 'รอการยืนยันจาก LINE…',
     success: 'ผูกบัญชีสำเร็จ!',
+  },
+  gcal: {
+    button: 'Google Calendar',
+    title: 'Google Calendar',
+    notConfigured:
+      'ระบบยังไม่ได้ตั้งค่า Google Calendar (ผู้ดูแลต้องตั้ง TOKEN_ENC_KEY และ Google client)',
+    intro:
+      'งานที่มีวัน/เวลาจะถูกสร้าง แก้ไข และลบใน Google Calendar ของคุณโดยอัตโนมัติ (ทางเดียว: Dobby → Google)',
+    connect: 'เชื่อม Google Calendar',
+    reconnect: 'เชื่อมใหม่',
+    needsReconnect: 'การเชื่อมหมดอายุหรือถูกเพิกถอน กรุณาเชื่อมใหม่เพื่อกลับมาซิงก์',
+    connectedAs: 'เชื่อมกับบัญชี',
+    autoSync: 'ซิงก์อัตโนมัติ',
+    calendarId: 'รหัสปฏิทิน (primary = ปฏิทินหลัก)',
+    save: 'บันทึก',
+    resync: 'Sync ทั้งหมดใหม่',
+    resyncing: 'กำลัง sync…',
+    resyncDone: 'เสร็จแล้ว',
+    created: 'สร้าง',
+    updated: 'อัปเดต',
+    deleted: 'ลบ',
+    failed: 'ล้มเหลว',
+    disconnect: 'ยกเลิกการเชื่อม',
+    confirmDisconnect:
+      'ยกเลิกการเชื่อม Google Calendar ใช่ไหม? (event ที่ซิงก์ไปแล้วจะยังอยู่ใน Google และจะไม่ซิงก์อีกจนกว่าจะเชื่อมใหม่)',
+    taskSwitch: 'ซิงก์ไป Google Calendar',
+    taskSwitchHint: 'งานที่ยังไม่กำหนดวัน/เวลาจะไม่ถูกซิงก์',
+    lastSynced: 'ซิงก์ล่าสุด',
+    connectedOk: 'เชื่อม Google Calendar สำเร็จ ✅',
+    denied: 'คุณไม่ได้อนุญาตการเข้าถึง Google Calendar',
+    errScope: 'ต้องติ๊กอนุญาตสิทธิ์ "ดู/แก้ไข event ในปฏิทิน" ตอนเชื่อม',
+    errRefresh: 'Google ไม่ได้ส่งสิทธิ์ถาวรมา ลองเชื่อมใหม่และกดอนุญาตทั้งหมด',
+    errToken: 'แลกรหัสกับ Google ไม่สำเร็จ ลองใหม่อีกครั้ง',
+    reasons: {
+      accessNotConfigured:
+        'ยังไม่ได้เปิด Google Calendar API ใน Google Cloud Console (APIs & Services → Library)',
+      insufficientPermissions: 'สิทธิ์ไม่พอ กรุณาเชื่อมใหม่และอนุญาตสิทธิ์ปฏิทิน',
+      needs_reconnect: 'การเชื่อมหมดอายุ กรุณาเชื่อมใหม่',
+      notFound: 'ไม่พบปฏิทินที่ระบุ ตรวจสอบรหัสปฏิทิน',
+      rateLimitExceeded: 'Google จำกัดความถี่ชั่วคราว ลองใหม่ภายหลัง',
+    } as Record<string, string>,
+  },
+  login: {
+    title: 'เข้าสู่ระบบ',
+    google: 'เข้าสู่ระบบด้วย Google',
+    hint: 'ใช้บัญชี Google ที่ได้รับอนุญาตเท่านั้น',
+    denied: 'การเข้าสู่ระบบถูกยกเลิก',
   },
   error: {
     generic: 'เกิดข้อผิดพลาด ลองใหม่อีกครั้ง',

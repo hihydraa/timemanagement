@@ -15,6 +15,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Filters, { applyFilters, emptyFilters, type FilterState } from '../components/Filters';
 import Legend from '../components/Legend';
+import GcalDialog from '../components/GcalDialog';
 import LineDialog from '../components/LineDialog';
 import TaskDrawer, { type DrawerInit } from '../components/TaskDrawer';
 import TodayPanel from '../components/TodayPanel';
@@ -22,7 +23,15 @@ import { api, ApiClientError } from '../lib/api';
 import { eventColors } from '../lib/colors';
 import { t } from '../lib/i18n';
 import { addMinutesWall, calDateToIso, calDateToYmd, isoToWall, wallNow } from '../lib/time';
-import type { Category, ColorMode, Task, TaskPayload, TodayData, User } from '../lib/types';
+import type {
+  Category,
+  ColorMode,
+  GcalStatus,
+  Task,
+  TaskPayload,
+  TodayData,
+  User,
+} from '../lib/types';
 
 const MODE_KEY = 'dobby.colorMode';
 const loadMode = (): ColorMode => {
@@ -144,6 +153,9 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
   const [error, setError] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [showLine, setShowLine] = useState(false);
+  const [gcal, setGcal] = useState<GcalStatus | null>(null);
+  const [showGcal, setShowGcal] = useState(false);
+  const [gcalNotice, setGcalNotice] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
 
   const setMode = (m: ColorMode) => {
     setModeState(m);
@@ -194,6 +206,38 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
     void loadToday();
     void loadCategories();
   }, [loadToday, loadCategories]);
+
+  // ผลจากการ redirect กลับจาก Google (?gcal=connected|denied|error&reason=...)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const r = q.get('gcal');
+    if (!r) return;
+    window.history.replaceState(null, '', window.location.pathname);
+    const reason = q.get('reason');
+    setGcalNotice(
+      r === 'connected'
+        ? { kind: 'ok', text: t.gcal.connectedOk }
+        : r === 'denied'
+          ? { kind: 'error', text: t.gcal.denied }
+          : {
+              kind: 'error',
+              text:
+                reason === 'scope'
+                  ? t.gcal.errScope
+                  : reason === 'refresh'
+                    ? t.gcal.errRefresh
+                    : t.gcal.errToken,
+            },
+    );
+    setShowGcal(true);
+  }, []);
+
+  useEffect(() => {
+    api
+      .gcalStatus()
+      .then(setGcal)
+      .catch(() => undefined);
+  }, []);
 
   // ลิงก์ "แก้ไข" จาก LINE: /?task=<id> เปิดฟอร์มงานนั้นทันที
   useEffect(() => {
@@ -297,6 +341,23 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
           onClick={() => setShowFilters((v) => !v)}
         >
           {showFilters ? t.nav.hideFilters : t.nav.filters}
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowGcal(true)}
+          className="rounded px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+        >
+          {t.gcal.button}
+          {gcal?.connected && gcal.syncEnabled && (
+            <span aria-label="เชื่อมอยู่" className="ml-1 text-green-600">
+              ●
+            </span>
+          )}
+          {gcal?.needsReconnect && (
+            <span aria-label="ต้องเชื่อมใหม่" className="ml-1 text-amber-600">
+              ⚠
+            </span>
+          )}
         </button>
         <button
           type="button"
@@ -404,11 +465,23 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
       </div>
 
       {showLine && <LineDialog onClose={() => setShowLine(false)} />}
+      {showGcal && (
+        <GcalDialog
+          notice={gcalNotice}
+          onClose={() => {
+            setShowGcal(false);
+            setGcalNotice(null);
+            refreshAll();
+          }}
+          onStatusChange={setGcal}
+        />
+      )}
 
       {drawer && (
         <TaskDrawer
           init={drawer}
           categories={categories}
+          gcalAvailable={!!gcal?.connected && gcal.syncEnabled}
           onClose={() => setDrawer(null)}
           onSaved={(warning) => {
             setDrawer(null);

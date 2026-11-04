@@ -16,6 +16,9 @@ export interface Task {
   estimateMinutes: number | null;
   tags: string[];
   attachmentCount: number;
+  gcalSync: boolean;
+  gcalEventId: string | null;
+  gcalSyncedAt: string | null;
   completedAt: string | null;
 }
 
@@ -40,7 +43,9 @@ export interface TodayData {
   today: Task[];
 }
 
-export type TaskPayload = Partial<Omit<Task, 'id' | 'completedAt' | 'attachmentCount'>>;
+export type TaskPayload = Partial<
+  Omit<Task, 'id' | 'completedAt' | 'attachmentCount' | 'gcalEventId' | 'gcalSyncedAt'>
+>;
 
 export type ColorMode = 'category' | 'urgency' | 'importance';
 
@@ -59,4 +64,24 @@ export interface StorageInfo {
   quotaBytes: number;
   maxFileBytes: number;
   maxFiles: number;
+}
+
+export interface GcalStatus {
+  configured: boolean;
+  connected: boolean;
+  needsReconnect: boolean;
+  email: string | null;
+  syncEnabled: boolean;
+  calendarId: string;
+}
+
+export interface ResyncResult {
+  processed: number;
+  created: number;
+  updated: number;
+  deleted: number;
+  skipped: number;
+  failed: number;
+  nextCursor: string | null;
+  reasons: string[];
 }

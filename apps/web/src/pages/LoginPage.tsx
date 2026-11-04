@@ -1,6 +1,7 @@
 import { t } from '../lib/i18n';
 
 export default function LoginPage() {
+  const denied = new URLSearchParams(window.location.search).get('login') === 'denied';
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-6">
       <h1 className="text-4xl font-bold">{t.appName}</h1>
@@ -11,6 +12,11 @@ export default function LoginPage() {
       >
         {t.login.google}
       </a>
+      {denied && (
+        <p role="alert" className="text-sm text-amber-700 dark:text-amber-400">
+          {t.login.denied}
+        </p>
+      )}
       <p className="text-xs text-slate-500">{t.login.hint}</p>
     </main>
   );

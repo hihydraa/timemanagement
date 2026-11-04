@@ -26,13 +26,16 @@ export default function LineDialog({ onClose }: { onClose: () => void }) {
     }
   }, []);
 
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     void refresh();
     closeRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onCloseRef.current();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [refresh, onClose]);
+  }, [refresh]);
 
   // นับถอยหลัง + ตรวจสถานะทุก 3 วินาทีระหว่างรอผู้ใช้พิมพ์รหัสใน LINE
   useEffect(() => {

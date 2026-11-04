@@ -14,6 +14,8 @@ export interface DrawerInit {
 interface Props {
   init: DrawerInit;
   categories: Category[];
+  /** เชื่อม Google Calendar และเปิดซิงก์อยู่ → แสดงสวิตช์ซิงก์ต่องาน */
+  gcalAvailable: boolean;
   onClose: () => void;
   /** warning = สร้าง/บันทึกงานสำเร็จแต่มีเรื่องที่ต้องแจ้งผู้ใช้ (เช่นแนบไฟล์ไม่สำเร็จ) */
   onSaved: (warning?: string) => void;
@@ -30,6 +32,7 @@ const labelCls = 'block text-xs font-medium text-slate-600 dark:text-slate-300 m
 export default function TaskDrawer({
   init,
   categories,
+  gcalAvailable,
   onClose,
   onSaved,
   onAttachmentsChanged,
@@ -50,6 +53,7 @@ export default function TaskDrawer({
   const [due, setDue] = useState(isoToInput(task?.dueAt ?? null));
   const [estimate, setEstimate] = useState(task?.estimateMinutes?.toString() ?? '');
   const [tags, setTags] = useState(task?.tags.join(', ') ?? '');
+  const [gcalSync, setGcalSync] = useState(task?.gcalSync ?? true);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -73,6 +77,7 @@ export default function TaskDrawer({
       importance,
       status,
       allDay,
+      ...(gcalAvailable ? { gcalSync } : {}),
       estimateMinutes: estimate ? Number(estimate) : null,
       tags: tags
         .split(',')
@@ -328,6 +333,25 @@ export default function TaskDrawer({
             onChange={(e) => setTags(e.target.value)}
           />
         </div>
+        {gcalAvailable && (
+          <div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={gcalSync}
+                onChange={(e) => setGcalSync(e.target.checked)}
+              />
+              {t.gcal.taskSwitch}
+            </label>
+            <p className="ml-6 text-xs text-slate-500 dark:text-slate-400">
+              {t.gcal.taskSwitchHint}
+              {task?.gcalSyncedAt
+                ? ` · ${t.gcal.lastSynced} ${new Date(task.gcalSyncedAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`
+                : ''}
+            </p>
+          </div>
+        )}
+
         <Attachments
           taskId={task?.id ?? null}
           pending={pendingFiles}
