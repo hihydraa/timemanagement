@@ -1,4 +1,11 @@
-import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import {
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
 
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
@@ -69,6 +76,8 @@ export const tasks = sqliteTable(
     estimateMinutes: integer('estimate_minutes'),
     recurrenceRule: text('recurrence_rule'),
     parentTaskId: text('parent_task_id'),
+    /** แถวจริงของ "ครั้งที่" (YYYY-MM-DD) ในซีรีส์ที่ parent_task_id ชี้ไป (ใช้ซ่อน instance เสมือนของวันนั้น) */
+    recurrenceId: text('recurrence_id'),
     gcalEventId: text('gcal_event_id'),
     gcalSyncedAt: text('gcal_synced_at'),
     /** ผู้ใช้เปิด/ปิดการซิงก์งานนี้ไป Google Calendar (ผลจริงต้องเปิด gcal_sync_enabled ด้วย) */
@@ -84,6 +93,8 @@ export const tasks = sqliteTable(
     index('tasks_user_due_idx').on(t.userId, t.dueAt),
     index('tasks_user_start_idx').on(t.userId, t.startAt),
     index('tasks_user_status_idx').on(t.userId, t.status),
+    // ซีรีส์หนึ่งมีแถวจริงของแต่ละครั้งได้ไม่เกินหนึ่งแถว (NULL ไม่ชนกันใน SQLite)
+    uniqueIndex('tasks_series_occurrence_idx').on(t.parentTaskId, t.recurrenceId),
   ],
 );
 
@@ -156,3 +167,18 @@ export const lineState = sqliteTable('line_state', {
   failCount: integer('fail_count').notNull().default(0),
   failWindowAt: text('fail_window_at'),
 });
+
+/** checklist ย่อยของงาน (แยกตารางเพื่อไม่ให้ปนกับ Inbox/ปฏิทิน/แจ้งเตือน) */
+export const subtasks = sqliteTable(
+  'subtasks',
+  {
+    id: text('id').primaryKey(),
+    taskId: text('task_id').notNull(),
+    userId: text('user_id').notNull(),
+    title: text('title').notNull(),
+    done: integer('done').notNull().default(0),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [index('subtasks_task_idx').on(t.taskId)],
+);

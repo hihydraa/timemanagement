@@ -5,6 +5,7 @@ import { background } from '../lib/background';
 import { parseJson, parseQuery } from '../lib/http';
 import { now } from '../lib/time';
 import { removeEventSafe, syncTaskSafe } from '../services/googleCalendar';
+import { ensureReal } from '../services/series';
 import {
   createTask,
   deleteTask,
@@ -12,6 +13,7 @@ import {
   inboxTasks,
   listQuery,
   listTasks,
+  openTasks,
   snoozeTask,
   taskInput,
   taskPatch,
@@ -49,14 +51,34 @@ r.patch('/tasks/:id', async (c) => {
 });
 
 r.delete('/tasks/:id', async (c) => {
-  const { gcalEventId } = await deleteTask(
-    getDb(c.env.DB),
-    c.env.FILES,
-    c.get('userId'),
-    c.req.param('id'),
+  const scope = c.req.query('scope') === 'series' ? 'series' : 'one';
+  const userId = c.get('userId');
+  const res = await deleteTask(getDb(c.env.DB), c.env.FILES, userId, c.req.param('id'), scope);
+  // ลบทั้งซีรีส์/งานปกติ → ลบ event; ยกเลิกเฉพาะครั้งนี้ → ซิงก์แถวนั้น (event ของครั้งนั้นถูกลบ)
+  await background(
+    c,
+    Promise.all([
+      ...res.gcalEventIds.map((e) => removeEventSafe(c.env, userId, e)),
+      res.tombstoneId ? syncTaskSafe(c.env, userId, res.tombstoneId) : Promise.resolve(),
+    ]),
   );
-  await background(c, removeEventSafe(c.env, c.get('userId'), gcalEventId));
   return c.json({ ok: true });
+});
+
+/** สร้างแถวจริงของ instance (ใช้ก่อนแนบไฟล์/แก้ checklist) — งานปกติคืนตัวเอง */
+r.post('/tasks/:id/materialize', async (c) => {
+  const db = getDb(c.env.DB);
+  const userId = c.get('userId');
+  const id = await ensureReal(db, userId, c.req.param('id'));
+  return c.json({ task: (await withTags(db, [await getOwned(db, userId, id)]))[0] });
+});
+
+/** งานที่ยังไม่เสร็จทั้งหมด (สำหรับ Eisenhower Matrix) */
+r.get('/matrix', async (c) => {
+  const list = await openTasks(getDb(c.env.DB), c.get('userId'));
+  return c.json({
+    tasks: list.sort((a, b) => b.urgency * b.importance - a.urgency * a.importance),
+  });
 });
 
 r.post('/tasks/:id/complete', async (c) => {

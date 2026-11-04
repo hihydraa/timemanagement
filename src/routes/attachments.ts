@@ -11,6 +11,7 @@ import {
   usedBytes,
 } from '../services/attachments';
 import { contentDisposition, IMAGE_MIMES } from '../services/files';
+import { ensureReal } from '../services/series';
 import { getOwned } from '../services/tasks';
 import type { AppEnv } from '../types';
 
@@ -26,8 +27,8 @@ r.get('/tasks/:id/attachments', async (c) => {
 r.post('/tasks/:id/attachments', async (c) => {
   const db = getDb(c.env.DB);
   const userId = c.get('userId');
-  const taskId = c.req.param('id');
-  await getOwned(db, userId, taskId); // ตรวจสิทธิ์ก่อนอ่าน body
+  await getOwned(db, userId, c.req.param('id')); // ตรวจสิทธิ์ก่อนอ่าน body
+  const taskId = await ensureReal(db, userId, c.req.param('id')); // instance เสมือนของงานทำซ้ำ → สร้างแถวจริงก่อนแนบ
 
   const { maxFileBytes } = limitsFrom(c.env);
   const len = Number(c.req.header('Content-Length'));
@@ -53,7 +54,7 @@ r.post('/tasks/:id/attachments', async (c) => {
     (f): f is File => typeof f !== 'string',
   );
   const saved = await saveUploads(db, c.env.FILES, c.env, userId, taskId, files);
-  return c.json({ attachments: saved }, 201);
+  return c.json({ attachments: saved, taskId }, 201);
 });
 
 r.get('/attachments/:id', async (c) => {

@@ -11,6 +11,7 @@ import categoriesRoutes from './routes/categories';
 import gcalRoutes from './routes/gcal';
 import { lineApi, lineWebhook } from './routes/line';
 import settingsRoutes from './routes/settings';
+import subtasksRoutes from './routes/subtasks';
 import tasksRoutes from './routes/tasks';
 import type { AppEnv } from './types';
 import { nowIso } from './lib/time';
@@ -63,6 +64,7 @@ api.route('/', attachmentsRoutes);
 api.route('/line', lineApi);
 api.route('/gcal', gcalRoutes);
 api.route('/', settingsRoutes);
+api.route('/', subtasksRoutes);
 app.route('/api', api);
 
 app.onError((err, c) => {

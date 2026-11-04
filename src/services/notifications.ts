@@ -15,6 +15,7 @@ import {
 } from './flex';
 import { pushMessage, type LineMessage } from './line';
 import { setList } from './lineBot';
+import { isVirtualId, loadSeriesInstances, virtualId } from './series';
 import { todayBuckets, withTags, type TaskDto } from './tasks';
 
 /**
@@ -215,26 +216,51 @@ const dueDaily = (s: Settings, kind: Kind, hm: string): boolean =>
 // ---------------------------------------------------------------- reminders
 interface ReminderEvent {
   taskId: string;
+  /** คีย์กันเตือนซ้ำ: ครั้งของซีรีส์ใช้ <แม่>~<วันที่> เหมือนกันทั้งก่อน/หลังสร้างแถวจริง */
+  key: string;
   userId: string;
   kind: 'before' | 'due';
   at: string;
 }
 
-async function reminderCandidates(db: Db, active: Target[], at: Date): Promise<ReminderEvent[]> {
+type TaskRow = typeof tasks.$inferSelect;
+
+async function reminderCandidates(
+  db: Db,
+  active: Target[],
+  at: Date,
+): Promise<{ events: ReminderEvent[]; virtualRows: TaskRow[] }> {
   const want = active.filter((t) => t.s.remindBeforeMinutes > 0);
-  if (!want.length) return [];
+  if (!want.length) return { events: [], virtualRows: [] };
   const nowStr = at.toISOString();
   const horizon = new Date(at.getTime() + HORIZON_MIN * MIN).toISOString();
   const byUser = new Map(want.map((t) => [t.userId, t]));
-  const out: ReminderEvent[] = [];
+  const events: ReminderEvent[] = [];
+  const virtualRows: TaskRow[] = [];
   const ids = [...byUser.keys()];
+
+  const consider = (r: TaskRow): boolean => {
+    const key = r.parentTaskId && r.recurrenceId ? virtualId(r.parentTaskId, r.recurrenceId) : r.id;
+    const win = byUser.get(r.userId)!.s.remindBeforeMinutes * MIN;
+    const within = (iso: string | null): iso is string =>
+      !!iso && iso > nowStr && Date.parse(iso) - at.getTime() <= win;
+    // งานละ 1 เหตุการณ์ต่อรอบ: เริ่มงานก่อน แล้วค่อยเดดไลน์ (ทีหลังยังเตือนได้ในรอบถัดไป)
+    if (within(r.startAt))
+      events.push({ taskId: r.id, key, userId: r.userId, kind: 'before', at: r.startAt });
+    else if (within(r.dueAt))
+      events.push({ taskId: r.id, key, userId: r.userId, kind: 'due', at: r.dueAt });
+    else return false;
+    return true;
+  };
+
   for (let i = 0; i < ids.length; i += 40) {
+    const chunkIds = ids.slice(i, i + 40);
     const rows = await db
       .select()
       .from(tasks)
       .where(
         and(
-          inArray(tasks.userId, ids.slice(i, i + 40)),
+          inArray(tasks.userId, chunkIds),
           inArray(tasks.status, [...OPEN]),
           or(
             and(gt(tasks.startAt, nowStr), lte(tasks.startAt, horizon)),
@@ -243,30 +269,30 @@ async function reminderCandidates(db: Db, active: Target[], at: Date): Promise<R
         ),
       )
       .limit(200);
-    for (const r of rows) {
-      const win = byUser.get(r.userId)!.s.remindBeforeMinutes * MIN;
-      const within = (iso: string | null): iso is string =>
-        !!iso && iso > nowStr && Date.parse(iso) - at.getTime() <= win;
-      // งานละ 1 เหตุการณ์ต่อรอบ: เริ่มงานก่อน แล้วค่อยเดดไลน์ (ทีหลังยังเตือนได้ในรอบถัดไป)
-      if (within(r.startAt))
-        out.push({ taskId: r.id, userId: r.userId, kind: 'before', at: r.startAt });
-      else if (within(r.dueAt))
-        out.push({ taskId: r.id, userId: r.userId, kind: 'due', at: r.dueAt });
-    }
+    for (const r of rows) consider(r);
+    // งานทำซ้ำ: ครั้งเสมือนที่ใกล้ถึงเวลาก็เตือนได้ (id เสมือน = <แม่>~<วันที่>)
+    const virt = await loadSeriesInstances(
+      db,
+      chunkIds,
+      bangkokDate(at),
+      bangkokDate(new Date(at.getTime() + HORIZON_MIN * MIN)),
+    );
+    for (const r of virt) if (consider(r)) virtualRows.push(r);
   }
-  return out;
+  return { events, virtualRows };
 }
 
 async function runReminders(
   rc: RunCtx,
   active: Target[],
   events: ReminderEvent[],
+  virtualRows: TaskRow[],
   state: DayState,
 ) {
   if (!events.length) return;
   // กรองที่เคยเตือนแล้ว (ตรงทั้งงาน+ชนิด+เวลา: เลื่อนเวลางานแล้วจะเตือนใหม่)
   const sentKeys = new Set<string>();
-  const taskIds = [...new Set(events.map((e) => e.taskId))];
+  const taskIds = [...new Set(events.map((e) => e.key))];
   for (let i = 0; i < taskIds.length; i += 50) {
     const rows = await rc.db
       .select()
@@ -274,14 +300,18 @@ async function runReminders(
       .where(and(inArray(reminders.taskId, taskIds.slice(i, i + 50)), isNotNull(reminders.sentAt)));
     for (const r of rows) sentKeys.add(`${r.taskId}|${r.kind}|${r.remindAt}`);
   }
-  const fresh = events.filter((e) => !sentKeys.has(`${e.taskId}|${e.kind}|${e.at}`));
+  const fresh = events.filter((e) => !sentKeys.has(`${e.key}|${e.kind}|${e.at}`));
   if (!fresh.length) return;
 
-  const rows = await rc.db
-    .select()
-    .from(tasks)
-    .where(inArray(tasks.id, [...new Set(fresh.map((e) => e.taskId))].slice(0, 50)));
-  const dtos = new Map((await withTags(rc.db, rows)).map((t) => [t.id, t]));
+  const realIds = [...new Set(fresh.map((e) => e.taskId).filter((id) => !isVirtualId(id)))].slice(
+    0,
+    50,
+  );
+  const rows = realIds.length
+    ? await rc.db.select().from(tasks).where(inArray(tasks.id, realIds))
+    : [];
+  const freshVirtual = virtualRows.filter((r) => fresh.some((e) => e.taskId === r.id));
+  const dtos = new Map((await withTags(rc.db, [...rows, ...freshVirtual])).map((t) => [t.id, t]));
   const base = rc.env.APP_BASE_URL.replace(/\/$/, '');
 
   for (const t of active) {
@@ -306,7 +336,7 @@ async function runReminders(
       await rc.db.insert(reminders).values(
         mine.map((e) => ({
           id: crypto.randomUUID(),
-          taskId: e.taskId,
+          taskId: e.key,
           remindAt: e.at,
           sentAt: nowIso(),
           kind: e.kind,
@@ -438,7 +468,7 @@ export async function runNotifications(env: Env): Promise<RunSummary> {
   const dailyJobs = DAILY.flatMap((kind) =>
     active.filter((t) => dueDaily(t.s, kind, hm)).map((t) => ({ t, kind })),
   );
-  const events = await reminderCandidates(db, active, at);
+  const { events, virtualRows } = await reminderCandidates(db, active, at);
   if (!dailyJobs.length && !events.length) return summary; // รอบส่วนใหญ่จบที่นี่ (query แค่ 1–2 ครั้ง)
 
   const quota = await loadQuota(env, db, at);
@@ -453,7 +483,7 @@ export async function runNotifications(env: Env): Promise<RunSummary> {
     fromBangkok(today).toISOString(),
   );
 
-  await runReminders(rc, active, events, state); // เตือนก่อนเวลาสำคัญสุด (ไวต่อเวลา)
+  await runReminders(rc, active, events, virtualRows, state); // เตือนก่อนเวลาสำคัญสุด (ไวต่อเวลา)
 
   for (const { t, kind } of dailyJobs) {
     if (rc.pushes >= MAX_PUSHES_PER_RUN || quotaExhausted(rc.quota)) break;

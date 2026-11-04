@@ -398,8 +398,8 @@ async function cmdDone(ctx: Ctx, user: User, ref: string) {
   if (!r.ok) return send(ctx, r.reply);
   if (r.task.status === 'done')
     return send(ctx, [text(`งานนี้เสร็จไปแล้ว: ${clip(r.task.title, 80)}`)]);
-  await updateTask(ctx.db, user.id, r.task.id, { status: 'done' });
-  return replyThenSync(ctx, user.id, r.task.id, [text(`✅ เสร็จแล้ว: ${clip(r.task.title, 80)}`)]);
+  const done = await updateTask(ctx.db, user.id, r.task.id, { status: 'done' });
+  return replyThenSync(ctx, user.id, done.id, [text(`✅ เสร็จแล้ว: ${clip(r.task.title, 80)}`)]);
 }
 
 async function cmdDelete(ctx: Ctx, user: User, ref: string) {
@@ -619,8 +619,8 @@ async function handlePostback(ctx: Ctx, user: User, data: string) {
   switch (a) {
     case 'done': {
       const t = await getOwned(db, user.id, id);
-      await updateTask(db, user.id, id, { status: 'done' });
-      return replyThenSync(ctx, user.id, id, [text(`✅ เสร็จแล้ว: ${clip(t.title, 80)}`)]);
+      const done = await updateTask(db, user.id, id, { status: 'done' });
+      return replyThenSync(ctx, user.id, done.id, [text(`✅ เสร็จแล้ว: ${clip(t.title, 80)}`)]);
     }
     case 'snz': {
       const minutes = Number(q.get('m') ?? 0);
@@ -633,7 +633,7 @@ async function handlePostback(ctx: Ctx, user: User, data: string) {
             : null;
       if (!by) return send(ctx, [text('คำสั่งไม่ถูกต้อง')]);
       const moved = await snoozeTask(db, user.id, id, by);
-      return replyThenSync(ctx, user.id, id, [await card(ctx, moved, '⏰ เลื่อนแล้ว')]);
+      return replyThenSync(ctx, user.id, moved.id, [await card(ctx, moved, '⏰ เลื่อนแล้ว')]);
     }
     case 'del': {
       const t = await getOwned(db, user.id, id);
@@ -641,9 +641,12 @@ async function handlePostback(ctx: Ctx, user: User, data: string) {
     }
     case 'delok': {
       const t = await getOwned(db, user.id, id);
-      const { gcalEventId } = await deleteTask(db, ctx.env.FILES, user.id, id);
+      const res = await deleteTask(db, ctx.env.FILES, user.id, id); // งานทำซ้ำ = ลบเฉพาะครั้งนี้
       await send(ctx, [text(`🗑 ลบแล้ว: ${clip(t.title, 80)}`)]);
-      return removeEventSafe(ctx.env, user.id, gcalEventId);
+      for (const e of res.gcalEventIds) await removeEventSafe(ctx.env, user.id, e);
+      return res.tombstoneId
+        ? void (await syncTaskSafe(ctx.env, user.id, res.tombstoneId))
+        : undefined;
     }
     case 'carry': {
       // ปุ่มจากสรุปเย็น: เลื่อนงานค้างของวัน d ไปวันถัดไป (d ต้องเป็นวันล่าสุด กันปุ่มเก่าทำงานผิดวัน)
@@ -679,7 +682,9 @@ async function handlePostback(ctx: Ctx, user: User, data: string) {
       if (!date) return send(ctx, [text('คำสั่งไม่ถูกต้อง')]);
       await getOwned(db, user.id, id);
       const scheduled = await updateTask(db, user.id, id, { allDay: true, dueDate: date });
-      return replyThenSync(ctx, user.id, id, [await card(ctx, scheduled, '📅 กำหนดวันแล้ว')]);
+      return replyThenSync(ctx, user.id, scheduled.id, [
+        await card(ctx, scheduled, '📅 กำหนดวันแล้ว'),
+      ]);
     }
     case 'att': {
       await getOwned(db, user.id, id);

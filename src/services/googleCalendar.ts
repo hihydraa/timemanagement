@@ -290,6 +290,31 @@ function noteFailure(ctx: SyncCtx, r: ApiResult) {
 }
 
 // ------------------------------------------------------------------ task → event
+const hhmmss = (dateTime: string) => dateTime.slice(11, 19).replace(/:/g, '');
+
+/** event ของงาน; งานแม่ของซีรีส์จะใส่ EXDATE ของครั้งที่มีแถวจริงแล้ว (ซึ่งซิงก์เป็น event ของตัวเองแยกต่างหาก) */
+export async function buildEvent(ctx: SyncCtx, t: TaskRow): Promise<Record<string, unknown>> {
+  const ev = await buildEventBase(ctx, t);
+  if (!t.recurrenceRule) return ev;
+  const kids = await ctx.db
+    .select({ d: tasks.recurrenceId })
+    .from(tasks)
+    .where(
+      and(
+        eq(tasks.parentTaskId, t.id),
+        eq(tasks.userId, ctx.userId),
+        isNotNull(tasks.recurrenceId),
+      ),
+    );
+  const start = ev.start as { date?: string; dateTime?: string };
+  const lines = kids.map((k) => {
+    const d = k.d!.replace(/-/g, '');
+    return start.dateTime
+      ? `EXDATE;TZID=${TZ}:${d}T${hhmmss(start.dateTime)}`
+      : `EXDATE;VALUE=DATE:${d}`;
+  });
+  return { ...ev, recurrence: [...(ev.recurrence as string[]), ...lines] };
+}
 const ok = (r: ApiResult) => r.status >= 200 && r.status < 300;
 const hasWhen = (t: TaskRow) => !!(t.startAt || t.dueAt || t.dueDate);
 
@@ -308,7 +333,7 @@ async function categoryName(ctx: SyncCtx, id: string | null): Promise<string | n
   return ctx.cats.get(id) ?? null;
 }
 
-export async function buildEvent(ctx: SyncCtx, t: TaskRow): Promise<Record<string, unknown>> {
+async function buildEventBase(ctx: SyncCtx, t: TaskRow): Promise<Record<string, unknown>> {
   const base = ctx.env.APP_BASE_URL.replace(/\/$/, '');
   const cat = await categoryName(ctx, t.categoryId);
   const description = [
@@ -323,7 +348,8 @@ export async function buildEvent(ctx: SyncCtx, t: TaskRow): Promise<Record<strin
     .filter((x) => x !== '')
     .join('\n');
 
-  const done = t.status === 'done';
+  // งานแม่ของซีรีส์แทนทั้งซีรีส์: ✅/ยกเลิกของครั้งแรกไม่ควรกระทบทุกครั้งใน Google
+  const done = t.status === 'done' && !t.recurrenceRule;
   const common = {
     description,
     extendedProperties: { private: { dobbyTaskId: t.id } },
@@ -403,7 +429,7 @@ async function deleteEvent(ctx: SyncCtx, eventId: string): Promise<boolean> {
 }
 
 export async function syncRow(ctx: SyncCtx, t: TaskRow): Promise<SyncResult> {
-  const wanted = t.gcalSync === 1 && t.status !== 'cancelled' && hasWhen(t);
+  const wanted = t.gcalSync === 1 && (t.status !== 'cancelled' || !!t.recurrenceRule) && hasWhen(t);
   if (!wanted) {
     if (!t.gcalEventId) return 'skipped';
     if (!(await deleteEvent(ctx, t.gcalEventId))) return 'failed';
@@ -444,7 +470,18 @@ export async function syncTaskSafe(env: Env, userId: string, taskId: string): Pr
       .from(tasks)
       .where(and(eq(tasks.id, taskId), eq(tasks.userId, userId)))
       .get();
-    return row ? await syncRow(ctx, row) : 'skipped';
+    if (!row) return 'skipped';
+    const res = await syncRow(ctx, row);
+    if (row.parentTaskId && row.recurrenceId) {
+      // ครั้งหนึ่งของซีรีส์เปลี่ยน → อัปเดต EXDATE ของงานแม่ (กันครั้งเดิมซ้ำใน Google)
+      const parent = await ctx.db
+        .select()
+        .from(tasks)
+        .where(and(eq(tasks.id, row.parentTaskId), eq(tasks.userId, userId)))
+        .get();
+      if (parent) await syncRow(ctx, parent);
+    }
+    return res;
   } catch (e) {
     console.error('gcal sync error', e instanceof Error ? e.message : 'unknown');
     return 'failed';

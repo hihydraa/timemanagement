@@ -17,6 +17,14 @@ import type { Db } from '../db/client';
 import { categories, taskTags, tasks } from '../db/schema';
 import { ApiError } from '../lib/http';
 import { countsByTask, deleteTaskFiles } from './attachments';
+import { deleteSubtasksOf, subtaskCounts } from './subtasks';
+import {
+  ensureReal,
+  isVirtualId,
+  loadSeriesInstances,
+  parseVirtualId,
+  resolveVirtual,
+} from './series';
 import { addDays, bangkokDate, fromBangkok, nowIso } from '../lib/time';
 
 type TaskRow = typeof tasks.$inferSelect;
@@ -25,6 +33,8 @@ export interface TaskDto extends Omit<TaskRow, 'allDay' | 'gcalSync'> {
   gcalSync: boolean;
   tags: string[];
   attachmentCount: number;
+  subtaskTotal: number;
+  subtaskDone: number;
 }
 
 const iso = z
@@ -91,21 +101,25 @@ function chunk<T>(a: T[], n = 50): T[][] {
 }
 
 export async function withTags(db: Db, rows: TaskRow[]): Promise<TaskDto[]> {
+  // instance เสมือนใช้แท็ก/รายการย่อยของงานแม่
+  const key = (r: TaskRow) => parseVirtualId(r.id)?.parentId ?? r.id;
+  const keys = [...new Set(rows.map(key))];
   const byTask = new Map<string, string[]>();
-  for (const ids of chunk(rows.map((r) => r.id))) {
+  for (const ids of chunk(keys)) {
     const tg = await db.select().from(taskTags).where(inArray(taskTags.taskId, ids));
     for (const t of tg) byTask.set(t.taskId, [...(byTask.get(t.taskId) ?? []), t.tag]);
   }
-  const counts = await countsByTask(
-    db,
-    rows.map((r) => r.id),
-  );
+  const real = rows.filter((r) => !isVirtualId(r.id)).map((r) => r.id);
+  const counts = await countsByTask(db, real);
+  const subs = await subtaskCounts(db, keys);
   return rows.map((r) => ({
     ...r,
     allDay: r.allDay === 1,
     gcalSync: r.gcalSync === 1,
-    tags: (byTask.get(r.id) ?? []).sort(),
+    tags: (byTask.get(key(r)) ?? []).sort(),
     attachmentCount: counts.get(r.id) ?? 0,
+    subtaskTotal: subs.get(key(r))?.total ?? 0,
+    subtaskDone: subs.get(key(r))?.done ?? 0,
   }));
 }
 
@@ -126,6 +140,8 @@ async function replaceTags(db: Db, taskId: string, tags: string[]) {
 }
 
 export async function getOwned(db: Db, userId: string, id: string): Promise<TaskRow> {
+  const v = parseVirtualId(id);
+  if (v) return resolveVirtual(db, userId, v); // instance ของงานทำซ้ำ (เสมือน หรือแถวจริงถ้าเคยสร้างแล้ว)
   const row = await db
     .select()
     .from(tasks)
@@ -172,7 +188,15 @@ export async function updateTask(
   id: string,
   patch: z.infer<typeof taskPatch>,
 ): Promise<TaskDto> {
+  id = await ensureReal(db, userId, id); // แก้ instance เสมือน = สร้างแถวจริงของครั้งนั้นก่อน
   const cur = await getOwned(db, userId, id);
+  if (cur.parentTaskId && patch.recurrenceRule) {
+    throw new ApiError(
+      400,
+      'validation_error',
+      'recurrenceRule: ตั้งการทำซ้ำได้เฉพาะงานแม่ของซีรีส์',
+    );
+  }
   const merged = normalizeTime({
     allDay: patch.allDay ?? cur.allDay === 1,
     startAt: patch.startAt !== undefined ? patch.startAt : cur.startAt,
@@ -210,17 +234,67 @@ export async function updateTask(
   return (await withTags(db, [await getOwned(db, userId, id)]))[0]!;
 }
 
+export interface DeleteResult {
+  /** event บน Google Calendar ที่ต้องลบ */
+  gcalEventIds: string[];
+  /** ลบแค่ "ครั้งนี้" ของงานทำซ้ำ = ทำเครื่องหมายยกเลิก (แถวยังอยู่เพื่อไม่ให้ instance เสมือนกลับมา) ให้ซิงก์แถวนี้แทน */
+  tombstoneId: string | null;
+}
+
+/**
+ * ลบงาน
+ * - งานปกติ: ลบจริง
+ * - งานทำซ้ำ scope=one (ค่าเริ่มต้น): ยกเลิกเฉพาะครั้งนี้ (tombstone)
+ * - งานทำซ้ำ scope=series: ลบทั้งซีรีส์ (แม่ + ทุกครั้งที่สร้างแถวจริงไว้)
+ */
 export async function deleteTask(
   db: Db,
   bucket: R2Bucket,
   userId: string,
   id: string,
-): Promise<{ gcalEventId: string | null }> {
+  scope: 'one' | 'series' = 'one',
+): Promise<DeleteResult> {
   const row = await getOwned(db, userId, id);
-  await deleteTaskFiles(db, bucket, userId, id);
-  await db.delete(taskTags).where(eq(taskTags.taskId, id));
-  await db.delete(tasks).where(and(eq(tasks.id, id), eq(tasks.userId, userId)));
-  return { gcalEventId: row.gcalEventId };
+  const inSeries = !!row.recurrenceRule || (!!row.parentTaskId && !!row.recurrenceId);
+
+  if (inSeries && scope === 'one') {
+    const realId = await ensureReal(db, userId, id);
+    await db
+      .update(tasks)
+      .set({ status: 'cancelled', completedAt: null, updatedAt: nowIso() })
+      .where(and(eq(tasks.id, realId), eq(tasks.userId, userId)));
+    return { gcalEventIds: [], tombstoneId: realId };
+  }
+
+  const ids: string[] = [];
+  const events: string[] = [];
+  if (inSeries) {
+    const parentId = row.recurrenceRule ? row.id : row.parentTaskId!;
+    const all = await db
+      .select({ id: tasks.id, ev: tasks.gcalEventId })
+      .from(tasks)
+      .where(
+        and(eq(tasks.userId, userId), or(eq(tasks.id, parentId), eq(tasks.parentTaskId, parentId))),
+      );
+    for (const r of all) {
+      ids.push(r.id);
+      if (r.ev) events.push(r.ev);
+    }
+  } else {
+    ids.push(row.id);
+    if (row.gcalEventId) events.push(row.gcalEventId);
+  }
+  for (const tid of ids) {
+    await deleteTaskFiles(db, bucket, userId, tid);
+    await db.delete(taskTags).where(eq(taskTags.taskId, tid));
+  }
+  await deleteSubtasksOf(db, ids);
+  for (let i = 0; i < ids.length; i += 50) {
+    await db
+      .delete(tasks)
+      .where(and(eq(tasks.userId, userId), inArray(tasks.id, ids.slice(i, i + 50))));
+  }
+  return { gcalEventIds: events, tombstoneId: null };
 }
 
 export const listQuery = z.object({
@@ -267,7 +341,30 @@ export async function listTasks(
     .where(and(...conds))
     .orderBy(asc(tasks.startAt), asc(tasks.dueAt), desc(tasks.createdAt))
     .limit(500);
-  return withTags(db, rows);
+  const real = await withTags(db, rows);
+  if (!(q.from && q.to)) return real;
+
+  // งานทำซ้ำ: ขยายเป็น instance เสมือนในช่วงที่ขอ (ที่ยังไม่มีแถวจริง)
+  const fromDate = bangkokDate(new Date(q.from));
+  const toDate = bangkokDate(new Date(new Date(q.to).getTime() - 1));
+  const from = q.from;
+  const to = q.to;
+  const inRange = (r: TaskRow) =>
+    r.startAt
+      ? r.startAt < to && (r.endAt ?? r.startAt) >= from
+      : r.dueAt
+        ? r.dueAt >= from && r.dueAt < to
+        : !!r.dueDate && r.dueDate >= fromDate && r.dueDate < bangkokDate(new Date(to));
+  const virt = (await loadSeriesInstances(db, [userId], fromDate, toDate)).filter(inRange);
+  const needle = q.q?.toLowerCase();
+  const extra = (await withTags(db, virt)).filter(
+    (t) =>
+      (!q.status || q.status === 'todo') &&
+      (!q.category || t.categoryId === q.category) &&
+      (!needle || t.title.toLowerCase().includes(needle)) &&
+      (!q.tag || t.tags.includes(q.tag)),
+  );
+  return [...real, ...extra];
 }
 
 const OPEN = ['todo', 'doing'] as const;
@@ -298,6 +395,8 @@ export async function todayBuckets(db: Db, userId: string, at: Date) {
     )
     .limit(500);
   const all = await withTags(db, rows);
+  // วันนี้ของงานทำซ้ำ (instance เสมือน) นับเป็นงานวันนี้ด้วย
+  all.push(...(await withTags(db, await loadSeriesInstances(db, [userId], today, today))));
 
   const seen = new Set<string>();
   const take = (pred: (t: TaskDto) => boolean) => {
@@ -395,6 +494,9 @@ export async function carryOver(
       and(
         eq(tasks.userId, userId),
         inArray(tasks.status, ['todo', 'doing']),
+        // งานทำซ้ำไม่เลื่อนด้วยปุ่มนี้ (การเลื่อนแม่จะย้ายทั้งซีรีส์)
+        isNull(tasks.recurrenceRule),
+        isNull(tasks.parentTaskId),
         or(
           and(gte(tasks.startAt, start), lt(tasks.startAt, end)),
           and(isNull(tasks.startAt), gte(tasks.dueAt, start), lt(tasks.dueAt, end)),
