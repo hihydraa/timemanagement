@@ -41,7 +41,10 @@ export default {
       },
       boxShadow: { soft: '0 1px 2px rgb(60 45 20 / 0.08), 0 4px 14px rgb(60 45 20 / 0.08)' },
       keyframes: {
-        bob: { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-6px)' } },
+        bob: {
+          '0%,100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-6px)' },
+        },
         pop: {
           '0%': { opacity: '0', transform: 'translateY(16px) scale(.9)' },
           '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },

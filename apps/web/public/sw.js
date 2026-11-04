@@ -7,7 +7,13 @@
 const VERSION = 'v1';
 const STATIC = `dobby-static-${VERSION}`;
 const API = `dobby-api-${VERSION}`;
-const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/favicon-64.png', '/mascot/hero.webp'];
+const SHELL = [
+  '/',
+  '/manifest.webmanifest',
+  '/icons/icon-192.png',
+  '/icons/favicon-64.png',
+  '/mascot/hero.webp',
+];
 const API_ALLOW = [
   '/api/session',
   '/api/me',
@@ -128,7 +134,12 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  if (p.startsWith('/assets/') || p.startsWith("/icons/") || p.startsWith("/mascot/") || p === '/manifest.webmanifest') {
+  if (
+    p.startsWith('/assets/') ||
+    p.startsWith('/icons/') ||
+    p.startsWith('/mascot/') ||
+    p === '/manifest.webmanifest'
+  ) {
     e.respondWith(
       caches.match(req).then(
         (hit) =>
