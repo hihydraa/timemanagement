@@ -30,6 +30,8 @@ export const userSettings = sqliteTable('user_settings', {
   /** เวลาเตือนเดดไลน์วันนี้ (บ่าย) */
   deadlineAlertTime: text('deadline_alert_time').notNull().default('15:00'),
   eveningReviewEnabled: integer('evening_review_enabled').notNull().default(1),
+  /** ส่วนที่แสดงในแถบด้านข้างของปฏิทิน (JSON array ของชื่อส่วน; null = ค่าเริ่มต้น) */
+  sidebarSections: text('sidebar_sections'),
 });
 
 export const googleTokens = sqliteTable('google_tokens', {

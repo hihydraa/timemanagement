@@ -24,9 +24,18 @@ import TodayPanel from '../components/TodayPanel';
 import { api, ApiClientError } from '../lib/api';
 import { useApp } from '../lib/appContext';
 import { eventColors } from '../lib/colors';
+import SidebarCustomize from '../components/SidebarCustomize';
 import { t } from '../lib/i18n';
+import { SIDEBAR_DEFAULT, sortSections } from '../lib/sidebar';
 import { addMinutesWall, calDateToIso, calDateToYmd, isoToWall, wallNow } from '../lib/time';
-import type { Category, ColorMode, Task, TaskPayload, TodayData } from '../lib/types';
+import type {
+  Category,
+  ColorMode,
+  SidebarSection,
+  Task,
+  TaskPayload,
+  TodayData,
+} from '../lib/types';
 
 // ฟอร์มงานโหลดเมื่อเปิดใช้ครั้งแรกเท่านั้น (ไม่อยู่ใน chunk ที่ต้องใช้ตอนแสดงปฏิทินครั้งแรก)
 const TaskDrawer = lazy(() => import('../components/TaskDrawer'));
@@ -165,7 +174,7 @@ function useIsMobile() {
 }
 
 export default function CalendarPage() {
-  const { categories, reloadCategories, gcalAvailable } = useApp();
+  const { user, categories, reloadCategories, gcalAvailable } = useApp();
   const calRef = useRef<FullCalendar>(null);
   const isMobile = useIsMobile();
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
@@ -184,6 +193,55 @@ export default function CalendarPage() {
     } catch {
       /* ignore */
     }
+  };
+
+  // ส่วนของแถบข้างที่แสดง: เก็บต่อบัญชีบนเซิร์ฟเวอร์ (แคชใน localStorage แยกตามผู้ใช้กันกระพริบ)
+  const sbKey = `dobby.sidebar.${user.id}`;
+  const [sections, setSections] = useState<SidebarSection[]>(() => {
+    try {
+      const v: unknown = JSON.parse(localStorage.getItem(sbKey) ?? 'null');
+      if (Array.isArray(v)) return sortSections(v as SidebarSection[]);
+    } catch {
+      /* ใช้ค่าเริ่มต้น */
+    }
+    return SIDEBAR_DEFAULT;
+  });
+  useEffect(() => {
+    let alive = true;
+    api
+      .getSettings()
+      .then((r) => {
+        if (!alive) return;
+        setSections(sortSections(r.sidebarSections));
+        try {
+          localStorage.setItem(sbKey, JSON.stringify(r.sidebarSections));
+        } catch {
+          /* ignore */
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [sbKey]);
+  const saveSections = (next: SidebarSection[]) => {
+    setSections(next);
+    // ส่วนที่ซ่อนจะไม่กรองอีก (กันกรองทิ้งงานโดยผู้ใช้มองไม่เห็นว่าทำไม)
+    setFilters((f) => ({
+      ...f,
+      q: next.includes('search') ? f.q : '',
+      tag: next.includes('tag') ? f.tag : '',
+      categories: next.includes('category') ? f.categories : new Set(),
+      urgency: next.includes('urgency') ? f.urgency : new Set(),
+      importance: next.includes('importance') ? f.importance : new Set(),
+      statuses: next.includes('status') ? f.statuses : emptyFilters().statuses,
+    }));
+    try {
+      localStorage.setItem(sbKey, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+    api.patchSettings({ sidebarSections: next }).catch(() => setError(t.error.loadFailed));
   };
 
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
@@ -413,27 +471,18 @@ export default function CalendarPage() {
 
       <div className="grid flex-1 gap-3 p-3 lg:grid-cols-[16rem_1fr_18rem]">
         <aside className={`${showFilters ? 'block' : 'hidden'} space-y-4 lg:block`}>
-          <div>
-            <label
-              htmlFor="jump"
-              className="mb-1 block text-xs font-semibold text-slate-500 dark:text-slate-400"
-            >
-              {t.nav.jumpTo}
-            </label>
-            <input
-              id="jump"
-              type="date"
-              onChange={(e) => e.target.value && calRef.current?.getApi().gotoDate(e.target.value)}
-              className="w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800"
-            />
-          </div>
+          <SidebarCustomize value={sections} onChange={saveSections} />
           <Filters
             value={filters}
             onChange={setFilters}
             categories={categories}
             allTags={allTags}
+            sections={sections}
+            onJump={(d) => calRef.current?.getApi().gotoDate(d)}
           />
-          <Legend categories={categories} onChanged={reloadCategories} />
+          {sections.includes('legend') && (
+            <Legend categories={categories} onChanged={reloadCategories} />
+          )}
         </aside>
 
         <main className="min-w-0 order-first lg:order-none">{calendar}</main>

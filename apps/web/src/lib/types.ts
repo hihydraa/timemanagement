@@ -113,8 +113,12 @@ export interface NotificationSettings {
   lineNotifyEnabled: boolean;
 }
 
+export type SidebarSection =
+  'search' | 'jump' | 'category' | 'urgency' | 'importance' | 'status' | 'tag' | 'legend';
+
 export interface SettingsView {
   settings: NotificationSettings;
+  sidebarSections: SidebarSection[];
   lineLinked: boolean;
 }
 

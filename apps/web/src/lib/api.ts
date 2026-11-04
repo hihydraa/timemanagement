@@ -10,6 +10,7 @@ import type {
   PushStatus,
   ResyncResult,
   SettingsView,
+  SidebarSection,
   StorageInfo,
   Subtask,
   Task,
@@ -129,7 +130,7 @@ export const api = {
   gcalDisconnect: () => req<GcalStatus>('POST', '/api/gcal/disconnect', {}),
   gcalResync: (cursor: string | null) => req<ResyncResult>('POST', '/api/gcal/resync', { cursor }),
   getSettings: () => req<SettingsView>('GET', '/api/settings'),
-  patchSettings: (p: Partial<NotificationSettings>) =>
+  patchSettings: (p: Partial<NotificationSettings> & { sidebarSections?: SidebarSection[] }) =>
     req<SettingsView>('PATCH', '/api/settings', p),
   pushStatus: () => req<PushStatus>('GET', '/api/notifications/status'),
   listAttachments: (taskId: string) =>

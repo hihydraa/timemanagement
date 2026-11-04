@@ -1,4 +1,3 @@
-/* eslint-env node */
 /* global console, process, URL */
 // ตรวจค่าก่อน deploy จริง: ล้มเหลว (exit 1) ถ้ายังเป็นค่า placeholder / ไม่ปลอดภัย
 import { readFileSync } from 'node:fs';

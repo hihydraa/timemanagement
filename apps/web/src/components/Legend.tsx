@@ -42,27 +42,37 @@ export default function Legend({
           </li>
         ))}
       </ul>
-      <div className="mb-1 flex items-center gap-1.5" aria-label={t.legend.stripe}>
-        {[4, 3, 2, 1].map((l) => (
-          <span key={l} className="inline-flex items-center gap-1">
-            <span
-              className="inline-block h-4 w-1.5 rounded-sm"
-              style={{ background: URGENCY_COLORS[l] }}
-            />
-            {'!'.repeat(l)}
-          </span>
-        ))}
-      </div>
-      <p className="text-slate-500 dark:text-slate-400">
-        {t.legend.stripe} · {t.legend.stars}
-      </p>
-      <div className="mt-1 flex gap-1.5" aria-hidden>
+      <p className="mb-1 text-slate-600 dark:text-slate-400">{t.legend.stripe}</p>
+      <div className="mb-2 flex items-center gap-1.5">
         {[4, 3, 2, 1].map((l) => (
           <span
             key={l}
-            className="inline-block h-3 w-5 rounded-sm"
-            style={{ background: IMPORTANCE_COLORS[l] }}
+            title={`${t.filter.urgency}: ${t.urgency[l]}`}
+            className="inline-block h-4 w-6 rounded-sm"
+            style={{ background: URGENCY_COLORS[l] }}
           />
+        ))}
+      </div>
+      <p className="mb-1 text-slate-600 dark:text-slate-400">{t.legend.stars}</p>
+      <div className="flex items-end gap-1.5">
+        {[4, 3, 2, 1].map((l) => (
+          <span
+            key={l}
+            title={`${t.filter.importance}: ${t.importance[l]}`}
+            className="inline-flex items-end gap-px"
+          >
+            {[1, 2, 3, 4].map((i) => (
+              <span
+                key={i}
+                aria-hidden
+                className="w-1 rounded-sm"
+                style={{
+                  height: 4 + i * 3,
+                  background: i <= l ? IMPORTANCE_COLORS[l] : 'rgb(148 163 184 / 0.35)',
+                }}
+              />
+            ))}
+          </span>
         ))}
       </div>
     </section>

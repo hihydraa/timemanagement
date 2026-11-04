@@ -9,6 +9,33 @@ import type { AppEnv } from '../types';
 
 const r = new Hono<AppEnv>();
 
+/** ส่วนของแถบด้านข้างที่ผู้ใช้เลือกแสดง/ซ่อนได้ (ลำดับแสดงคงที่ตามนี้) */
+export const SIDEBAR_SECTIONS = [
+  'search',
+  'jump',
+  'category',
+  'urgency',
+  'importance',
+  'status',
+  'tag',
+  'legend',
+] as const;
+export const DEFAULT_SIDEBAR: string[] = ['search', 'category', 'urgency'];
+
+function parseSidebar(raw: string | null | undefined): string[] {
+  if (!raw) return DEFAULT_SIDEBAR;
+  try {
+    const v: unknown = JSON.parse(raw);
+    if (Array.isArray(v)) {
+      const ok = SIDEBAR_SECTIONS.filter((s) => v.includes(s));
+      return ok;
+    }
+  } catch {
+    /* ใช้ค่าเริ่มต้น */
+  }
+  return DEFAULT_SIDEBAR;
+}
+
 const hm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'เวลาต้องเป็นรูปแบบ HH:mm');
 const patchInput = z
   .object({
@@ -20,6 +47,7 @@ const patchInput = z
     quietHoursStart: hm,
     quietHoursEnd: hm,
     lineNotifyEnabled: z.boolean(),
+    sidebarSections: z.array(z.enum(SIDEBAR_SECTIONS)).max(SIDEBAR_SECTIONS.length),
   })
   .partial()
   .strict();
@@ -41,6 +69,8 @@ async function view(db: ReturnType<typeof getDb>, userId: string) {
       quietHoursEnd: d.quietHoursEnd ?? '06:30',
       lineNotifyEnabled: (d.lineNotifyEnabled ?? 1) === 1,
     },
+    /** แยกจาก settings (การแจ้งเตือน) เพื่อไม่ให้หน้าตั้งค่าแจ้งเตือนเขียนทับโดยไม่ตั้งใจ */
+    sidebarSections: parseSidebar(d.sidebarSections),
     lineLinked: !!u?.lineUserId,
   };
 }
@@ -61,6 +91,8 @@ r.patch('/settings', async (c) => {
   if (body.quietHoursStart !== undefined) set.quietHoursStart = body.quietHoursStart;
   if (body.quietHoursEnd !== undefined) set.quietHoursEnd = body.quietHoursEnd;
   if (body.lineNotifyEnabled !== undefined) set.lineNotifyEnabled = body.lineNotifyEnabled ? 1 : 0;
+  if (body.sidebarSections !== undefined)
+    set.sidebarSections = JSON.stringify([...new Set(body.sidebarSections)]);
   if (Object.keys(set).length) {
     await db
       .insert(userSettings)
