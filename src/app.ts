@@ -5,6 +5,7 @@ import { getDb } from './db/client';
 import { users } from './db/schema';
 import { ApiError, errorBody } from './lib/http';
 import { originCheck, requireAuth } from './middleware';
+import attachmentsRoutes from './routes/attachments';
 import auth from './routes/auth';
 import categoriesRoutes from './routes/categories';
 import tasksRoutes from './routes/tasks';
@@ -13,21 +14,29 @@ import { nowIso } from './lib/time';
 
 export const app = new Hono<AppEnv>();
 
-app.use(
-  '*',
-  secureHeaders({
-    contentSecurityPolicy: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"], // FullCalendar inject style
-      imgSrc: ["'self'", 'data:', 'blob:'],
-      connectSrc: ["'self'"],
-      frameAncestors: ["'none'"],
-    },
-    referrerPolicy: 'strict-origin-when-cross-origin',
-    xContentTypeOptions: 'nosniff',
-  }),
-);
+const baseSecureHeaders = secureHeaders({
+  contentSecurityPolicy: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'"],
+    styleSrc: ["'self'", "'unsafe-inline'"], // FullCalendar inject style
+    imgSrc: ["'self'", 'data:', 'blob:'],
+    connectSrc: ["'self'"],
+    frameAncestors: ["'none'"],
+  },
+  referrerPolicy: 'strict-origin-when-cross-origin',
+  xContentTypeOptions: 'nosniff',
+});
+
+// ไฟล์ดาวน์โหลดตั้ง CSP แบบ sandbox + nosniff เอง (ดู routes/attachments.ts) จึงไม่ให้ global CSP ทับ
+const isDownload = (path: string) => /^\/api\/attachments\/[^/]+$/.test(path);
+app.use('*', async (c, next) => {
+  if (isDownload(c.req.path) && c.req.method === 'GET') {
+    await next();
+    c.res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    return;
+  }
+  return baseSecureHeaders(c, next);
+});
 
 app.get('/api/health', (c) => c.json({ ok: true, name: 'dobby', time: nowIso() }));
 
@@ -46,6 +55,7 @@ api.get('/me', async (c) => {
 });
 api.route('/', tasksRoutes);
 api.route('/', categoriesRoutes);
+api.route('/', attachmentsRoutes);
 app.route('/api', api);
 
 app.onError((err, c) => {

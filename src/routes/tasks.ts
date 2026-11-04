@@ -44,7 +44,7 @@ r.patch('/tasks/:id', async (c) => {
 });
 
 r.delete('/tasks/:id', async (c) => {
-  await deleteTask(getDb(c.env.DB), c.get('userId'), c.req.param('id'));
+  await deleteTask(getDb(c.env.DB), c.env.FILES, c.get('userId'), c.req.param('id'));
   return c.json({ ok: true });
 });
 

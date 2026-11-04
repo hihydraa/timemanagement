@@ -16,12 +16,14 @@ import { z } from 'zod';
 import type { Db } from '../db/client';
 import { categories, taskTags, tasks } from '../db/schema';
 import { ApiError } from '../lib/http';
+import { countsByTask, deleteTaskFiles } from './attachments';
 import { addDays, bangkokDate, fromBangkok, nowIso } from '../lib/time';
 
 type TaskRow = typeof tasks.$inferSelect;
 export interface TaskDto extends Omit<TaskRow, 'allDay'> {
   allDay: boolean;
   tags: string[];
+  attachmentCount: number;
 }
 
 const iso = z
@@ -84,10 +86,15 @@ export async function withTags(db: Db, rows: TaskRow[]): Promise<TaskDto[]> {
     const tg = await db.select().from(taskTags).where(inArray(taskTags.taskId, ids));
     for (const t of tg) byTask.set(t.taskId, [...(byTask.get(t.taskId) ?? []), t.tag]);
   }
+  const counts = await countsByTask(
+    db,
+    rows.map((r) => r.id),
+  );
   return rows.map((r) => ({
     ...r,
     allDay: r.allDay === 1,
     tags: (byTask.get(r.id) ?? []).sort(),
+    attachmentCount: counts.get(r.id) ?? 0,
   }));
 }
 
@@ -187,8 +194,14 @@ export async function updateTask(
   return (await withTags(db, [await getOwned(db, userId, id)]))[0]!;
 }
 
-export async function deleteTask(db: Db, userId: string, id: string): Promise<void> {
+export async function deleteTask(
+  db: Db,
+  bucket: R2Bucket,
+  userId: string,
+  id: string,
+): Promise<void> {
   await getOwned(db, userId, id);
+  await deleteTaskFiles(db, bucket, userId, id);
   await db.delete(taskTags).where(eq(taskTags.taskId, id));
   await db.delete(tasks).where(and(eq(tasks.id, id), eq(tasks.userId, userId)));
 }
