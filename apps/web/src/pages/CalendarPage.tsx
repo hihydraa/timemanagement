@@ -74,6 +74,7 @@ function taskToEvent(task: Task, mode: ColorMode, cats: Map<string, Category>): 
     classNames: task.status === 'done' || task.status === 'cancelled' ? ['dobby-done'] : [],
     extendedProps: {
       stripe: c.stripe,
+      finished: task.status === 'done' || task.status === 'cancelled',
       urgency: task.urgency,
       importance: task.importance,
       attachmentCount: task.attachmentCount,
@@ -132,7 +133,12 @@ function renderEvent(arg: EventContentArg) {
     >
       <div className="min-w-0 flex-1 truncate text-xs leading-tight">
         {arg.timeText && <span className="mr-1 font-semibold">{arg.timeText}</span>}
-        <span>{arg.event.title}</span>
+        {arg.event.extendedProps.finished && (
+          <span aria-hidden className="mr-0.5 font-bold">
+            ✓
+          </span>
+        )}
+        <span className="dobby-title">{arg.event.title}</span>
         {arg.event.extendedProps.recurring && (
           <span role="img" aria-label={t.series.badge} className="ml-1">
             🔁

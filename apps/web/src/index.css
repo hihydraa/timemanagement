@@ -55,10 +55,10 @@
   min-height: 2.25rem;
 }
 .dobby-done {
-  opacity: 0.5;
+  opacity: 0.65;
 }
-.dobby-done .fc-event-main span,
-.dobby-done .fc-event-main div > div {
+/* ขีดฆ่าเฉพาะชื่องาน (เวลาและป้ายยังอ่านได้) */
+.dobby-done .dobby-title {
   text-decoration: line-through;
 }
 @media (prefers-color-scheme: dark) {
