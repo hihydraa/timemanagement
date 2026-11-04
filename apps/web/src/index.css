@@ -2,6 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Design tokens (docs/UX_REVISION.md หัวข้อ 2) — Tailwind palette ใน tailwind.config.js ใช้ค่าชุดเดียวกัน */
+:root {
+  --bg: #faf7ef;
+  --surface: #ffffff;
+  --surface-2: #f3eedf;
+  --border: #e6dfcb;
+  --text: #23302a;
+  /* สเปคเดิม #6b7568 ได้ contrast 4.49/4.14 บน bg/surface-2 (ต่ำกว่า AA) จึงเข้มขึ้นเล็กน้อย */
+  --text-muted: #5f6a5c;
+  --brand: #3f6650;
+  --brand-strong: #2c4a39;
+  --brand-soft: #e4eee7;
+  --urg-4: #d9534f;
+  --urg-3: #e8803f;
+  --urg-2: #e9be3c;
+  --urg-1: #a9aeb8;
+  --load-ok: #5fa777;
+  --load-warn: #e9be3c;
+  --load-over: #d9534f;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 1px 2px rgba(35, 48, 42, 0.06);
+  --shadow-md: 0 4px 14px rgba(35, 48, 42, 0.08);
+  --space: 4px;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1f2b25;
+    --surface: #26342d;
+    --surface-2: #2e3d35;
+    --border: #3e4f45;
+    --text: #f1ecdd;
+    --text-muted: #b4bdb0;
+    --brand: #6f9a82;
+    --brand-strong: #9dbba8;
+    --brand-soft: #2c4a39;
+    --urg-4: #e5736f;
+    --urg-3: #ee9560;
+    --urg-2: #edcb5e;
+    --urg-1: #b9bdc6;
+    --load-ok: #6fbb88;
+    --load-warn: #edcb5e;
+    --load-over: #e5736f;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.35);
+  }
+}
+
 @layer base {
   body {
     @apply bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100;
@@ -11,6 +61,13 @@
       -apple-system,
       'Segoe UI',
       sans-serif;
+    font-size: 14px;
+    line-height: 1.6; /* กันสระ/วรรณยุกต์ไทยถูกตัด */
+  }
+  h1,
+  h2,
+  h3 {
+    line-height: 1.35;
   }
   button {
     @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-500;
@@ -54,8 +111,40 @@
 .fc .fc-button {
   min-height: 2.25rem;
 }
-.dobby-done {
-  opacity: 0.65;
+/* งานเสร็จ/ยกเลิก: สีเรียบ (ไม่ลด opacity เพราะทำให้ contrast ตก) ชื่อขีดฆ่า มี ✓ นำหน้า */
+.fc .fc-event.dobby-done {
+  background-color: var(--surface-2) !important;
+  border-color: var(--border) !important;
+  color: var(--text-muted) !important;
+  box-shadow: none;
+}
+.fc .fc-event.dobby-done .fc-event-main {
+  color: var(--text-muted);
+}
+/* event: ไม่ใช้สีฟ้าเริ่มต้นของ FullCalendar (สีจริงมาจากพาสเทลตามประเภท) */
+.fc {
+  --fc-event-bg-color: var(--brand-soft);
+  --fc-event-border-color: var(--brand-soft);
+  --fc-event-text-color: var(--text);
+}
+.fc .fc-event {
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+}
+.fc .fc-timegrid-event:not(.fc-timegrid-event-short) .dobby-line {
+  white-space: normal;
+}
+.fc .fc-timegrid-event:not(.fc-timegrid-event-short) .dobby-time {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fc .fc-timegrid-event-short .dobby-chips {
+  display: none;
+}
+.fc .fc-timegrid-event-short .fc-event-main > div {
+  flex-direction: row;
 }
 /* ขีดฆ่าเฉพาะชื่องาน (เวลาและป้ายยังอ่านได้) */
 .dobby-done .dobby-title {

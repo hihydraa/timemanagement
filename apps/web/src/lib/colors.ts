@@ -31,15 +31,63 @@ export function textColorFor(bg: string): string {
   return white >= black ? '#ffffff' : '#111827';
 }
 
+function hexToHsl(hex: string): [number, number, number] {
+  const n = parseInt(hex.slice(1), 16);
+  const r = ((n >> 16) & 255) / 255;
+  const g = ((n >> 8) & 255) / 255;
+  const b = (n & 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  if (d === 0) return [0, 0, l];
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  const h =
+    max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, s, l];
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const v = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(v * 255)
+      .toString(16)
+      .padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+export function contrast(a: string, b: string): number {
+  const x = luminance(a);
+  const y = luminance(b);
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+
+/** สีพาสเทลของ event: พื้นอ่อน (L≈90%) + ตัวอักษรเข้มของ hue เดียวกัน (contrast ≥ 7:1) + สีเต็มสำหรับจุด */
+export function pastel(color: string): { bg: string; text: string; dot: string } {
+  const [h, s0] = hexToHsl(color);
+  const s = Math.min(0.62, Math.max(0.22, s0));
+  const bg = hslToHex(h, s, 0.9);
+  let l = 0.26;
+  let text = hslToHex(h, Math.min(0.7, s0 + 0.1), l);
+  while (contrast(text, bg) < 7 && l > 0.06) {
+    l -= 0.02;
+    text = hslToHex(h, Math.min(0.7, s0 + 0.1), l);
+  }
+  return { bg, text, dot: color };
+}
+
 export function eventColors(task: Task, mode: ColorMode, cats: Map<string, Category>) {
   const catColor = (task.categoryId && cats.get(task.categoryId)?.color) || NO_CATEGORY_COLOR;
-  const bg =
+  const base =
     mode === 'urgency'
       ? URGENCY_COLORS[task.urgency]!
       : mode === 'importance'
         ? IMPORTANCE_COLORS[task.importance]!
         : catColor;
-  // โหมดย้อมสีตามความเร่งด่วน แถบซ้ายจะกลืนกับพื้น จึงใช้สีเข้มแทน
-  const stripe = mode === 'urgency' ? 'rgba(0,0,0,0.45)' : URGENCY_COLORS[task.urgency]!;
-  return { bg, text: textColorFor(bg), stripe };
+  const p = pastel(base);
+  // แถบซ้าย = ความเร่งด่วนเสมอ (ไม่ขึ้นกับโหมดย้อมสี)
+  return { bg: p.bg, text: p.text, dot: p.dot, stripe: URGENCY_COLORS[task.urgency]! };
 }

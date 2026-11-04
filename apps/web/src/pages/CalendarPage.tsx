@@ -24,10 +24,21 @@ import TodayPanel from '../components/TodayPanel';
 import { api, ApiClientError } from '../lib/api';
 import { useApp } from '../lib/appContext';
 import { eventColors } from '../lib/colors';
+import MiniCalendar from '../components/MiniCalendar';
+import Popover from '../components/Popover';
 import SidebarCustomize from '../components/SidebarCustomize';
 import { t } from '../lib/i18n';
+import { CountdownChip, ImportanceChip, UrgencyText } from '../components/TaskChips';
 import { SIDEBAR_DEFAULT, sortSections } from '../lib/sidebar';
-import { addMinutesWall, calDateToIso, calDateToYmd, isoToWall, wallNow } from '../lib/time';
+import {
+  addMinutesWall,
+  calDateToIso,
+  calDateToYmd,
+  isoToWall,
+  isPointInTime,
+  todayYmd,
+  wallNow,
+} from '../lib/time';
 import type {
   Category,
   ColorMode,
@@ -74,9 +85,14 @@ function taskToEvent(task: Task, mode: ColorMode, cats: Map<string, Category>): 
     classNames: task.status === 'done' || task.status === 'cancelled' ? ['dobby-done'] : [],
     extendedProps: {
       stripe: c.stripe,
+      dot: c.dot,
       finished: task.status === 'done' || task.status === 'cancelled',
       urgency: task.urgency,
       importance: task.importance,
+      dueAt: task.dueAt,
+      dueDate: task.dueDate,
+      status: task.status,
+      category: (task.categoryId && cats.get(task.categoryId)?.name) || '',
       attachmentCount: task.attachmentCount,
       recurring: !!(task.recurrenceRule || task.recurrenceId),
       subtaskTotal: task.subtaskTotal,
@@ -94,46 +110,95 @@ function taskToEvent(task: Task, mode: ColorMode, cats: Map<string, Category>): 
   }
   if (task.startAt) {
     const start = isoToWall(task.startAt);
-    const end = task.endAt
-      ? isoToWall(task.endAt)
-      : addMinutesWall(start, task.estimateMinutes ?? 60);
+    // เริ่ม = จบ (หรือไม่มีจบและไม่มีเวลาประมาณ) = จุดเวลา: แสดงธง + เวลาเดียว, บล็อกบนตารางสูงขั้นต่ำ 30 นาทีให้กดได้
+    const point = isPointInTime(task);
+    const end = point
+      ? addMinutesWall(start, 30)
+      : task.endAt && task.endAt !== task.startAt
+        ? isoToWall(task.endAt)
+        : addMinutesWall(start, task.estimateMinutes ?? 60);
     return {
       ...base,
       start,
       end,
       allDay: false,
-      extendedProps: { ...base.extendedProps, kind: 'timed' },
+      durationEditable: !point,
+      extendedProps: { ...base.extendedProps, kind: 'timed', point },
     };
   }
   if (task.dueAt) {
     const end = isoToWall(task.dueAt);
     return {
       ...base,
-      title: `⏰ ${task.title}`,
-      start: addMinutesWall(end, -30),
-      end,
+      start: end,
+      end: addMinutesWall(end, 30),
       allDay: false,
       durationEditable: false,
-      extendedProps: { ...base.extendedProps, kind: 'deadline' },
+      extendedProps: { ...base.extendedProps, kind: 'deadline', point: true },
     };
   }
   return null;
 }
 
+const onEventMount = (info: { el: HTMLElement; event: Parameters<typeof EVENT_TIP>[0] }) => {
+  info.el.title = EVENT_TIP(info.event);
+};
+
+const hm = (d: Date | null) => (d ? d.toISOString().slice(11, 16) : '');
+
+/** ข้อความเวลาบนก้อนงาน: จุดเวลา = ⚑ + เวลาเดียว, ช่วงเวลา = "09:00–17:00" (ไม่ใช้ "9:00 - 17:00" ของ FullCalendar) */
+function eventTimeText(arg: EventContentArg): string {
+  if (!arg.timeText) return ''; // มุมมองรายการ/ทั้งวันมีช่องเวลาของตัวเอง
+  const { event } = arg;
+  if (event.extendedProps.point) return hm(event.start);
+  const timeGrid = arg.view.type.startsWith('timeGrid');
+  return timeGrid && event.end ? `${hm(event.start)}–${hm(event.end)}` : hm(event.start);
+}
+
+const EVENT_TIP = (e: {
+  title: string;
+  extendedProps: Record<string, unknown>;
+  start: Date | null;
+  end: Date | null;
+}) => {
+  const x = e.extendedProps;
+  const time =
+    x.kind === 'allday' ? 'ทั้งวัน' : x.point ? hm(e.start) : `${hm(e.start)}–${hm(e.end)}`;
+  return [`${time} ${e.title}`, x.category as string, x.finished ? t.status.done : '']
+    .filter(Boolean)
+    .join(' · ');
+};
+
 function renderEvent(arg: EventContentArg) {
-  const { stripe, urgency, importance } = arg.event.extendedProps as {
+  const x = arg.event.extendedProps as {
     stripe: string;
     urgency: number;
     importance: number;
+    point?: boolean;
+    finished?: boolean;
+    dueAt: string | null;
+    dueDate: string | null;
+    status: Task['status'];
   };
+  const time = eventTimeText(arg);
   return (
     <div
-      className="flex h-full min-w-0 items-start gap-1 overflow-hidden"
-      style={{ borderLeft: `5px solid ${stripe}`, paddingLeft: 3 }}
+      className="flex h-full min-w-0 flex-col gap-0.5 overflow-hidden"
+      style={{ borderLeft: `4px solid ${x.stripe}`, paddingLeft: 4 }}
     >
-      <div className="min-w-0 flex-1 truncate text-xs leading-tight">
-        {arg.timeText && <span className="mr-1 font-semibold">{arg.timeText}</span>}
-        {arg.event.extendedProps.finished && (
+      <div className="dobby-line min-w-0 truncate text-xs leading-tight">
+        <UrgencyText level={x.urgency} />
+        {time && (
+          <span className="dobby-time mr-1 font-semibold tabular-nums">
+            {x.point && (
+              <span aria-label={t.chips.deadline} className="mr-0.5">
+                ⚑
+              </span>
+            )}
+            {time}
+          </span>
+        )}
+        {x.finished && (
           <span aria-hidden className="mr-0.5 font-bold">
             ✓
           </span>
@@ -144,26 +209,23 @@ function renderEvent(arg: EventContentArg) {
             🔁
           </span>
         )}
+      </div>
+      {/* ชิปอยู่บรรทัดที่สอง: ซ่อนเมื่อก้อนเตี้ย (.fc-timegrid-event-short) เพื่อให้ชื่อ+เวลาอยู่บรรทัดเดียว */}
+      <div className="dobby-chips flex flex-wrap items-center gap-1">
+        <ImportanceChip level={x.importance} />
+        <CountdownChip task={{ dueAt: x.dueAt, dueDate: x.dueDate, status: x.status }} />
         {(arg.event.extendedProps.subtaskTotal as number) > 0 && (
-          <span className="ml-1">
+          <span className="text-[11px]">
             ☑{arg.event.extendedProps.subtaskDone as number}/
             {arg.event.extendedProps.subtaskTotal as number}
           </span>
         )}
         {(arg.event.extendedProps.attachmentCount as number) > 0 && (
-          <span role="img" aria-label={t.attach.title} className="ml-1">
+          <span role="img" aria-label={t.attach.title} className="text-[11px]">
             📎
           </span>
         )}
       </div>
-      <span
-        className="shrink-0 pr-0.5 text-[10px] leading-tight"
-        aria-label={`${t.legend.bang} ${urgency} ${t.legend.stars} ${importance}`}
-      >
-        {'!'.repeat(urgency)}
-        <br />
-        {'★'.repeat(importance)}
-      </span>
     </div>
   );
 }
@@ -183,6 +245,7 @@ export default function CalendarPage() {
   const { user, categories, reloadCategories, gcalAvailable } = useApp();
   const calRef = useRef<FullCalendar>(null);
   const isMobile = useIsMobile();
+  const [viewDate, setViewDate] = useState(todayYmd);
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [today, setToday] = useState<TodayData | null>(null);
@@ -327,6 +390,7 @@ export default function CalendarPage() {
     const from = calDateToIso(a.start);
     const to = calDateToIso(a.end);
     setRange((prev) => (prev && prev.from === from && prev.to === to ? prev : { from, to }));
+    setViewDate(calDateToYmd(a.view.calendar.getDate()));
   }, []);
 
   const onSelect = (info: DateSelectArg) => {
@@ -358,8 +422,10 @@ export default function CalendarPage() {
       const end = ev.end ?? new Date(start.getTime() + 60 * 60_000);
       patch =
         kind === 'deadline'
-          ? { allDay: false, dueAt: calDateToIso(end) }
-          : { allDay: false, startAt: calDateToIso(start), endAt: calDateToIso(end) };
+          ? { allDay: false, dueAt: calDateToIso(start) }
+          : ev.extendedProps.point
+            ? { allDay: false, startAt: calDateToIso(start), endAt: calDateToIso(start) }
+            : { allDay: false, startAt: calDateToIso(start), endAt: calDateToIso(end) };
     }
     try {
       await api.updateTask(ev.id, patch);
@@ -399,7 +465,7 @@ export default function CalendarPage() {
         footerToolbar={isMobile ? FOOTER_MOBILE : false}
         height={isMobile ? 'auto' : 'calc(100vh - 7rem)'}
         scrollTime="07:00:00"
-        slotEventOverlap={false}
+        slotEventOverlap
         editable
         droppable
         drop={h.drop}
@@ -408,6 +474,8 @@ export default function CalendarPage() {
         dayMaxEvents
         events={events}
         eventContent={renderEvent}
+        eventShortHeight={40}
+        eventDidMount={onEventMount}
         select={h.select}
         eventClick={h.eventClick}
         eventDrop={h.move}
@@ -418,39 +486,36 @@ export default function CalendarPage() {
     [isMobile, events, h, onDatesSet],
   );
 
-  const modeBtn = (m: ColorMode) => (
-    <button
-      key={m}
-      type="button"
-      aria-pressed={mode === m}
-      onClick={() => setMode(m)}
-      className={`px-3 py-2 text-sm ${mode === m ? 'bg-brand-600 text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
-    >
-      {t.colorBy[m]}
-    </button>
-  );
-
   return (
     <div className="flex flex-col">
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-700">
-        <div
-          role="group"
-          aria-label={t.colorBy.label}
-          className="flex items-center overflow-hidden rounded border border-slate-300 dark:border-slate-600"
-        >
-          <span className="px-2 text-xs text-slate-500">{t.colorBy.label}</span>
-          {(['category', 'urgency', 'importance'] as ColorMode[]).map(modeBtn)}
-        </div>
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 py-2 dark:border-slate-700">
+        <Popover label={t.view.title} icon="🎨">
+          <fieldset className="space-y-1">
+            <legend className="mb-1 text-xs font-semibold">{t.colorBy.label}</legend>
+            {(['category', 'urgency', 'importance'] as ColorMode[]).map((m) => (
+              <label key={m} className="flex cursor-pointer items-center gap-2 py-0.5">
+                <input
+                  type="radio"
+                  name="color-mode"
+                  checked={mode === m}
+                  onChange={() => setMode(m)}
+                  className="h-4 w-4 accent-brand-600"
+                />
+                {t.colorBy[m]}
+              </label>
+            ))}
+          </fieldset>
+        </Popover>
         <button
           type="button"
           onClick={() => setDrawer({ prefill: { allDay: false } })}
-          className="ml-auto rounded bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
+          className="ml-auto rounded-full bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700"
         >
           + {t.nav.newTask}
         </button>
         <button
           type="button"
-          className="rounded px-3 py-2 text-sm hover:bg-slate-100 lg:hidden dark:hover:bg-slate-800"
+          className="rounded-full px-3 py-2 text-sm hover:bg-slate-100 lg:hidden dark:hover:bg-slate-800"
           aria-expanded={showFilters}
           onClick={() => setShowFilters((v) => !v)}
         >
@@ -461,7 +526,7 @@ export default function CalendarPage() {
       {error && (
         <p
           role="alert"
-          className="mx-3 mt-2 flex items-center justify-between rounded bg-red-50 p-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300"
+          className="mt-2 flex items-center justify-between rounded bg-red-50 p-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300"
         >
           {error}
           <button
@@ -475,19 +540,24 @@ export default function CalendarPage() {
         </p>
       )}
 
-      <div className="grid flex-1 gap-3 p-3 lg:grid-cols-[16rem_1fr_18rem]">
+      <div className="grid flex-1 gap-4 py-3 lg:grid-cols-[14rem_minmax(0,1fr)_16rem]">
         <aside className={`${showFilters ? 'block' : 'hidden'} space-y-4 lg:block`}>
           <SidebarCustomize value={sections} onChange={saveSections} />
+          {sections.includes('mini') && (
+            <MiniCalendar
+              selected={viewDate}
+              onPick={(d) => calRef.current?.getApi().gotoDate(d)}
+            />
+          )}
           <Filters
             value={filters}
             onChange={setFilters}
             categories={categories}
             allTags={allTags}
             sections={sections}
-            onJump={(d) => calRef.current?.getApi().gotoDate(d)}
           />
           {sections.includes('legend') && (
-            <Legend categories={categories} onChanged={reloadCategories} />
+            <Legend categories={categories} onChanged={reloadCategories} mode={mode} />
           )}
         </aside>
 

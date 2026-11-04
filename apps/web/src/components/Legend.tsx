@@ -1,14 +1,17 @@
 import { api } from '../lib/api';
 import { IMPORTANCE_COLORS, URGENCY_COLORS } from '../lib/colors';
 import { t } from '../lib/i18n';
-import type { Category } from '../lib/types';
+import type { Category, ColorMode } from '../lib/types';
+import { pastel } from '../lib/colors';
 
 export default function Legend({
   categories,
   onChanged,
+  mode,
 }: {
   categories: Category[];
   onChanged: () => void;
+  mode: ColorMode;
 }) {
   return (
     <section
@@ -16,32 +19,52 @@ export default function Legend({
       className="rounded-lg border border-slate-200 p-3 text-xs dark:border-slate-700"
     >
       <h3 className="mb-2 font-semibold">{t.legend.title}</h3>
-      <ul className="mb-2 space-y-1">
-        {categories.map((c) => (
-          <li key={c.id} className="flex items-center gap-2">
-            <input
-              type="color"
-              value={c.color}
-              aria-label={`${t.legend.pickColor}: ${c.name}`}
-              onChange={(e) => {
-                // อัปเดตตอนปล่อยเมาส์/ปิด picker เพื่อลดจำนวน request
-                const v = e.target.value;
-                e.target.dataset.pending = v;
-              }}
-              onBlur={(e) => {
-                const v = e.target.dataset.pending;
-                if (v && v !== c.color)
-                  api
-                    .updateCategory(c.id, { color: v })
-                    .then(onChanged)
-                    .catch(() => undefined);
-              }}
-              className="h-5 w-5 cursor-pointer rounded border-0 bg-transparent p-0"
-            />
-            {c.name}
-          </li>
-        ))}
-      </ul>
+      {mode === 'category' && (
+        <ul className="mb-2 space-y-1">
+          {categories.map((c) => (
+            <li key={c.id} className="flex items-center gap-2">
+              <input
+                type="color"
+                value={c.color}
+                aria-label={`${t.legend.pickColor}: ${c.name}`}
+                onChange={(e) => {
+                  // อัปเดตตอนปล่อยเมาส์/ปิด picker เพื่อลดจำนวน request
+                  const v = e.target.value;
+                  e.target.dataset.pending = v;
+                }}
+                onBlur={(e) => {
+                  const v = e.target.dataset.pending;
+                  if (v && v !== c.color)
+                    api
+                      .updateCategory(c.id, { color: v })
+                      .then(onChanged)
+                      .catch(() => undefined);
+                }}
+                className="h-5 w-5 cursor-pointer rounded border-0 bg-transparent p-0"
+              />
+              {c.name}
+            </li>
+          ))}
+        </ul>
+      )}
+      {mode !== 'category' && (
+        <ul className="mb-2 space-y-1">
+          {[4, 3, 2, 1].map((l) => {
+            const base = mode === 'urgency' ? URGENCY_COLORS[l]! : IMPORTANCE_COLORS[l]!;
+            const p = pastel(base);
+            return (
+              <li key={l} className="flex items-center gap-2">
+                <span
+                  aria-hidden
+                  className="inline-block h-4 w-6 rounded-sm border"
+                  style={{ background: p.bg, borderColor: base }}
+                />
+                {mode === 'urgency' ? t.urgency[l] : t.importance[l]}
+              </li>
+            );
+          })}
+        </ul>
+      )}
       <p className="mb-1 text-slate-600 dark:text-slate-400">{t.legend.stripe}</p>
       <div className="mb-2 flex items-center gap-1.5">
         {[4, 3, 2, 1].map((l) => (

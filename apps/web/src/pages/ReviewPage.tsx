@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import CategoryBars from '../components/CategoryBars';
 import { api, ApiClientError } from '../lib/api';
-import { addDaysYmd, dayLabel, formatMinutes, mondayOf, todayYmd } from '../lib/dates';
+import {
+  addDaysYmd,
+  dayLabel,
+  defaultReviewWeek,
+  formatMinutes,
+  mondayOf,
+  todayYmd,
+  weekLabel,
+} from '../lib/dates';
 import Mascot from '../components/Mascot';
 import { t } from '../lib/i18n';
 import type { BriefTask, WeeklyStats } from '../lib/types';
@@ -16,7 +24,8 @@ const Card = ({ label, value, hint }: { label: string; value: string; hint?: str
 
 export default function ReviewPage() {
   const thisMonday = mondayOf(todayYmd());
-  const [week, setWeek] = useState(addDaysYmd(thisMonday, -7)); // ค่าเริ่มต้น = สัปดาห์ที่แล้ว
+  const today = todayYmd();
+  const [week, setWeek] = useState(() => defaultReviewWeek(today)); // จ–พ = สัปดาห์ที่แล้ว, พฤ–อา = สัปดาห์นี้
   const [data, setData] = useState<WeeklyStats | null>(null);
   const [error, setError] = useState('');
   const [title, setTitle] = useState('');
@@ -56,7 +65,7 @@ export default function ReviewPage() {
     }
   }
 
-  const list = (items: BriefTask[], withCheck: boolean) => (
+  const list = (items: BriefTask[]) => (
     <ul className="space-y-1">
       {items.length === 0 && <li className="text-sm text-slate-500">{t.review.nothing}</li>}
       {items.map((x) => (
@@ -64,15 +73,21 @@ export default function ReviewPage() {
           key={x.id}
           className="flex items-start gap-2 rounded border border-slate-200 p-2 text-sm dark:border-slate-700"
         >
-          {withCheck ? (
+          {x.status === 'done' ? (
+            <span
+              role="img"
+              aria-label={t.status.done}
+              className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-green-600 text-[10px] text-white"
+            >
+              ✓
+            </span>
+          ) : (
             <input
               type="checkbox"
-              className="mt-0.5"
+              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer appearance-none rounded-full border-2 border-slate-400 checked:border-green-600 checked:bg-green-600 dark:border-slate-300"
               aria-label={`${t.today.complete}: ${x.title}`}
               onChange={() => void api.completeTask(x.id).then(load)}
             />
-          ) : (
-            <span aria-hidden>✅</span>
           )}
           <span className="min-w-0 flex-1 break-words">{x.title}</span>
           {x.date && <span className="shrink-0 text-xs text-slate-500">{dayLabel(x.date)}</span>}
@@ -82,26 +97,46 @@ export default function ReviewPage() {
   );
 
   return (
-    <main className="mx-auto max-w-4xl space-y-4 p-3">
+    <main className="space-y-4 py-3">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="mr-auto text-lg font-semibold">{t.review.title}</h2>
+        <div
+          role="group"
+          aria-label={t.review.pickWeek}
+          className="flex overflow-hidden rounded-full border border-slate-300 text-sm dark:border-slate-600"
+        >
+          {[addDaysYmd(thisMonday, -7), thisMonday].map((w) => (
+            <button
+              key={w}
+              type="button"
+              aria-pressed={week === w}
+              onClick={() => setWeek(w)}
+              className={`px-3 py-1.5 ${week === w ? 'bg-brand-600 text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+            >
+              {weekLabel(w, today)}
+            </button>
+          ))}
+        </div>
         <button
           type="button"
+          aria-label={t.review.prev}
           onClick={() => setWeek(addDaysYmd(week, -7))}
-          className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
+          className="rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
         >
-          ‹ {t.review.prev}
+          ‹
         </button>
         <span data-testid="week-range" className="text-sm font-medium">
+          <strong>{weekLabel(week, today)}</strong>{' '}
           {data ? `${dayLabel(data.weekStart)} – ${dayLabel(data.weekEnd)}` : week}
         </span>
         <button
           type="button"
+          aria-label={t.review.next}
           disabled={week >= thisMonday}
           onClick={() => setWeek(addDaysYmd(week, 7))}
-          className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 disabled:opacity-40 dark:border-slate-600 dark:hover:bg-slate-800"
+          className="rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 disabled:opacity-40 dark:border-slate-600 dark:hover:bg-slate-800"
         >
-          {t.review.next} ›
+          ›
         </button>
       </div>
 
@@ -124,12 +159,12 @@ export default function ReviewPage() {
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <Card label={t.review.done} value={String(data.completed)} />
+            <Card label={t.review.done} value={String(data.completed)} hint={t.defs.completed} />
             <Card label={t.review.overdue} value={String(data.overdueOpen)} />
             <Card
               label={t.review.rate}
               value={data.completionRate === null ? '—' : `${data.completionRate}%`}
-              hint={`${data.scheduledDone}/${data.scheduled} ${t.review.scheduledOf}`}
+              hint={`${data.scheduledDone}/${data.scheduled} ${t.review.scheduledOf} · ${t.defs.rate}`}
             />
             <Card label={t.review.focus} value={formatMinutes(data.focusMinutes)} />
           </div>
@@ -143,11 +178,11 @@ export default function ReviewPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <section aria-label={t.review.completedList} className="space-y-2">
               <h3 className="font-semibold">{t.review.completedList}</h3>
-              {list(data.completedTasks, false)}
+              {list(data.completedTasks)}
             </section>
             <section aria-label={t.review.notDoneList} className="space-y-2">
               <h3 className="font-semibold">{t.review.notDoneList}</h3>
-              {list(data.notDoneTasks, true)}
+              {list(data.notDoneTasks)}
             </section>
           </div>
 
@@ -156,8 +191,8 @@ export default function ReviewPage() {
             className="space-y-2 rounded-lg border border-brand-200 p-3 dark:border-brand-900"
           >
             <h3 className="font-semibold">
-              {t.review.plan}{' '}
-              <span className="text-xs font-normal text-slate-500">
+              {t.review.planOf} {weekLabel(data.nextWeek.weekStart, today)}{' '}
+              <span className="text-xs font-normal text-slate-600 dark:text-slate-300">
                 ({dayLabel(data.nextWeek.weekStart)} – {dayLabel(data.nextWeek.weekEnd)})
               </span>
             </h3>
@@ -170,7 +205,7 @@ export default function ReviewPage() {
                 value={title}
                 maxLength={200}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder={t.review.planTitle}
+                placeholder={`${t.review.planTitle} ${weekLabel(data.nextWeek.weekStart, today)}`}
                 className="min-w-0 flex-1 rounded border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800"
               />
               <label htmlFor="plan-day" className="sr-only">
@@ -199,7 +234,7 @@ export default function ReviewPage() {
             {data.nextWeek.tasks.length === 0 ? (
               <p className="text-sm text-slate-500">{t.review.planEmpty}</p>
             ) : (
-              list(data.nextWeek.tasks, false)
+              list(data.nextWeek.tasks)
             )}
           </section>
         </>

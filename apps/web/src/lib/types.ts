@@ -114,7 +114,7 @@ export interface NotificationSettings {
 }
 
 export type SidebarSection =
-  'search' | 'jump' | 'category' | 'urgency' | 'importance' | 'status' | 'tag' | 'legend';
+  'mini' | 'search' | 'category' | 'urgency' | 'importance' | 'status' | 'tag' | 'legend';
 
 export interface SettingsView {
   settings: NotificationSettings;

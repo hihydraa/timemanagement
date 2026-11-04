@@ -1,4 +1,5 @@
 import { bangkokDate, bangkokParts } from '../lib/time';
+import { IMPORTANCE_LABEL, URGENCY_LABEL } from '../lib/labels';
 import type { LineMessage } from './line';
 import type { TaskDto } from './tasks';
 
@@ -55,7 +56,11 @@ export const taskDate = (t: TaskDto): string | null =>
 /** ข้อความเวลาสั้น ๆ เช่น "14:00–15:30", "ทั้งวัน", "⏰ 17:00" */
 export const timeText = (t: TaskDto): string => {
   if (t.allDay) return 'ทั้งวัน';
-  if (t.startAt) return t.endAt ? `${hmOf(t.startAt)}–${hmOf(t.endAt)}` : hmOf(t.startAt);
+  // เริ่ม = จบ ถือเป็นจุดเวลา (แสดงเวลาเดียว)
+  if (t.startAt)
+    return t.endAt && hmOf(t.endAt) !== hmOf(t.startAt)
+      ? `${hmOf(t.startAt)}–${hmOf(t.endAt)}`
+      : hmOf(t.startAt);
   if (t.dueAt) return `⏰ ${hmOf(t.dueAt)}`;
   return 'ไม่กำหนดเวลา';
 };
@@ -108,6 +113,15 @@ const button = (
   ...(color ? { color } : {}),
   action: { ...action, label: clip(label, 20) },
 });
+/** ระดับที่ควรเน้นเป็นคำ เช่น "ด่วนมาก · สำคัญ" (ระดับปกติ/ต่ำไม่แสดง) */
+const levelText = (t: TaskDto): string =>
+  [
+    t.urgency >= 3 ? URGENCY_LABEL[t.urgency] : '',
+    t.importance >= 3 ? IMPORTANCE_LABEL[t.importance] : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
 const pb = (data: string) => ({ type: 'postback', data });
 
 export type MascotPose = 'morning' | 'deadline' | 'done' | 'rest';
@@ -121,9 +135,6 @@ const mascotHero = (baseUrl: string, pose: MascotPose) => ({
   backgroundColor: '#F6ECD6',
 });
 
-const stars = (n: number) => '★'.repeat(n);
-const bangs = (n: number) => '!'.repeat(n);
-
 /** การ์ดยืนยันหลังสร้างงาน: มีปุ่ม เสร็จ / แก้ไข / ลบ */
 export function taskCard(
   t: TaskDto,
@@ -136,8 +147,9 @@ export function taskCard(
 ): LineMessage {
   const stripe = URGENCY_COLOR[t.urgency] ?? '#9ca3af';
   const meta = [
-    `เร่งด่วน ${bangs(t.urgency)}`,
-    `สำคัญ ${stars(t.importance)}`,
+    // แสดงเฉพาะระดับที่ควรเน้น (ด่วน/สำคัญขึ้นไป) เป็นคำ
+    t.urgency >= 3 ? (URGENCY_LABEL[t.urgency] ?? '') : '',
+    t.importance >= 3 ? (IMPORTANCE_LABEL[t.importance] ?? '') : '',
     o.categoryName ? `#${o.categoryName}` : '',
     ...t.tags.map((x) => `@${x}`),
   ]
@@ -255,7 +267,7 @@ export function listCard(
             contents: [
               txt(clip(t.title, 60), { size: 'sm', weight: 'bold' }),
               txt(
-                `${taskDate(t) && sections.length > 1 && s.title.includes('เลย') ? `${dayLabel(taskDate(t)!)} · ` : ''}${timeText(t)}  ${bangs(t.urgency)} ${stars(t.importance)}${t.attachmentCount ? ' 📎' : ''}`,
+                `${taskDate(t) && sections.length > 1 && s.title.includes('เลย') ? `${dayLabel(taskDate(t)!)} · ` : ''}${timeText(t)}${levelText(t) ? `  ${levelText(t)}` : ''}${t.attachmentCount ? ' 📎' : ''}`,
                 { size: 'xs', color: '#6b7280' },
               ),
             ],
@@ -379,11 +391,7 @@ export function alertCarousel(items: AlertItem[], baseUrl: string): LineMessage 
             txt(label, { size: 'xs', weight: 'bold', color: '#3d6552' }),
             txt(clip(t.title, 100), { weight: 'bold', size: 'md', margin: 'sm' }),
             txt(`🕒 ${whenText(t)}`, { size: 'sm', margin: 'md' }),
-            txt(`เร่งด่วน ${bangs(t.urgency)}  สำคัญ ${stars(t.importance)}`, {
-              size: 'xs',
-              color: '#6b7280',
-              margin: 'sm',
-            }),
+            txt(levelText(t) || ' ', { size: 'xs', color: '#6b7280', margin: 'sm' }),
           ],
         },
       ],

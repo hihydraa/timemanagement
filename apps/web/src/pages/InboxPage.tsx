@@ -5,6 +5,7 @@ import { api, ApiClientError } from '../lib/api';
 import { useApp } from '../lib/appContext';
 import { nextMonday, todayYmd, tomorrow } from '../lib/dates';
 import EmptyState from '../components/EmptyState';
+import { URGENCY_COLORS } from '../lib/colors';
 import { t } from '../lib/i18n';
 import type { Task } from '../lib/types';
 
@@ -52,7 +53,7 @@ export default function InboxPage() {
     'rounded border border-slate-300 px-2.5 py-1.5 text-xs hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800';
 
   return (
-    <main className="mx-auto max-w-3xl space-y-4 p-3">
+    <main className="space-y-4 py-3">
       <h2 className="text-lg font-semibold">{t.inbox.title}</h2>
 
       <form onSubmit={quickAdd} className="flex gap-2">
@@ -94,7 +95,8 @@ export default function InboxPage() {
         {tasks?.map((task) => (
           <li
             key={task.id}
-            className="rounded-lg border border-slate-200 p-3 dark:border-slate-700"
+            className="rounded-lg border border-l-4 border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800"
+            style={{ borderLeftColor: URGENCY_COLORS[task.urgency] }}
           >
             <div className="flex items-start gap-2">
               <input

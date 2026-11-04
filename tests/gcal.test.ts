@@ -174,7 +174,7 @@ describe('ซิงก์งานไป Google Calendar', () => {
     expect(e.end).toEqual({ dateTime: '2026-11-05T15:00:00+07:00', timeZone: 'Asia/Bangkok' });
     expect(String(e.description)).toContain('รายละเอียด');
     expect(String(e.description)).toContain(`http://localhost:5173/?task=${t.id}`);
-    expect(String(e.description)).toContain('!!!!');
+    expect(String(e.description)).toContain('ความเร่งด่วน: ด่วนมาก');
     expect(e.reminders).toEqual({
       useDefault: false,
       overrides: [{ method: 'popup', minutes: 30 }],

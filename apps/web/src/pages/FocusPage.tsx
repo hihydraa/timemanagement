@@ -254,7 +254,7 @@ export default function FocusPage() {
     : t.focus.phaseIdle;
 
   return (
-    <main className="mx-auto grid max-w-3xl gap-4 p-3 md:grid-cols-[1fr_16rem]">
+    <main className="grid gap-4 py-3 md:grid-cols-[1fr_16rem]">
       <section aria-label={t.focus.title} className="space-y-4">
         <div className="flex items-end gap-3">
           <Mascot pose={run?.phase === 'break' ? 'rest' : run ? 'plan' : 'morning'} height={96} />

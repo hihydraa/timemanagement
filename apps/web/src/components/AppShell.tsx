@@ -3,6 +3,7 @@ import { api } from '../lib/api';
 import { AppContext, type AppCtx, type View } from '../lib/appContext';
 import { t } from '../lib/i18n';
 import CelebrateToast from './CelebrateToast';
+import PageContainer from './PageContainer';
 import Mascot from './Mascot';
 import type { Category, GcalStatus, PushStatus, User } from '../lib/types';
 import { useOnline } from '../lib/pwa';
@@ -148,125 +149,129 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
 
   return (
     <AppContext.Provider value={ctx}>
-      <div className="mx-auto flex min-h-screen max-w-[1600px] flex-col">
+      <div className="flex min-h-screen flex-col">
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:text-brand-700 focus:shadow dark:focus:bg-slate-900"
         >
           {t.skip}
         </a>
-        <header className="flex items-center gap-2 border-b border-slate-200 px-3 pt-2 dark:border-slate-700">
-          <h1 className="flex items-center gap-1.5 pb-1 text-lg font-bold text-brand-700 dark:text-brand-300">
-            <img
-              src="/icons/favicon-64.png"
-              alt=""
-              width={32}
-              height={32}
-              className="rounded-lg"
-              decoding="async"
-            />
-            {t.appName}
-          </h1>
-          <nav aria-label="หน้าหลัก" className="-mb-px flex flex-1 gap-1 overflow-x-auto">
-            {VIEWS.map((v) => (
+        <header className="border-b border-slate-200 dark:border-slate-700">
+          <PageContainer className="flex items-center gap-2 pt-2">
+            <h1 className="flex items-center gap-1.5 pb-1 text-lg font-bold text-brand-700 dark:text-brand-300">
+              <img
+                src="/icons/favicon-64.png"
+                alt=""
+                width={32}
+                height={32}
+                className="rounded-lg"
+                decoding="async"
+              />
+              {t.appName}
+            </h1>
+            <nav aria-label="หน้าหลัก" className="-mb-px flex flex-1 gap-1 overflow-x-auto">
+              {VIEWS.map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  aria-current={view === v ? 'page' : undefined}
+                  onClick={() => goTo(v)}
+                  className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm ${view === v ? 'border-brand-600 font-semibold text-brand-700 dark:text-brand-300' : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'}`}
+                >
+                  {t.views[v]}
+                </button>
+              ))}
+            </nav>
+            <div ref={menuRef} className="relative pb-1">
               <button
-                key={v}
                 type="button"
-                aria-current={view === v ? 'page' : undefined}
-                onClick={() => goTo(v)}
-                className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm ${view === v ? 'border-brand-600 font-semibold text-brand-700 dark:text-brand-300' : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'}`}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((o) => !o)}
+                className="rounded px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
               >
-                {t.views[v]}
+                {t.menu.label} ▾
+                {gcal?.needsReconnect && (
+                  <span aria-label="ต้องเชื่อมใหม่" className="ml-1 text-amber-600">
+                    ⚠
+                  </span>
+                )}
               </button>
-            ))}
-          </nav>
-          <div ref={menuRef} className="relative pb-1">
-            <button
-              type="button"
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((o) => !o)}
-              className="rounded px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              {t.menu.label} ▾
-              {gcal?.needsReconnect && (
-                <span aria-label="ต้องเชื่อมใหม่" className="ml-1 text-amber-600">
-                  ⚠
-                </span>
+              {menuOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 z-40 mt-1 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+                >
+                  {menuItem(t.settings.button, () => setDialog('settings'))}
+                  {menuItem(
+                    <>
+                      {t.gcal.button}
+                      {gcal?.connected && gcal.syncEnabled && (
+                        <span aria-label="เชื่อมอยู่" className="ml-1 text-green-600">
+                          ●
+                        </span>
+                      )}
+                    </>,
+                    () => setDialog('gcal'),
+                  )}
+                  {menuItem(t.line.button, () => setDialog('line'))}
+                  {menuItem(t.menu.export, () => setDialog('export'))}
+                  <div className="my-1 border-t border-slate-200 dark:border-slate-700" />
+                  {menuItem(
+                    `${t.nav.logout} (${user.email})`,
+                    () => void api.logout().finally(onLogout),
+                  )}
+                </div>
               )}
-            </button>
-            {menuOpen && (
-              <div
-                role="menu"
-                className="absolute right-0 z-40 mt-1 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
-              >
-                {menuItem(t.settings.button, () => setDialog('settings'))}
-                {menuItem(
-                  <>
-                    {t.gcal.button}
-                    {gcal?.connected && gcal.syncEnabled && (
-                      <span aria-label="เชื่อมอยู่" className="ml-1 text-green-600">
-                        ●
-                      </span>
-                    )}
-                  </>,
-                  () => setDialog('gcal'),
-                )}
-                {menuItem(t.line.button, () => setDialog('line'))}
-                {menuItem(t.menu.export, () => setDialog('export'))}
-                <div className="my-1 border-t border-slate-200 dark:border-slate-700" />
-                {menuItem(
-                  `${t.nav.logout} (${user.email})`,
-                  () => void api.logout().finally(onLogout),
-                )}
-              </div>
-            )}
-          </div>
+            </div>
+          </PageContainer>
         </header>
 
-        {!online && (
-          <p
-            role="status"
-            className="mx-3 mt-2 flex items-center gap-3 rounded-lg bg-slate-100 p-2 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200"
-          >
-            <Mascot pose="rest" height={44} />
-            <span>
-              <strong>{t.mascot.offline}</strong> — {t.offlineBanner}
-            </span>
-          </p>
-        )}
+        <PageContainer className="flex-1">
+          {!online && (
+            <p
+              role="status"
+              className="mt-2 flex items-center gap-3 rounded-lg bg-slate-100 p-2 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            >
+              <Mascot pose="rest" height={44} />
+              <span>
+                <strong>{t.mascot.offline}</strong> — {t.offlineBanner}
+              </span>
+            </p>
+          )}
 
-        {push && push.limitConfigured && (push.nearLimit || push.exhausted) && (
-          <p
-            role="status"
-            className={`mx-3 mt-2 rounded p-2 text-sm ${push.exhausted ? 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300'}`}
-          >
-            {push.exhausted
-              ? t.settings.quotaFull
-              : `${t.settings.quotaBanner} (${push.used}/${push.limit})`}
-          </p>
-        )}
+          {push && push.limitConfigured && (push.nearLimit || push.exhausted) && (
+            <p
+              role="status"
+              className={`mt-2 rounded p-2 text-sm ${push.exhausted ? 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300'}`}
+            >
+              {push.exhausted
+                ? t.settings.quotaFull
+                : `${t.settings.quotaBanner} (${push.used}/${push.limit})`}
+            </p>
+          )}
 
-        <div id="main" tabIndex={-1} className="flex-1 outline-none">
-          <Suspense
-            fallback={
-              <div
-                role="status"
-                className="flex flex-col items-center gap-2 p-8 text-slate-600 dark:text-slate-300"
-              >
-                <Mascot pose="morning" height={110} bob />
-                <p>{t.mascot.loading}</p>
-              </div>
-            }
-          >
-            {view === 'calendar' && <CalendarPage />}
-            {view === 'inbox' && <InboxPage />}
-            {view === 'matrix' && <MatrixPage />}
-            {view === 'focus' && <FocusPage />}
-            {view === 'review' && <ReviewPage />}
-            {view === 'stats' && <StatsPage />}
-          </Suspense>
-        </div>
+          <div id="main" tabIndex={-1} className="flex-1 outline-none">
+            <Suspense
+              fallback={
+                <div
+                  role="status"
+                  className="flex flex-col items-center gap-2 p-8 text-slate-600 dark:text-slate-300"
+                >
+                  <Mascot pose="morning" height={110} bob />
+                  <p>{t.mascot.loading}</p>
+                </div>
+              }
+            >
+              {view === 'calendar' && <CalendarPage />}
+              {view === 'inbox' && <InboxPage />}
+              {view === 'matrix' && <MatrixPage />}
+              {view === 'focus' && <FocusPage />}
+              {view === 'review' && <ReviewPage />}
+              {view === 'stats' && <StatsPage />}
+            </Suspense>
+          </div>
+        </PageContainer>
 
         {dialog === 'line' && <LineDialog onClose={() => setDialog(null)} />}
         {dialog === 'export' && <ExportDialog onClose={() => setDialog(null)} />}

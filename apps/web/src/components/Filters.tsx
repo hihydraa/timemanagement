@@ -20,6 +20,20 @@ export const emptyFilters = (): FilterState => ({
   statuses: new Set<Status>(['todo', 'doing', 'done']),
 });
 
+/** จำนวนตัวกรองที่กำลังทำงานอยู่ (สถานะเริ่มต้น = ต้องทำ/กำลังทำ/เสร็จ ไม่นับ) */
+export function activeCount(f: FilterState): number {
+  const d = emptyFilters().statuses;
+  const statusChanged = f.statuses.size !== d.size || [...d].some((x) => !f.statuses.has(x));
+  return (
+    (f.q.trim() ? 1 : 0) +
+    (f.tag ? 1 : 0) +
+    (f.categories.size ? 1 : 0) +
+    (f.urgency.size ? 1 : 0) +
+    (f.importance.size ? 1 : 0) +
+    (statusChanged ? 1 : 0)
+  );
+}
+
 function toggle<T>(s: Set<T>, v: T): Set<T> {
   const n = new Set(s);
   if (n.has(v)) n.delete(v);
@@ -36,7 +50,6 @@ interface Props {
   categories: Category[];
   allTags: string[];
   sections: SidebarSection[];
-  onJump: (date: string) => void;
 }
 
 const legendCls = 'mb-1 text-xs font-semibold text-slate-600 dark:text-slate-400';
@@ -157,7 +170,7 @@ function StatusIcon({ status, light }: { status: Status; light: boolean }) {
   );
 }
 
-export default function Filters({ value, onChange, categories, allTags, sections, onJump }: Props) {
+export default function Filters({ value, onChange, categories, allTags, sections }: Props) {
   const set = (p: Partial<FilterState>) => onChange({ ...value, ...p });
   const has = (s: SidebarSection) => sections.includes(s);
   return (
@@ -174,20 +187,6 @@ export default function Filters({ value, onChange, categories, allTags, sections
             value={value.q}
             onChange={(e) => set({ q: e.target.value })}
             className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 dark:border-slate-600 dark:bg-slate-800"
-          />
-        </div>
-      )}
-
-      {has('jump') && (
-        <div>
-          <label htmlFor="jump" className={`block ${legendCls}`}>
-            {t.filter.jump}
-          </label>
-          <input
-            id="jump"
-            type="date"
-            onChange={(e) => e.target.value && onJump(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800"
           />
         </div>
       )}
@@ -286,13 +285,15 @@ export default function Filters({ value, onChange, categories, allTags, sections
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => onChange(emptyFilters())}
-        className="text-xs text-brand-700 underline dark:text-brand-300"
-      >
-        {t.filter.clear}
-      </button>
+      {activeCount(value) > 0 && (
+        <button
+          type="button"
+          onClick={() => onChange(emptyFilters())}
+          className="text-xs text-brand-700 underline dark:text-brand-300"
+        >
+          {t.filter.clear} ({activeCount(value)})
+        </button>
+      )}
     </section>
   );
 }

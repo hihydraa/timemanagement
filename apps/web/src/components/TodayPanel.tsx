@@ -1,6 +1,8 @@
 import { api } from '../lib/api';
+import { URGENCY_COLORS } from '../lib/colors';
 import { t } from '../lib/i18n';
 import EmptyState from './EmptyState';
+import TaskMeta from './TaskMeta';
 import Mascot, { type Pose } from './Mascot';
 import { formatTimeRange } from '../lib/time';
 import type { Task, TodayData } from '../lib/types';
@@ -37,7 +39,8 @@ function Group({
         {tasks.map((task) => (
           <li
             key={task.id}
-            className="flex items-start gap-2 rounded border border-slate-200 p-2 dark:border-slate-700"
+            className="flex items-start gap-2 rounded-lg border border-l-4 border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-800"
+            style={{ borderLeftColor: URGENCY_COLORS[task.urgency] }}
           >
             <input
               type="checkbox"
@@ -52,10 +55,9 @@ function Group({
             />
             <button type="button" onClick={() => onOpen(task)} className="min-w-0 flex-1 text-left">
               <span className="block truncate text-sm font-medium">{task.title}</span>
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                {formatTimeRange(task) || task.dueDate} · {'!'.repeat(task.urgency)}{' '}
-                {'★'.repeat(task.importance)}
-                {task.attachmentCount > 0 && ` · 📎${task.attachmentCount}`}
+              <span className="flex flex-wrap items-center gap-1 text-xs text-slate-600 dark:text-slate-300">
+                <span>{formatTimeRange(task) || task.dueDate}</span>
+                <TaskMeta task={task} />
               </span>
             </button>
           </li>

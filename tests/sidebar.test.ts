@@ -12,9 +12,9 @@ beforeEach(async () => {
 });
 
 describe('ตั้งค่าแถบด้านข้างต่อบัญชี', () => {
-  it('ค่าเริ่มต้นแสดงเฉพาะที่สำคัญ: ค้นหา, ประเภท, ความเร่งด่วน', async () => {
+  it('ค่าเริ่มต้นแสดงเฉพาะที่สำคัญ: ปฏิทินย่อ, ค้นหา, ประเภท, ความเร่งด่วน', async () => {
     const r = await a.call('GET', '/api/settings');
-    expect(r.json.sidebarSections).toEqual(['search', 'category', 'urgency']);
+    expect(r.json.sidebarSections).toEqual(['mini', 'search', 'category', 'urgency']);
   });
 
   it('บันทึกได้ ลำดับคงที่ ตัดค่าซ้ำ และแยกตามบัญชี', async () => {
@@ -29,6 +29,7 @@ describe('ตั้งค่าแถบด้านข้างต่อบั�
       'legend',
     ]);
     expect((await b.call('GET', '/api/settings')).json.sidebarSections).toEqual([
+      'mini',
       'search',
       'category',
       'urgency',

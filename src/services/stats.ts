@@ -15,6 +15,20 @@ const OPEN = new Set(['todo', 'doing']);
 const rate = (done: number, total: number) =>
   total === 0 ? null : Math.round((done / total) * 1000) / 10;
 
+/**
+ * นิยามเดียวของ "อัตราสำเร็จ" ที่ใช้ทั้งหน้ารีวิวและสถิติ:
+ * (งานที่กำหนดไว้ในช่วง ที่สถานะเสร็จแล้ว) ÷ (งานที่กำหนดไว้ในช่วงทั้งหมด ไม่นับที่ยกเลิก)
+ * ต่างจาก "งานที่เสร็จ" ซึ่งนับตามวันที่ทำเสร็จจริงโดยไม่สนว่ากำหนดไว้ช่วงไหน
+ */
+export function completionOf(scheduled: { status: string }[]) {
+  const scheduledDone = scheduled.filter((t) => t.status === 'done').length;
+  return {
+    scheduled: scheduled.length,
+    scheduledDone,
+    completionRate: rate(scheduledDone, scheduled.length),
+  };
+}
+
 /** งานที่ "กำหนด" ในช่วงวันที่ (ตามวันเริ่ม/เดดไลน์/ทั้งวัน) ไม่รวมที่ยกเลิก — แถวจริง + ครั้งเสมือนที่ยังไม่มีแถว (นับเป็นยังไม่ทำ) */
 async function scheduledIn(db: Db, userId: string, from: string, to: string): Promise<TaskRow[]> {
   const start = fromBangkok(from).toISOString();
@@ -126,7 +140,6 @@ export async function weeklyStats(
   const scheduled = (await scheduledIn(db, userId, weekStart, weekEnd)).filter(
     (t) => (anchorDateOf(t) ?? weekEnd) <= today || !t.id.includes('~'),
   );
-  const scheduledDone = scheduled.filter((t) => t.status === 'done').length;
   const notDone = scheduled.filter((t) => OPEN.has(t.status));
   const overdueOpen = notDone.filter((t) => (anchorDateOf(t) ?? today) < today);
 
@@ -163,9 +176,7 @@ export async function weeklyStats(
     weekStart,
     weekEnd,
     completed: completed.length,
-    scheduled: scheduled.length,
-    scheduledDone,
-    completionRate: rate(scheduledDone, scheduled.length),
+    ...completionOf(scheduled),
     overdueOpen: overdueOpen.length,
     focusMinutes,
     byCategory,
@@ -211,7 +222,6 @@ export async function overviewStats(db: Db, userId: string, days: number, at: Da
     const d = anchorDateOf(t);
     if (d) schedByDate.set(d, (schedByDate.get(d) ?? 0) + 1);
   }
-  const scheduledDone = scheduled.filter((t) => t.status === 'done').length;
 
   const daily = Array.from({ length: days }, (_, i) => {
     const d = addDays(from, i);
@@ -260,9 +270,7 @@ export async function overviewStats(db: Db, userId: string, days: number, at: Da
     days,
     from,
     to: today,
-    scheduled: scheduled.length,
-    scheduledDone,
-    completionRate: rate(scheduledDone, scheduled.length),
+    ...completionOf(scheduled),
     completedTotal: completedInRange.length,
     focusMinutes,
     daily,

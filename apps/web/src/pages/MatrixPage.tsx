@@ -4,6 +4,7 @@ import TaskMeta from '../components/TaskMeta';
 import { api, ApiClientError } from '../lib/api';
 import { useApp } from '../lib/appContext';
 import { dayLabel } from '../lib/dates';
+import { URGENCY_COLORS } from '../lib/colors';
 import { t } from '../lib/i18n';
 import type { Task } from '../lib/types';
 
@@ -97,7 +98,7 @@ export default function MatrixPage() {
   }
 
   return (
-    <main className="mx-auto max-w-5xl space-y-3 p-3">
+    <main className="space-y-3 py-3">
       <h2 className="text-lg font-semibold">{t.matrix.title}</h2>
       <p className="text-sm text-slate-600 dark:text-slate-300">{t.matrix.hint}</p>
       {error && (
@@ -155,7 +156,8 @@ export default function MatrixPage() {
                       e.dataTransfer.setData('text/plain', task.id);
                       e.dataTransfer.effectAllowed = 'move';
                     }}
-                    className="cursor-grab rounded border border-slate-200 bg-white p-2 active:cursor-grabbing dark:border-slate-700 dark:bg-slate-900"
+                    className="cursor-grab rounded-lg border border-l-4 border-slate-200 bg-white p-2 active:cursor-grabbing dark:border-slate-700 dark:bg-slate-800"
+                    style={{ borderLeftColor: URGENCY_COLORS[task.urgency] }}
                   >
                     <button
                       type="button"

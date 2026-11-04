@@ -11,8 +11,8 @@ const r = new Hono<AppEnv>();
 
 /** ส่วนของแถบด้านข้างที่ผู้ใช้เลือกแสดง/ซ่อนได้ (ลำดับแสดงคงที่ตามนี้) */
 export const SIDEBAR_SECTIONS = [
+  'mini',
   'search',
-  'jump',
   'category',
   'urgency',
   'importance',
@@ -20,7 +20,7 @@ export const SIDEBAR_SECTIONS = [
   'tag',
   'legend',
 ] as const;
-export const DEFAULT_SIDEBAR: string[] = ['search', 'category', 'urgency'];
+export const DEFAULT_SIDEBAR: string[] = ['mini', 'search', 'category', 'urgency'];
 
 function parseSidebar(raw: string | null | undefined): string[] {
   if (!raw) return DEFAULT_SIDEBAR;

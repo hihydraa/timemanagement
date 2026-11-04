@@ -2,16 +2,58 @@ import { useEffect, useState } from 'react';
 import { api, ApiClientError } from '../lib/api';
 import { dayLabel, formatMinutes } from '../lib/dates';
 import EmptyState from '../components/EmptyState';
+import { isSparse, yTicks } from '../lib/chart';
 import { t } from '../lib/i18n';
 import type { OverviewStats } from '../lib/types';
 
 const RANGES = [7, 30, 90];
 
+/** heatmap รายวัน (จันทร์–อาทิตย์): ใช้เมื่อข้อมูลน้อย ความเข้ม = จำนวนงานที่เสร็จ (มีตัวเลขกำกับ ไม่พึ่งสีอย่างเดียว) */
+function DailyHeatmap({ data }: { data: OverviewStats['daily'] }) {
+  const peak = Math.max(1, ...data.map((d) => d.completed));
+  const lead = (new Date(`${data[0]!.date}T00:00:00Z`).getUTCDay() + 6) % 7;
+  const cells: (OverviewStats['daily'][number] | null)[] = [
+    ...Array<null>(lead).fill(null),
+    ...data,
+  ];
+  return (
+    <div role="group" aria-label={t.stats.daily}>
+      <div className="grid grid-cols-7 gap-1.5 text-center text-xs">
+        {['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา'].map((w) => (
+          <span key={w} className="text-slate-600 dark:text-slate-300">
+            {w}
+          </span>
+        ))}
+        {cells.map((c, i) =>
+          c ? (
+            <div
+              key={c.date}
+              title={`${dayLabel(c.date)}: เสร็จ ${c.completed} / กำหนด ${c.scheduled}`}
+              className={`flex aspect-square flex-col items-center justify-center rounded-lg border ${c.completed ? 'border-brand-600 font-semibold text-white' : 'border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300'}`}
+              style={
+                c.completed
+                  ? { background: `rgb(63 102 80 / ${0.55 + 0.45 * (c.completed / peak)})` }
+                  : undefined
+              }
+            >
+              <span className="text-[11px] opacity-80">{Number(c.date.slice(8))}</span>
+              <span className="text-sm">{c.completed ? `✓ ${c.completed}` : '·'}</span>
+            </div>
+          ) : (
+            <span key={`b${i}`} />
+          ),
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DailyChart({ data }: { data: OverviewStats['daily'] }) {
   const W = 600;
   const H = 180;
   const pad = { l: 28, r: 4, t: 8, b: 20 };
-  const max = Math.max(1, ...data.map((d) => Math.max(d.completed, d.scheduled)));
+  const ticks = yTicks(Math.max(1, ...data.map((d) => Math.max(d.completed, d.scheduled))));
+  const max = ticks[ticks.length - 1] ?? 1;
   const bw = (W - pad.l - pad.r) / data.length;
   const y = (v: number) => pad.t + (H - pad.t - pad.b) * (1 - v / max);
   const total = data.reduce((n, d) => n + d.completed, 0);
@@ -22,23 +64,17 @@ function DailyChart({ data }: { data: OverviewStats['daily'] }) {
       aria-label={`${t.stats.daily}: รวม ${total} งาน`}
       className="w-full"
     >
-      {[0, 0.5, 1].map((f) => (
-        <g key={f}>
+      {ticks.map((v) => (
+        <g key={v}>
           <line
             x1={pad.l}
             x2={W - pad.r}
-            y1={y(max * f)}
-            y2={y(max * f)}
+            y1={y(v)}
+            y2={y(v)}
             className="stroke-slate-200 dark:stroke-slate-700"
           />
-          <text
-            x={pad.l - 4}
-            y={y(max * f) + 3}
-            textAnchor="end"
-            fontSize="9"
-            className="fill-slate-500"
-          >
-            {Math.round(max * f)}
+          <text x={pad.l - 4} y={y(v) + 3} textAnchor="end" fontSize="9" className="fill-slate-500">
+            {v}
           </text>
         </g>
       ))}
@@ -104,7 +140,7 @@ export default function StatsPage() {
   const useFocus = (d?.focusMinutes ?? 0) > 0; // มีเวลาโฟกัสก็แบ่งตามเวลา ไม่งั้นแบ่งตามจำนวนงาน
 
   return (
-    <main className="mx-auto max-w-4xl space-y-4 p-3">
+    <main className="space-y-4 py-3">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="mr-auto text-lg font-semibold">{t.stats.title}</h2>
         <div
@@ -143,12 +179,12 @@ export default function StatsPage() {
               [
                 t.stats.rate,
                 d.completionRate === null ? '—' : `${d.completionRate}%`,
-                `${d.scheduledDone}/${d.scheduled}`,
+                `${d.scheduledDone}/${d.scheduled} · ${t.defs.rate}`,
               ],
               [
                 t.stats.completed,
                 String(d.completedTotal),
-                `${t.stats.thisWeek} ${d.totals.doneThisWeek}`,
+                `${t.defs.completed} (${t.stats.thisWeek} ${d.totals.doneThisWeek})`,
               ],
               [t.stats.focus, formatMinutes(d.focusMinutes), `${t.stats.open} ${d.totals.open}`],
               [
@@ -170,7 +206,7 @@ export default function StatsPage() {
 
           <section aria-label={t.stats.daily} className="space-y-2">
             <h3 className="font-semibold">{t.stats.daily}</h3>
-            <DailyChart data={d.daily} />
+            {isSparse(d.daily) ? <DailyHeatmap data={d.daily} /> : <DailyChart data={d.daily} />}
             <details>
               <summary className="cursor-pointer text-xs text-brand-600 dark:text-brand-400">
                 {t.stats.table}

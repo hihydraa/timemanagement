@@ -46,3 +46,25 @@ export function formatMinutes(min: number): string {
 }
 
 export { todayYmd, wallNow };
+
+/**
+ * สัปดาห์ที่หน้ารีวิวเปิดเป็นค่าเริ่มต้น (วันจันทร์ของสัปดาห์นั้น):
+ * จันทร์–พุธ = สัปดาห์ที่แล้ว (สรุปสัปดาห์ที่เพิ่งจบ), พฤหัส–อาทิตย์ = สัปดาห์ปัจจุบัน
+ */
+export function defaultReviewWeek(today: string): string {
+  const monday = mondayOf(today);
+  const dayIndex = (new Date(`${today}T00:00:00Z`).getUTCDay() + 6) % 7; // จ=0 … อา=6
+  return dayIndex <= 2 ? addDaysYmd(monday, -7) : monday;
+}
+
+/** ป้ายสัปดาห์เทียบกับวันนี้: "สัปดาห์นี้" / "สัปดาห์ที่แล้ว" / "สัปดาห์หน้า" / "สัปดาห์ของ จ. 20 ต.ค." */
+export function weekLabel(weekStart: string, today: string): string {
+  const diff = Math.round(
+    (Date.parse(`${weekStart}T00:00:00Z`) - Date.parse(`${mondayOf(today)}T00:00:00Z`)) /
+      (7 * 864e5),
+  );
+  if (diff === 0) return 'สัปดาห์นี้';
+  if (diff === -1) return 'สัปดาห์ที่แล้ว';
+  if (diff === 1) return 'สัปดาห์หน้า';
+  return `สัปดาห์ของ ${dayLabel(weekStart)}`;
+}
