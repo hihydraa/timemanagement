@@ -1,3 +1,62 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100;
+    font-family:
+      'Noto Sans Thai',
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      sans-serif;
+  }
+  button {
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-indigo-500;
+  }
+}
+
+/* FullCalendar theming */
+.fc {
+  --fc-button-bg-color: #4f46e5;
+  --fc-button-border-color: #4f46e5;
+  --fc-button-hover-bg-color: #4338ca;
+  --fc-button-hover-border-color: #4338ca;
+  --fc-button-active-bg-color: #3730a3;
+  --fc-button-active-border-color: #3730a3;
+  --fc-today-bg-color: rgba(79, 70, 229, 0.08);
+  --fc-now-indicator-color: #dc2626;
+}
+.fc .fc-toolbar-title {
+  font-size: 1.1rem;
+}
+.fc .fc-button {
+  min-height: 2.25rem;
+}
+.dobby-done {
+  opacity: 0.5;
+}
+.dobby-done .fc-event-main span,
+.dobby-done .fc-event-main div > div {
+  text-decoration: line-through;
+}
+@media (prefers-color-scheme: dark) {
+  .fc {
+    --fc-page-bg-color: #0f172a;
+    --fc-neutral-bg-color: #1e293b;
+    --fc-neutral-text-color: #cbd5e1;
+    --fc-border-color: #334155;
+    --fc-list-event-hover-bg-color: #1e293b;
+    --fc-today-bg-color: rgba(129, 140, 248, 0.15);
+    --fc-non-business-color: rgba(15, 23, 42, 0.5);
+  }
+}
+@media (max-width: 1023px) {
+  .fc .fc-toolbar.fc-header-toolbar {
+    margin-bottom: 0.5rem;
+  }
+  .fc .fc-toolbar-title {
+    font-size: 1rem;
+  }
+}

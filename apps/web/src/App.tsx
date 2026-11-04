@@ -1,24 +1,39 @@
 import { useEffect, useState } from 'react';
+import { api, ApiClientError } from './lib/api';
 import { t } from './lib/i18n';
+import type { User } from './lib/types';
+import CalendarPage from './pages/CalendarPage';
+import LoginPage from './pages/LoginPage';
 
-type Status = 'checking' | 'ok' | 'fail';
+type State =
+  { kind: 'loading' } | { kind: 'anon' } | { kind: 'user'; user: User } | { kind: 'error' };
 
 export default function App() {
-  const [status, setStatus] = useState<Status>('checking');
+  const [state, setState] = useState<State>({ kind: 'loading' });
 
   useEffect(() => {
-    fetch('/api/health')
-      .then((r) => setStatus(r.ok ? 'ok' : 'fail'))
-      .catch(() => setStatus('fail'));
+    api
+      .me()
+      .then((user) => setState({ kind: 'user', user }))
+      .catch((e) =>
+        setState(
+          e instanceof ApiClientError && e.status === 401 ? { kind: 'anon' } : { kind: 'error' },
+        ),
+      );
   }, []);
 
-  return (
-    <main className="min-h-screen flex flex-col items-center justify-center gap-2 bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">
-      <h1 className="text-3xl font-bold">{t.appName}</h1>
-      <p className="text-slate-600 dark:text-slate-300">{t.tagline}</p>
-      <p role="status" className="text-sm">
-        {t.health[status]}
+  if (state.kind === 'loading')
+    return (
+      <p role="status" className="p-6 text-slate-500">
+        {t.loading}
       </p>
-    </main>
-  );
+    );
+  if (state.kind === 'error')
+    return (
+      <p role="alert" className="p-6 text-red-600">
+        {t.error.loadFailed}
+      </p>
+    );
+  if (state.kind === 'anon') return <LoginPage />;
+  return <CalendarPage user={state.user} onLogout={() => setState({ kind: 'anon' })} />;
 }
