@@ -50,6 +50,7 @@ function Group({
               <span className="text-xs text-slate-500 dark:text-slate-400">
                 {formatTimeRange(task) || task.dueDate} · {'!'.repeat(task.urgency)}{' '}
                 {'★'.repeat(task.importance)}
+                {task.attachmentCount > 0 && ` · 📎${task.attachmentCount}`}
               </span>
             </button>
           </li>

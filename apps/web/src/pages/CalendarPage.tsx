@@ -43,7 +43,12 @@ function taskToEvent(task: Task, mode: ColorMode, cats: Map<string, Category>): 
     borderColor: c.bg,
     textColor: c.text,
     classNames: task.status === 'done' || task.status === 'cancelled' ? ['dobby-done'] : [],
-    extendedProps: { stripe: c.stripe, urgency: task.urgency, importance: task.importance },
+    extendedProps: {
+      stripe: c.stripe,
+      urgency: task.urgency,
+      importance: task.importance,
+      attachmentCount: task.attachmentCount,
+    },
   };
   if (task.allDay && task.dueDate) {
     return {
@@ -96,6 +101,11 @@ function renderEvent(arg: EventContentArg) {
       <div className="min-w-0 flex-1 truncate text-xs leading-tight">
         {arg.timeText && <span className="mr-1 font-semibold">{arg.timeText}</span>}
         <span>{arg.event.title}</span>
+        {(arg.event.extendedProps.attachmentCount as number) > 0 && (
+          <span role="img" aria-label={t.attach.title} className="ml-1">
+            📎
+          </span>
+        )}
       </div>
       <span
         className="shrink-0 pr-0.5 text-[10px] leading-tight"
@@ -378,10 +388,12 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
           init={drawer}
           categories={categories}
           onClose={() => setDrawer(null)}
-          onSaved={() => {
+          onSaved={(warning) => {
             setDrawer(null);
+            if (warning) setError(warning);
             refreshAll();
           }}
+          onAttachmentsChanged={refreshAll}
         />
       )}
     </div>

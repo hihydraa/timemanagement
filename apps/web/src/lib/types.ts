@@ -15,6 +15,7 @@ export interface Task {
   dueDate: string | null;
   estimateMinutes: number | null;
   tags: string[];
+  attachmentCount: number;
   completedAt: string | null;
 }
 
@@ -39,6 +40,23 @@ export interface TodayData {
   today: Task[];
 }
 
-export type TaskPayload = Partial<Omit<Task, 'id' | 'completedAt'>>;
+export type TaskPayload = Partial<Omit<Task, 'id' | 'completedAt' | 'attachmentCount'>>;
 
 export type ColorMode = 'category' | 'urgency' | 'importance';
+
+export interface Attachment {
+  id: string;
+  taskId: string;
+  filename: string;
+  mime: string;
+  sizeBytes: number;
+  createdAt: string;
+  isImage: boolean;
+}
+
+export interface StorageInfo {
+  usedBytes: number;
+  quotaBytes: number;
+  maxFileBytes: number;
+  maxFiles: number;
+}

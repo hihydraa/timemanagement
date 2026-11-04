@@ -1,4 +1,12 @@
-import type { Category, Task, TaskPayload, TodayData, User } from './types';
+import type {
+  Attachment,
+  Category,
+  StorageInfo,
+  Task,
+  TaskPayload,
+  TodayData,
+  User,
+} from './types';
 
 export class ApiClientError extends Error {
   constructor(
@@ -11,11 +19,13 @@ export class ApiClientError extends Error {
 }
 
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const isForm = body instanceof FormData;
   const res = await fetch(path, {
     method,
     credentials: 'same-origin',
-    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    // FormData: ปล่อยให้เบราว์เซอร์ตั้ง Content-Type (พร้อม boundary) เอง
+    headers: body !== undefined && !isForm ? { 'Content-Type': 'application/json' } : undefined,
+    body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
   });
   if (!res.ok) {
     const j = (await res.json().catch(() => null)) as {
@@ -49,4 +59,17 @@ export const api = {
     req<{ categories: Category[] }>('GET', '/api/categories').then((r) => r.categories),
   updateCategory: (id: string, p: Partial<Pick<Category, 'name' | 'color'>>) =>
     req<{ category: Category }>('PATCH', `/api/categories/${id}`, p).then((r) => r.category),
+  listAttachments: (taskId: string) =>
+    req<{ attachments: Attachment[] }>('GET', `/api/tasks/${taskId}/attachments`).then(
+      (r) => r.attachments,
+    ),
+  uploadAttachments: (taskId: string, files: File[]) => {
+    const fd = new FormData();
+    files.forEach((f) => fd.append('files', f));
+    return req<{ attachments: Attachment[] }>('POST', `/api/tasks/${taskId}/attachments`, fd).then(
+      (r) => r.attachments,
+    );
+  },
+  deleteAttachment: (id: string) => req<{ ok: true }>('DELETE', `/api/attachments/${id}`),
+  storage: () => req<StorageInfo>('GET', '/api/storage'),
 };

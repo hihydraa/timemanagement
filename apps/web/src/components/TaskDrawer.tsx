@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, ApiClientError } from '../lib/api';
+import Attachments from './Attachments';
 import { t } from '../lib/i18n';
 import { inputToIso, isoToInput } from '../lib/time';
 import type { Category, Status, Task, TaskPayload } from '../lib/types';
@@ -14,7 +15,10 @@ interface Props {
   init: DrawerInit;
   categories: Category[];
   onClose: () => void;
-  onSaved: () => void;
+  /** warning = สร้าง/บันทึกงานสำเร็จแต่มีเรื่องที่ต้องแจ้งผู้ใช้ (เช่นแนบไฟล์ไม่สำเร็จ) */
+  onSaved: (warning?: string) => void;
+  /** ไฟล์แนบของงานที่มีอยู่เปลี่ยน โดยไม่ปิดฟอร์ม */
+  onAttachmentsChanged: () => void;
 }
 
 const LEVELS = [1, 2, 3, 4];
@@ -23,7 +27,13 @@ const inputCls =
   'w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500';
 const labelCls = 'block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1';
 
-export default function TaskDrawer({ init, categories, onClose, onSaved }: Props) {
+export default function TaskDrawer({
+  init,
+  categories,
+  onClose,
+  onSaved,
+  onAttachmentsChanged,
+}: Props) {
   const { task, prefill } = init;
   const [title, setTitle] = useState(task?.title ?? '');
   const [description, setDescription] = useState(task?.description ?? '');
@@ -40,6 +50,7 @@ export default function TaskDrawer({ init, categories, onClose, onSaved }: Props
   const [due, setDue] = useState(isoToInput(task?.dueAt ?? null));
   const [estimate, setEstimate] = useState(task?.estimateMinutes?.toString() ?? '');
   const [tags, setTags] = useState(task?.tags.join(', ') ?? '');
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const titleRef = useRef<HTMLInputElement>(null);
@@ -78,9 +89,22 @@ export default function TaskDrawer({ init, categories, onClose, onSaved }: Props
     };
     setBusy(true);
     try {
-      if (task) await api.updateTask(task.id, payload);
-      else await api.createTask(payload);
-      onSaved();
+      if (task) {
+        await api.updateTask(task.id, payload);
+        onSaved();
+        return;
+      }
+      const created = await api.createTask(payload);
+      let warning: string | undefined;
+      if (pendingFiles.length) {
+        try {
+          await api.uploadAttachments(created.id, pendingFiles);
+        } catch (err) {
+          const msg = err instanceof ApiClientError ? err.message : t.error.generic;
+          warning = `${t.attach.partial}: ${msg}`;
+        }
+      }
+      onSaved(warning);
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : t.error.generic);
     } finally {
@@ -304,6 +328,13 @@ export default function TaskDrawer({ init, categories, onClose, onSaved }: Props
             onChange={(e) => setTags(e.target.value)}
           />
         </div>
+        <Attachments
+          taskId={task?.id ?? null}
+          pending={pendingFiles}
+          onPendingChange={setPendingFiles}
+          onChanged={onAttachmentsChanged}
+        />
+
         <div>
           <label htmlFor="f-desc" className={labelCls}>
             {t.form.description}
