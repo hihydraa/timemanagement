@@ -17,6 +17,7 @@ import Filters, { applyFilters, emptyFilters, type FilterState } from '../compon
 import Legend from '../components/Legend';
 import GcalDialog from '../components/GcalDialog';
 import LineDialog from '../components/LineDialog';
+import SettingsDialog from '../components/SettingsDialog';
 import TaskDrawer, { type DrawerInit } from '../components/TaskDrawer';
 import TodayPanel from '../components/TodayPanel';
 import { api, ApiClientError } from '../lib/api';
@@ -27,6 +28,7 @@ import type {
   Category,
   ColorMode,
   GcalStatus,
+  PushStatus,
   Task,
   TaskPayload,
   TodayData,
@@ -153,6 +155,8 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
   const [error, setError] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [showLine, setShowLine] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [push, setPush] = useState<PushStatus | null>(null);
   const [gcal, setGcal] = useState<GcalStatus | null>(null);
   const [showGcal, setShowGcal] = useState(false);
   const [gcalNotice, setGcalNotice] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
@@ -236,6 +240,10 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
     api
       .gcalStatus()
       .then(setGcal)
+      .catch(() => undefined);
+    api
+      .pushStatus()
+      .then(setPush)
       .catch(() => undefined);
   }, []);
 
@@ -344,6 +352,13 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
         </button>
         <button
           type="button"
+          onClick={() => setShowSettings(true)}
+          className="rounded px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+        >
+          {t.settings.button}
+        </button>
+        <button
+          type="button"
           onClick={() => setShowGcal(true)}
           className="rounded px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
         >
@@ -375,6 +390,17 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
           {t.nav.logout}
         </button>
       </header>
+
+      {push && push.limitConfigured && (push.nearLimit || push.exhausted) && (
+        <p
+          role="status"
+          className={`mx-3 mt-2 rounded p-2 text-sm ${push.exhausted ? 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300'}`}
+        >
+          {push.exhausted
+            ? t.settings.quotaFull
+            : `${t.settings.quotaBanner} (${push.used}/${push.limit})`}
+        </p>
+      )}
 
       {error && (
         <p
@@ -465,6 +491,27 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
       </div>
 
       {showLine && <LineDialog onClose={() => setShowLine(false)} />}
+      {showSettings && (
+        <SettingsDialog
+          onClose={() => {
+            setShowSettings(false);
+            api
+              .pushStatus()
+              .then(setPush)
+              .catch(() => undefined);
+          }}
+          onOpenLine={() => {
+            setShowSettings(false);
+            setShowLine(true);
+          }}
+          onSaved={() =>
+            api
+              .pushStatus()
+              .then(setPush)
+              .catch(() => undefined)
+          }
+        />
+      )}
       {showGcal && (
         <GcalDialog
           notice={gcalNotice}

@@ -2,7 +2,10 @@ import type {
   Attachment,
   Category,
   GcalStatus,
+  NotificationSettings,
+  PushStatus,
   ResyncResult,
+  SettingsView,
   StorageInfo,
   Task,
   TaskPayload,
@@ -70,6 +73,10 @@ export const api = {
     req<GcalStatus>('PATCH', '/api/gcal/settings', p),
   gcalDisconnect: () => req<GcalStatus>('POST', '/api/gcal/disconnect', {}),
   gcalResync: (cursor: string | null) => req<ResyncResult>('POST', '/api/gcal/resync', { cursor }),
+  getSettings: () => req<SettingsView>('GET', '/api/settings'),
+  patchSettings: (p: Partial<NotificationSettings>) =>
+    req<SettingsView>('PATCH', '/api/settings', p),
+  pushStatus: () => req<PushStatus>('GET', '/api/notifications/status'),
   listAttachments: (taskId: string) =>
     req<{ attachments: Attachment[] }>('GET', `/api/tasks/${taskId}/attachments`).then(
       (r) => r.attachments,

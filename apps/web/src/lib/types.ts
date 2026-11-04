@@ -85,3 +85,29 @@ export interface ResyncResult {
   nextCursor: string | null;
   reasons: string[];
 }
+
+export interface NotificationSettings {
+  morningDigestTime: string;
+  eveningReviewTime: string;
+  eveningReviewEnabled: boolean;
+  deadlineAlertTime: string;
+  remindBeforeMinutes: number;
+  quietHoursStart: string;
+  quietHoursEnd: string;
+  lineNotifyEnabled: boolean;
+}
+
+export interface SettingsView {
+  settings: NotificationSettings;
+  lineLinked: boolean;
+}
+
+export interface PushStatus {
+  month: string;
+  used: number;
+  limit: number;
+  limitConfigured: boolean;
+  blocked: boolean;
+  nearLimit: boolean;
+  exhausted: boolean;
+}
