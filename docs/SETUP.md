@@ -82,12 +82,46 @@ LINE_CHANNEL_ACCESS_TOKEN=<token> APP_BASE_URL=https://<worker-domain> npm run r
 > บอทตอบด้วย reply token เท่านั้น (ไม่นับโควตา push) การแจ้งเตือนแบบ push จะมาใน Phase 5
 > เพิ่ม `LINE_CHANNEL_SECRET` ผิดค่า/ไม่ตั้ง = webhook ตอบ 401 ทุกคำขอ (ตั้งใจ)
 
-## 5. Google OAuth + Calendar (Phase 1/4)
+## 5. Google OAuth (login) และ Google Calendar (Phase 1/4)
 
-1. Google Cloud Console → สร้าง OAuth client (Web) เปิด Google Calendar API
-2. Redirect URI = `GOOGLE_REDIRECT_URI`
-3. **เปลี่ยน consent screen เป็น "In production"** — ถ้าค้าง "Testing" refresh token จะหมดอายุทุก 7 วัน (แอปส่วนตัวใช้ได้แม้ขึ้นหน้าเตือน unverified)
-4. ตั้ง `ALLOWED_EMAILS` เป็นอีเมลของคุณ
+### 5.1 Login ด้วย Google
+
+1. Google Cloud Console → **Google Auth Platform → Clients → Create client** → Application type **Web application**
+2. **Authorized redirect URI** = ค่าเดียวกับ `GOOGLE_REDIRECT_URI` เช่น `https://dobby.<you>.workers.dev/auth/google/callback` (ต้องตรงทุกตัวอักษร) — **ใช้ URI เดียวนี้ทั้ง login และเชื่อม Calendar**
+3. เก็บ Client ID / Client secret แล้วตั้ง secrets: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `ALLOWED_EMAILS`
+
+### 5.2 เปิดซิงก์ Google Calendar
+
+1. **เปิด Google Calendar API**: Cloud Console → APIs & Services → Library → "Google Calendar API" → Enable
+2. **เพิ่ม scope**: Google Auth Platform → **Data Access → Add or remove scopes** → เพิ่ม `https://www.googleapis.com/auth/calendar.events` (scope เดียวที่ Dobby ขอ) → Save
+3. ตั้งคีย์เข้ารหัส token (ต้องเป็นค่าสุ่ม 32 ไบต์แบบ base64 — **เก็บไว้ให้ดี ถ้าเปลี่ยน/ทำหาย ต้องกด "เชื่อมใหม่"**):
+
+```bash
+openssl rand -base64 32 | npx wrangler secret put TOKEN_ENC_KEY
+```
+
+4. รัน migration ใหม่ของ Phase 4 (เพิ่มคอลัมน์ `tasks.gcal_sync`, `google_tokens.email`) แล้ว deploy:
+
+```bash
+npm run db:migrate:remote
+```
+
+```bash
+npm run deploy
+```
+
+5. เปิดเว็บ Dobby → ปุ่ม **Google Calendar** → **เชื่อม Google Calendar** → เลือกบัญชีและกดอนุญาต (ต้องติ๊กสิทธิ์ปฏิทินให้ครบ)
+6. กด **Sync ทั้งหมดใหม่** เพื่อส่งงานเดิมที่มีวัน/เวลาไปที่ปฏิทิน (ทำทีละชุด ๆ ละ 10 งาน เพราะ Worker ฟรีจำกัดจำนวนคำขอต่อครั้ง)
+7. ทดสอบ: สร้างงานมีเวลาในเว็บ หรือพิมพ์ใน LINE → ควรเห็น event ใน Google Calendar ถูกวัน/เวลา (เขตเวลา Asia/Bangkok)
+
+**พฤติกรรมการซิงก์** (ทางเดียว Dobby → Google): สร้าง/แก้ไข/เลื่อน → สร้าง/อัปเดต event · ทำเสร็จ → ชื่อ event นำหน้า `✅` · ยกเลิกหรือลบงาน (หรือเอาวัน/เวลาออก) → ลบ event · งานที่ไม่มีวัน/เวลา (Inbox) ไม่ซิงก์ · ปิดซิงก์รายงานได้ที่สวิตช์ในฟอร์มงาน
+
+### 5.3 สถานะ consent screen และอายุ token
+
+- **Testing**: ต้องเพิ่มอีเมลใน _Test users_ และ refresh token ของ Calendar **หมดอายุทุก 7 วัน** (ต้องกดเชื่อมใหม่) — ใช้แค่ลองระบบ
+- **In production** (Audience → Publish app): token ไม่หมดอายุทุก 7 วัน แอปที่ยังไม่ verify จะขึ้นหน้า "Google hasn't verified this app" (กด _Advanced → Go to Dobby_) และรับผู้ใช้ได้ไม่เกิน 100 คน — เหมาะกับใช้ส่วนตัว/คนใกล้ตัว
+- ถ้าจะเปิดสาธารณะ ต้องผ่านการ verify ของ Google (ต้องมี privacy policy และโดเมนของคุณเอง `workers.dev` ใช้ยืนยันไม่ได้)
+- ถ้าผู้ใช้เพิกถอนสิทธิ์ที่ https://myaccount.google.com/permissions Dobby จะแสดงสถานะ "ต้องเชื่อมใหม่" และงานยังบันทึกได้ตามปกติ
 
 ## 6. Deploy
 
