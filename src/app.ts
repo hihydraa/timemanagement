@@ -8,9 +8,12 @@ import { originCheck, requireAuth } from './middleware';
 import attachmentsRoutes from './routes/attachments';
 import auth from './routes/auth';
 import categoriesRoutes from './routes/categories';
+import exportRoutes from './routes/export';
+import focusRoutes from './routes/focus';
 import gcalRoutes from './routes/gcal';
 import { lineApi, lineWebhook } from './routes/line';
 import settingsRoutes from './routes/settings';
+import statsRoutes from './routes/stats';
 import subtasksRoutes from './routes/subtasks';
 import tasksRoutes from './routes/tasks';
 import type { AppEnv } from './types';
@@ -65,6 +68,9 @@ api.route('/line', lineApi);
 api.route('/gcal', gcalRoutes);
 api.route('/', settingsRoutes);
 api.route('/', subtasksRoutes);
+api.route('/', focusRoutes);
+api.route('/', exportRoutes);
+api.route('/', statsRoutes);
 app.route('/api', api);
 
 app.onError((err, c) => {
