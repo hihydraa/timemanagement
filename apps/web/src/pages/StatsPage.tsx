@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, ApiClientError } from '../lib/api';
 import { dayLabel, formatMinutes } from '../lib/dates';
+import EmptyState from '../components/EmptyState';
 import { t } from '../lib/i18n';
 import type { OverviewStats } from '../lib/types';
 
@@ -62,7 +63,7 @@ function DailyChart({ data }: { data: OverviewStats['daily'] }) {
               width={bw * 0.6}
               y={y(d.completed)}
               height={y(0) - y(d.completed)}
-              className="fill-indigo-600"
+              className="fill-brand-600"
             />
           </g>
         );
@@ -117,7 +118,7 @@ export default function StatsPage() {
               type="button"
               aria-pressed={days === r}
               onClick={() => setDays(r)}
-              className={`px-3 py-1.5 text-sm ${days === r ? 'bg-indigo-600 text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+              className={`px-3 py-1.5 text-sm ${days === r ? 'bg-brand-600 text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
             >
               {r} {t.stats.days}
             </button>
@@ -171,7 +172,7 @@ export default function StatsPage() {
             <h3 className="font-semibold">{t.stats.daily}</h3>
             <DailyChart data={d.daily} />
             <details>
-              <summary className="cursor-pointer text-xs text-indigo-600 dark:text-indigo-400">
+              <summary className="cursor-pointer text-xs text-brand-600 dark:text-brand-400">
                 {t.stats.table}
               </summary>
               <table className="mt-2 w-full text-left text-xs">
@@ -200,7 +201,13 @@ export default function StatsPage() {
           <section aria-label={t.stats.share} className="space-y-2">
             <h3 className="font-semibold">{t.stats.share}</h3>
             {share.length === 0 ? (
-              <p className="text-sm text-slate-500">{t.stats.empty}</p>
+              <EmptyState
+                compact
+                pose="plan"
+                height={90}
+                title={t.mascot.emptyStats}
+                hint={t.mascot.emptyStatsHint}
+              />
             ) : (
               <>
                 <div className="flex h-4 overflow-hidden rounded" aria-hidden>

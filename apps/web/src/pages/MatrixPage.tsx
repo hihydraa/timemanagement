@@ -137,7 +137,7 @@ export default function MatrixPage() {
                 const task = tasks?.find((x) => x.id === id);
                 if (task) void move(task, q);
               }}
-              className={`min-h-40 rounded-lg border-2 p-3 ${q.tone} ${over === q.id ? 'bg-indigo-50 dark:bg-indigo-950' : ''}`}
+              className={`min-h-40 rounded-lg border-2 p-3 ${q.tone} ${over === q.id ? 'bg-brand-50 dark:bg-brand-950' : ''}`}
             >
               <h3 className="font-semibold">
                 {q.title}{' '}

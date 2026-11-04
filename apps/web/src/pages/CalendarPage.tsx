@@ -360,7 +360,7 @@ export default function CalendarPage() {
       type="button"
       aria-pressed={mode === m}
       onClick={() => setMode(m)}
-      className={`px-3 py-2 text-sm ${mode === m ? 'bg-indigo-600 text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+      className={`px-3 py-2 text-sm ${mode === m ? 'bg-brand-600 text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
     >
       {t.colorBy[m]}
     </button>
@@ -380,7 +380,7 @@ export default function CalendarPage() {
         <button
           type="button"
           onClick={() => setDrawer({ prefill: { allDay: false } })}
-          className="ml-auto rounded bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+          className="ml-auto rounded bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
         >
           + {t.nav.newTask}
         </button>

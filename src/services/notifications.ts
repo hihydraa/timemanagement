@@ -365,7 +365,12 @@ async function runDaily(rc: RunCtx, t: Target, kind: Kind): Promise<SendResult |
     ];
     const total = b.overdue.length + b.dueToday.length + b.today.length;
     if (!total) return 'empty'; // วันนี้ไม่มีงาน = ไม่ส่ง (ประหยัดโควตา)
-    const { message, ids } = listCard(`🌅 สรุปงานวันนี้ ${dayLabel(b.date)}`, sections, base);
+    const { message, ids } = listCard(
+      `🌅 สรุปงานวันนี้ ${dayLabel(b.date)}`,
+      sections,
+      base,
+      'morning',
+    );
     const r = await send(rc, t, kind, message, `n=${total}`);
     if (r === 'sent') await setList(db, t.lineUserId, ids); // ให้ตอบ "เสร็จ 1" ได้ทันที
     return r;

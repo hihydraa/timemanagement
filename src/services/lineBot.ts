@@ -30,6 +30,7 @@ import {
   text,
   whenText,
   type ListSection,
+  type MascotPose,
   type QuickItem,
 } from './flex';
 import { getMessageContent, replyMessages, type LineMessage } from './line';
@@ -272,9 +273,15 @@ const baseUrl = (ctx: Ctx) => ctx.env.APP_BASE_URL.replace(/\/$/, '');
 const isOpen = (t: TaskDto) => t.status === 'todo' || t.status === 'doing';
 const sortKey = (t: TaskDto) => t.startAt ?? t.dueAt ?? '';
 
-async function reply(ctx: Ctx, heading: string, sections: ListSection[], emptyText: string) {
+async function reply(
+  ctx: Ctx,
+  heading: string,
+  sections: ListSection[],
+  emptyText: string,
+  pose?: MascotPose,
+) {
   if (sections.every((s) => s.tasks.length === 0)) return send(ctx, [text(emptyText)]);
-  const { message, ids } = listCard(heading, sections, baseUrl(ctx));
+  const { message, ids } = listCard(heading, sections, baseUrl(ctx), pose);
   await setList(ctx.db, ctx.lineUserId, ids);
   return send(ctx, [message]);
 }
@@ -290,6 +297,7 @@ async function cmdToday(ctx: Ctx, user: User) {
       { title: 'งานวันนี้', tasks: b.today },
     ],
     'วันนี้ไม่มีงาน 🎉',
+    'morning',
   );
 }
 
@@ -321,7 +329,7 @@ async function cmdWeek(ctx: Ctx, user: User) {
     const d = addDays(monday, i);
     sections.push({
       title: `${dayLabel(d)}${d === today ? ' (วันนี้)' : ''}`,
-      color: d === today ? '#4f46e5' : undefined,
+      color: d === today ? '#3d6552' : undefined,
       tasks: list.filter((t) => taskDate(t) === d),
     });
   }
@@ -335,6 +343,7 @@ async function cmdOverdue(ctx: Ctx, user: User) {
     '🔴 งานเลยกำหนด',
     [{ title: 'ค้างอยู่', color: '#dc2626', tasks: b.overdue }],
     'ไม่มีงานค้าง เยี่ยมมาก! 🎉',
+    'deadline',
   );
 }
 

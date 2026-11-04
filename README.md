@@ -28,5 +28,5 @@ npm run db:migrate:remote
 npm run deploy       # ตรวจค่าก่อน (scripts/predeploy-check.mjs) → build → wrangler deploy
 ```
 
-เอกสาร: [SETUP](docs/SETUP.md) · [DECISIONS](docs/DECISIONS.md) · [SECURITY](docs/SECURITY.md)
+เอกสาร: [SETUP](docs/SETUP.md) · [BRAND](docs/BRAND.md) · [DECISIONS](docs/DECISIONS.md) · [SECURITY](docs/SECURITY.md)
 สถานะ: Phase 0–7 เสร็จ (Lighthouse mobile หน้าปฏิทิน: Performance 93, Accessibility 100 บน wrangler dev)

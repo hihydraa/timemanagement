@@ -17,3 +17,5 @@
 # service worker ต้องตรวจการอัปเดตทุกครั้ง
 /sw.js
   Cache-Control: no-cache
+/mascot/*
+  Cache-Control: public, max-age=604800

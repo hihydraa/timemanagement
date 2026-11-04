@@ -4,6 +4,7 @@ import TaskMeta from '../components/TaskMeta';
 import { api, ApiClientError } from '../lib/api';
 import { useApp } from '../lib/appContext';
 import { nextMonday, todayYmd, tomorrow } from '../lib/dates';
+import EmptyState from '../components/EmptyState';
 import { t } from '../lib/i18n';
 import type { Task } from '../lib/types';
 
@@ -69,7 +70,7 @@ export default function InboxPage() {
         <button
           type="submit"
           disabled={busy || !title.trim()}
-          className="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          className="rounded bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
         >
           +<span className="sr-only">{t.nav.newTask}</span>
         </button>
@@ -85,7 +86,9 @@ export default function InboxPage() {
       )}
 
       {!tasks && !error && <p role="status">{t.loading}</p>}
-      {tasks && tasks.length === 0 && <p className="text-slate-500">{t.inbox.empty}</p>}
+      {tasks && tasks.length === 0 && (
+        <EmptyState pose="idea" title={t.mascot.emptyInbox} hint={t.mascot.emptyInboxHint} />
+      )}
 
       <ul className="space-y-2">
         {tasks?.map((task) => (

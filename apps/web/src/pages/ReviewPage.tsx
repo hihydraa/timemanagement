@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import CategoryBars from '../components/CategoryBars';
 import { api, ApiClientError } from '../lib/api';
 import { addDaysYmd, dayLabel, formatMinutes, mondayOf, todayYmd } from '../lib/dates';
+import Mascot from '../components/Mascot';
 import { t } from '../lib/i18n';
 import type { BriefTask, WeeklyStats } from '../lib/types';
 
@@ -116,6 +117,12 @@ export default function ReviewPage() {
 
       {data && (
         <>
+          <div className="flex items-center gap-3 rounded-2xl bg-brand-50 p-3 dark:bg-brand-950">
+            <Mascot pose={data.completed > 0 ? 'done' : 'rest'} height={96} />
+            <p className="font-semibold text-brand-800 dark:text-brand-200">
+              {data.completed > 0 ? t.mascot.reviewGood : t.mascot.reviewQuiet}
+            </p>
+          </div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <Card label={t.review.done} value={String(data.completed)} />
             <Card label={t.review.overdue} value={String(data.overdueOpen)} />
@@ -146,7 +153,7 @@ export default function ReviewPage() {
 
           <section
             aria-label={t.review.plan}
-            className="space-y-2 rounded-lg border border-indigo-200 p-3 dark:border-indigo-900"
+            className="space-y-2 rounded-lg border border-brand-200 p-3 dark:border-brand-900"
           >
             <h3 className="font-semibold">
               {t.review.plan}{' '}
@@ -184,7 +191,7 @@ export default function ReviewPage() {
               <button
                 type="submit"
                 disabled={busy || !title.trim()}
-                className="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                className="rounded bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
               >
                 {t.review.planAdd}
               </button>

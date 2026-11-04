@@ -114,14 +114,14 @@ export default function Attachments({
           setDragging(false);
           void addFiles(e.dataTransfer.files);
         }}
-        className={`rounded-lg border-2 border-dashed p-3 text-center text-sm ${dragging ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950' : 'border-slate-300 dark:border-slate-600'}`}
+        className={`rounded-lg border-2 border-dashed p-3 text-center text-sm ${dragging ? 'border-brand-500 bg-brand-50 dark:bg-brand-950' : 'border-slate-300 dark:border-slate-600'}`}
       >
         <span className="text-slate-600 dark:text-slate-300">{t.attach.drop} </span>
         <button
           type="button"
           disabled={busy}
           onClick={() => inputRef.current?.click()}
-          className="font-medium text-indigo-600 underline dark:text-indigo-400"
+          className="font-medium text-brand-600 underline dark:text-brand-400"
         >
           {t.attach.choose}
         </button>
@@ -136,7 +136,7 @@ export default function Attachments({
         />
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t.attach.hint}</p>
         {busy && (
-          <p role="status" className="mt-1 text-xs text-indigo-600">
+          <p role="status" className="mt-1 text-xs text-brand-600">
             {t.attach.uploading}
           </p>
         )}
@@ -175,7 +175,7 @@ export default function Attachments({
             <a
               href={`/api/attachments/${a.id}`}
               download={a.filename}
-              className="min-w-0 flex-1 truncate text-indigo-700 hover:underline dark:text-indigo-300"
+              className="min-w-0 flex-1 truncate text-brand-700 hover:underline dark:text-brand-300"
               title={`${t.attach.download}: ${a.filename}`}
             >
               {a.filename}
@@ -236,7 +236,7 @@ export default function Attachments({
             aria-label={t.attach.storage}
           >
             <div
-              className={`h-full ${pct > 90 ? 'bg-red-500' : 'bg-indigo-500'}`}
+              className={`h-full ${pct > 90 ? 'bg-red-500' : 'bg-brand-500'}`}
               style={{ width: `${pct}%` }}
             />
           </div>

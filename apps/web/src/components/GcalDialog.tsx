@@ -184,7 +184,7 @@ export default function GcalDialog({ notice, onClose, onStatusChange }: Props) {
             {!st.connected && (
               <a
                 href="/auth/google/connect"
-                className="inline-block rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                className="inline-block rounded bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
               >
                 {st.needsReconnect ? t.gcal.reconnect : t.gcal.connect}
               </a>
@@ -235,7 +235,7 @@ export default function GcalDialog({ notice, onClose, onStatusChange }: Props) {
                     type="button"
                     disabled={busy || prog.running || !st.syncEnabled}
                     onClick={() => void resyncAll()}
-                    className="rounded bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                    className="rounded bg-brand-600 px-4 py-2 font-medium text-white hover:bg-brand-700 disabled:opacity-50"
                   >
                     {prog.running ? t.gcal.resyncing : t.gcal.resync}
                   </button>

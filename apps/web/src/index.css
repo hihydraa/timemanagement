@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100;
+    @apply bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100;
     font-family:
       'Noto Sans Thai',
       system-ui,
@@ -13,20 +13,40 @@
       sans-serif;
   }
   button {
-    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-indigo-500;
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-500;
   }
 }
 
-/* FullCalendar theming */
+/* FullCalendar theming (โทน Dobby) */
 .fc {
-  --fc-button-bg-color: #4f46e5;
-  --fc-button-border-color: #4f46e5;
-  --fc-button-hover-bg-color: #4338ca;
-  --fc-button-hover-border-color: #4338ca;
-  --fc-button-active-bg-color: #3730a3;
-  --fc-button-active-border-color: #3730a3;
-  --fc-today-bg-color: rgba(79, 70, 229, 0.08);
-  --fc-now-indicator-color: #dc2626;
+  --fc-button-bg-color: #3d6552;
+  --fc-button-border-color: #3d6552;
+  --fc-button-hover-bg-color: #315243;
+  --fc-button-hover-border-color: #315243;
+  --fc-button-active-bg-color: #284237;
+  --fc-button-active-border-color: #284237;
+  --fc-page-bg-color: #fffdf8;
+  --fc-neutral-bg-color: #f3ecdb;
+  --fc-neutral-text-color: #4f6056;
+  --fc-border-color: #e6dcc4;
+  --fc-today-bg-color: rgba(238, 168, 68, 0.16);
+  --fc-now-indicator-color: #c2410c;
+}
+.fc .fc-button {
+  border-radius: 9999px;
+}
+.fc .fc-button-group > .fc-button {
+  border-radius: 0;
+}
+.fc .fc-button-group > .fc-button:first-child {
+  border-radius: 9999px 0 0 9999px;
+}
+.fc .fc-button-group > .fc-button:last-child {
+  border-radius: 0 9999px 9999px 0;
+}
+.fc .fc-scrollgrid {
+  border-radius: 0.75rem;
+  overflow: hidden;
 }
 .fc .fc-toolbar-title {
   font-size: 1.1rem;
@@ -43,13 +63,23 @@
 }
 @media (prefers-color-scheme: dark) {
   .fc {
-    --fc-page-bg-color: #0f172a;
-    --fc-neutral-bg-color: #1e293b;
-    --fc-neutral-text-color: #cbd5e1;
-    --fc-border-color: #334155;
-    --fc-list-event-hover-bg-color: #1e293b;
-    --fc-today-bg-color: rgba(129, 140, 248, 0.15);
-    --fc-non-business-color: rgba(15, 23, 42, 0.5);
+    --fc-page-bg-color: #1c2822;
+    --fc-neutral-bg-color: #2a372f;
+    --fc-neutral-text-color: #cfc3a6;
+    --fc-border-color: #3b4a42;
+    --fc-list-event-hover-bg-color: #2a372f;
+    --fc-today-bg-color: rgba(238, 168, 68, 0.14);
+    --fc-non-business-color: rgba(18, 27, 23, 0.5);
+    --fc-button-bg-color: #4a7864;
+    --fc-button-border-color: #4a7864;
+    --fc-button-hover-bg-color: #5a8b75;
+    --fc-button-hover-border-color: #5a8b75;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-bob,
+  .animate-pop {
+    animation: none;
   }
 }
 @media (max-width: 1023px) {

@@ -76,7 +76,7 @@ function buildRule(f: RecForm, anchorWeekday: number | null): string | null {
 const LEVELS = [1, 2, 3, 4];
 const STATUSES: Status[] = ['todo', 'doing', 'done', 'cancelled'];
 const inputCls =
-  'w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500';
+  'w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500';
 const labelCls = 'block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1';
 
 export default function TaskDrawer({
@@ -258,7 +258,7 @@ export default function TaskDrawer({
         </div>
 
         {isOccurrence && (
-          <p className="rounded bg-indigo-50 p-2 text-xs text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200">
+          <p className="rounded bg-brand-50 p-2 text-xs text-brand-800 dark:bg-brand-950 dark:text-brand-200">
             🔁 {t.series.occurrenceNote}{' '}
             {onOpenTask && (
               <button
@@ -503,7 +503,7 @@ export default function TaskDrawer({
                                 : [...rec.days, d],
                             })
                           }
-                          className={`h-8 w-9 rounded-full border text-xs ${on ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800'}`}
+                          className={`h-8 w-9 rounded-full border text-xs ${on ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800'}`}
                         >
                           {t.series.weekdays[d]}
                         </button>
@@ -591,7 +591,7 @@ export default function TaskDrawer({
           <button
             type="submit"
             disabled={busy}
-            className="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+            className="rounded bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
           >
             {busy ? t.form.saving : t.form.save}
           </button>

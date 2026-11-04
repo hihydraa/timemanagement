@@ -57,6 +57,15 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
   return (await res.json()) as T;
 }
 
+/** แจ้ง UI ว่ามีงานเสร็จ (CelebrateToast ฟัง event นี้) */
+function celebrate() {
+  try {
+    window.dispatchEvent(new Event('dobby:celebrate'));
+  } catch {
+    /* ไม่มี window (เช่นตอน test) */
+  }
+}
+
 export const api = {
   me: () => req<{ user: User }>('GET', '/api/me').then((r) => r.user),
   /** ตอบ 200 เสมอ: user = null เมื่อยังไม่ล็อกอิน (ไม่มี 401 ใน console) */
@@ -70,7 +79,10 @@ export const api = {
   today: () => req<TodayData>('GET', '/api/today'),
   createTask: (p: TaskPayload) => req<{ task: Task }>('POST', '/api/tasks', p).then((r) => r.task),
   updateTask: (id: string, p: TaskPayload) =>
-    req<{ task: Task }>('PATCH', `/api/tasks/${id}`, p).then((r) => r.task),
+    req<{ task: Task }>('PATCH', `/api/tasks/${id}`, p).then((r) => {
+      if (p.status === 'done') celebrate();
+      return r.task;
+    }),
   deleteTask: (id: string, scope: 'one' | 'series' = 'one') =>
     req<{ ok: true }>('DELETE', `/api/tasks/${id}${scope === 'series' ? '?scope=series' : ''}`),
   materialize: (id: string) =>
@@ -99,7 +111,10 @@ export const api = {
     req<WeeklyStats>('GET', `/api/stats/weekly${week ? `?week=${week}` : ''}`),
   overview: (days: number) => req<OverviewStats>('GET', `/api/stats/overview?days=${days}`),
   completeTask: (id: string) =>
-    req<{ task: Task }>('POST', `/api/tasks/${id}/complete`).then((r) => r.task),
+    req<{ task: Task }>('POST', `/api/tasks/${id}/complete`).then((r) => {
+      celebrate();
+      return r.task;
+    }),
   listCategories: () =>
     req<{ categories: Category[] }>('GET', '/api/categories').then((r) => r.categories),
   updateCategory: (id: string, p: Partial<Pick<Category, 'name' | 'color'>>) =>

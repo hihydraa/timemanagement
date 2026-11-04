@@ -110,6 +110,17 @@ const button = (
 });
 const pb = (data: string) => ({ type: 'postback', data });
 
+export type MascotPose = 'morning' | 'deadline' | 'done' | 'rest';
+/** ภาพมาสคอต Dobby บนหัวการ์ด (ไฟล์ PNG จาก /mascot/ ของเว็บเอง; LINE ต้องการ https สาธารณะ) */
+const mascotHero = (baseUrl: string, pose: MascotPose) => ({
+  type: 'image',
+  url: `${baseUrl.replace(/\/$/, '')}/mascot/${pose}.png`,
+  size: 'full',
+  aspectRatio: '20:9',
+  aspectMode: 'fit',
+  backgroundColor: '#F6ECD6',
+});
+
 const stars = (n: number) => '★'.repeat(n);
 const bangs = (n: number) => '!'.repeat(n);
 
@@ -194,6 +205,7 @@ export function listCard(
   heading: string,
   sections: ListSection[],
   baseUrl: string,
+  pose?: MascotPose,
 ): { message: LineMessage; ids: string[] } {
   const ids: string[] = [];
   const rows: unknown[] = [];
@@ -260,6 +272,7 @@ export function listCard(
       altText: clip(`${heading}: ${total} งาน`, 380),
       contents: {
         type: 'bubble',
+        ...(pose && baseUrl.startsWith('https://') ? { hero: mascotHero(baseUrl, pose) } : {}),
         body: {
           type: 'box',
           layout: 'vertical',
@@ -355,7 +368,7 @@ export function alertCarousel(items: AlertItem[], baseUrl: string): LineMessage 
           layout: 'vertical',
           flex: 1,
           contents: [
-            txt(label, { size: 'xs', weight: 'bold', color: '#4f46e5' }),
+            txt(label, { size: 'xs', weight: 'bold', color: '#3d6552' }),
             txt(clip(t.title, 100), { weight: 'bold', size: 'md', margin: 'sm' }),
             txt(`🕒 ${whenText(t)}`, { size: 'sm', margin: 'md' }),
             txt(`เร่งด่วน ${bangs(t.urgency)}  สำคัญ ${stars(t.importance)}`, {
@@ -477,7 +490,7 @@ export function eveningCard(
 
   const footer: unknown[] = [];
   if (pending.length)
-    footer.push(button('เลื่อนงานค้างไปพรุ่งนี้', pb(`a=carry&d=${date}`), 'primary', '#4f46e5'));
+    footer.push(button('เลื่อนงานค้างไปพรุ่งนี้', pb(`a=carry&d=${date}`), 'primary', '#3d6552'));
   footer.push(button('เปิดในเว็บ', { type: 'uri', uri: baseUrl }, 'link'));
   return {
     ids,
@@ -486,6 +499,9 @@ export function eveningCard(
       altText: clip(`สรุปวันนี้: เสร็จ ${done.length} · ค้าง ${pending.length}`, 380),
       contents: {
         type: 'bubble',
+        ...(baseUrl.startsWith('https://')
+          ? { hero: mascotHero(baseUrl, done.length > 0 ? 'done' : 'rest') }
+          : {}),
         body: { type: 'box', layout: 'vertical', contents: body },
         footer: { type: 'box', layout: 'vertical', spacing: 'sm', contents: footer },
       },

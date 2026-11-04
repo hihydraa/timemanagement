@@ -1,5 +1,7 @@
 import { api } from '../lib/api';
 import { t } from '../lib/i18n';
+import EmptyState from './EmptyState';
+import Mascot, { type Pose } from './Mascot';
 import { formatTimeRange } from '../lib/time';
 import type { Task, TodayData } from '../lib/types';
 
@@ -15,7 +17,9 @@ function Group({
   tasks,
   onOpen,
   onChanged,
+  pose,
 }: {
+  pose?: Pose;
   title: string;
   tone: string;
   tasks: Task[];
@@ -25,7 +29,8 @@ function Group({
   if (!tasks.length) return null;
   return (
     <div>
-      <h3 className={`mb-1 text-xs font-semibold ${tone}`}>
+      <h3 className={`mb-1 flex items-center gap-1 text-xs font-semibold ${tone}`}>
+        {pose && <Mascot pose={pose} height={36} />}
         {title} ({tasks.length})
       </h3>
       <ul className="space-y-1">
@@ -66,10 +71,18 @@ export default function TodayPanel({ data, onOpen, onChanged }: Props) {
     <section aria-label={t.today.title} className="space-y-3">
       <h2 className="text-base font-semibold">{t.today.title}</h2>
       {!data && <p className="text-sm text-slate-500">{t.loading}</p>}
-      {empty && <p className="text-sm text-slate-500">{t.today.empty}</p>}
+      {empty && (
+        <EmptyState
+          pose="rest"
+          height={110}
+          title={t.mascot.emptyToday}
+          hint={t.mascot.emptyTodayHint}
+        />
+      )}
       {data && (
         <>
           <Group
+            pose="deadline"
             title={t.today.overdue}
             tone="text-red-600 dark:text-red-400"
             tasks={data.overdue}

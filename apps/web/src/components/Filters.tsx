@@ -27,7 +27,7 @@ function toggle<T>(s: Set<T>, v: T): Set<T> {
 }
 
 const chip = (on: boolean) =>
-  `rounded-full border px-2.5 py-1 text-xs ${on ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'}`;
+  `rounded-full border px-2.5 py-1 text-xs ${on ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'}`;
 
 interface Props {
   value: FilterState;
@@ -168,7 +168,7 @@ export default function Filters({ value, onChange, categories, allTags }: Props)
       <button
         type="button"
         onClick={() => onChange(emptyFilters())}
-        className="text-xs text-indigo-600 underline dark:text-indigo-400"
+        className="text-xs text-brand-600 underline dark:text-brand-400"
       >
         {t.filter.clear}
       </button>

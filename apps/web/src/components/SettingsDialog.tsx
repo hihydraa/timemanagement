@@ -212,7 +212,7 @@ export default function SettingsDialog({ onClose, onOpenLine, onSaved }: Props) 
                 aria-label={t.settings.quota}
               >
                 <div
-                  className={`h-full ${push.exhausted ? 'bg-red-500' : push.nearLimit ? 'bg-amber-500' : 'bg-indigo-500'}`}
+                  className={`h-full ${push.exhausted ? 'bg-red-500' : push.nearLimit ? 'bg-amber-500' : 'bg-brand-500'}`}
                   style={{ width: `${pct}%` }}
                 />
               </div>
@@ -242,7 +242,7 @@ export default function SettingsDialog({ onClose, onOpenLine, onSaved }: Props) 
           <button
             type="submit"
             disabled={busy || !s}
-            className="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+            className="rounded bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
           >
             {t.settings.save}
           </button>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, ApiClientError } from '../lib/api';
 import { formatMinutes } from '../lib/dates';
+import Mascot from '../components/Mascot';
 import { t } from '../lib/i18n';
 import { isoToWall } from '../lib/time';
 import type { FocusSession, Task } from '../lib/types';
@@ -255,7 +256,10 @@ export default function FocusPage() {
   return (
     <main className="mx-auto grid max-w-3xl gap-4 p-3 md:grid-cols-[1fr_16rem]">
       <section aria-label={t.focus.title} className="space-y-4">
-        <h2 className="text-lg font-semibold">{t.focus.title}</h2>
+        <div className="flex items-end gap-3">
+          <Mascot pose={run?.phase === 'break' ? 'rest' : run ? 'plan' : 'morning'} height={96} />
+          <h2 className="pb-2 text-lg font-semibold">{t.focus.title}</h2>
+        </div>
 
         <div className="flex flex-col items-center gap-3">
           <div className="relative h-56 w-56">
@@ -277,7 +281,7 @@ export default function FocusPage() {
                 strokeLinecap="round"
                 strokeDasharray={C}
                 strokeDashoffset={C * (1 - progress)}
-                className={run?.phase === 'break' ? 'stroke-green-500' : 'stroke-indigo-600'}
+                className={run?.phase === 'break' ? 'stroke-green-500' : 'stroke-brand-600'}
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -297,7 +301,7 @@ export default function FocusPage() {
             <button
               type="button"
               onClick={start}
-              className="rounded-full bg-indigo-600 px-8 py-3 text-base font-semibold text-white hover:bg-indigo-700"
+              className="rounded-full bg-brand-600 px-8 py-3 text-base font-semibold text-white hover:bg-brand-700"
             >
               {t.focus.start}
             </button>
@@ -409,7 +413,7 @@ export default function FocusPage() {
           <button
             type="button"
             onClick={() => void Notification.requestPermission().then(setPerm)}
-            className="text-xs text-indigo-600 underline dark:text-indigo-400"
+            className="text-xs text-brand-600 underline dark:text-brand-400"
           >
             {t.focus.notify}
           </button>
