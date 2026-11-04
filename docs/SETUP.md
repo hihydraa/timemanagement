@@ -1,0 +1,58 @@
+# Dobby — คู่มือติดตั้ง
+
+## 0. เตรียมเครื่อง
+
+- Node.js 20+ และบัญชี Cloudflare (free plan)
+- `npm install`
+
+## 1. Cloudflare D1 และ R2
+
+```bash
+npx wrangler login
+npx wrangler d1 create dobby
+npx wrangler r2 bucket create dobby-files
+```
+
+นำ `database_id` ที่ได้ไปใส่ใน `wrangler.toml` (ช่อง `REPLACE_WITH_YOUR_D1_ID`)
+
+> R2 ต้องผูกบัตรเพื่อเปิดใช้ แต่ไม่เสียเงินถ้าไม่เกิน quota ฟรี (10 GB)
+
+## 2. Secrets
+
+Local: `cp .dev.vars.example .dev.vars` แล้วกรอกค่า (**ห้าม commit**)
+Production: `npx wrangler secret put <NAME>` สำหรับแต่ละตัวใน `.dev.vars.example`
+
+สร้างค่าสุ่ม:
+
+```bash
+openssl rand -base64 32   # SESSION_SECRET, TOKEN_ENC_KEY
+```
+
+## 3. รัน local
+
+```bash
+npm run db:migrate:local
+npm run dev        # เว็บ http://localhost:5173 , API http://localhost:8787
+```
+
+## 4. LINE OA (Phase 3)
+
+1. สร้าง LINE Official Account → เปิด Messaging API ใน LINE Developers Console
+2. เก็บ **Channel secret** และออก **Channel access token (long-lived)**
+3. ตั้ง Webhook URL = `https://<worker-domain>/webhook/line` และเปิด "Use webhook"
+4. ปิด "Auto-reply messages" และ "Greeting messages" ใน OA Manager
+5. ตรวจโควตา push ของแพ็กเกจ แล้วตั้ง `PUSH_MONTHLY_LIMIT`
+
+## 5. Google OAuth + Calendar (Phase 1/4)
+
+1. Google Cloud Console → สร้าง OAuth client (Web) เปิด Google Calendar API
+2. Redirect URI = `GOOGLE_REDIRECT_URI`
+3. **เปลี่ยน consent screen เป็น "In production"** — ถ้าค้าง "Testing" refresh token จะหมดอายุทุก 7 วัน (แอปส่วนตัวใช้ได้แม้ขึ้นหน้าเตือน unverified)
+4. ตั้ง `ALLOWED_EMAILS` เป็นอีเมลของคุณ
+
+## 6. Deploy
+
+```bash
+npm run db:migrate:remote
+npm run deploy
+```

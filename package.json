@@ -1,0 +1,40 @@
+{
+  "name": "dobby",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "wrangler dev --port 8787",
+    "dev:web": "npm run dev -w @dobby/web",
+    "build": "npm run build -w @dobby/web && tsc --noEmit",
+    "deploy": "npm run build && wrangler deploy",
+    "lint": "eslint . && npm run lint -w @dobby/web",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply dobby --local",
+    "db:migrate:remote": "wrangler d1 migrations apply dobby --remote"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.44.0",
+    "hono": "^4.7.0",
+    "jose": "^6.0.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261103.1",
+    "@eslint/js": "^9.0.0",
+    "concurrently": "^9.0.0",
+    "drizzle-kit": "^0.31.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.4.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.0.0",
+    "wrangler": "^4.0.0"
+  }
+}
