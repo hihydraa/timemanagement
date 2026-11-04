@@ -82,6 +82,38 @@ LINE_CHANNEL_ACCESS_TOKEN=<token> APP_BASE_URL=https://<worker-domain> npm run r
 > บอทตอบด้วย reply token เท่านั้น (ไม่นับโควตา push) การแจ้งเตือนแบบ push จะมาใน Phase 5
 > เพิ่ม `LINE_CHANNEL_SECRET` ผิดค่า/ไม่ตั้ง = webhook ตอบ 401 ทุกคำขอ (ตั้งใจ)
 
+## 4b. แจ้งเตือนผ่าน LINE (Phase 5)
+
+ระบบมี Cron ทุก 5 นาที (`wrangler.toml` → `[triggers]`) ที่ส่ง push ให้ผู้ใช้ที่ผูก LINE แล้ว: **สรุปเช้า** (07:30) · **เตือนก่อนเวลา** (30 นาที) · **เตือนเดดไลน์วันนี้** (15:00) · **สรุปเย็น** (20:00, ปิดได้) — ตั้งเวลา/quiet hours ได้ที่ปุ่ม **ตั้งค่า** ในเว็บ
+
+1. รัน migration ใหม่ของ Phase 5 (เพิ่มคอลัมน์ `deadline_alert_time`, `evening_review_enabled`) แล้ว deploy:
+
+```bash
+npm run db:migrate:remote
+```
+
+```bash
+npm run deploy
+```
+
+2. **ตั้งโควตา push ให้ตรงกับแพ็กเกจ LINE OA ของคุณ** — เปิด LINE Official Account Manager ดูจำนวนข้อความ push ฟรีต่อเดือน แล้วแก้ `PUSH_MONTHLY_LIMIT` ใน `wrangler.toml` (`[vars]`) แล้ว deploy ใหม่ ค่าที่ใส่ไว้ (200) เป็นค่าตัวอย่าง **ไม่ใช่โควตาจริง** — ถ้าไม่ตั้ง/ตั้งผิดรูปแบบ ระบบจะไม่ส่ง push เลย (ตั้งใจ กันเกินโควตา)
+3. ตรวจใน Cloudflare Dashboard → Workers & Pages → dobby → Settings → Triggers ว่ามี Cron `*/5 * * * *`
+4. เมื่อโควตาใกล้เต็ม (≥ 80%) เว็บจะขึ้นแบนเนอร์เตือน และเมื่อเต็มจะหยุดส่ง push จนถึงเดือนหน้า (การตอบแชทใน LINE ไม่เสียโควตา)
+
+**หลักการส่ง:** แต่ละประเภทส่ง "วันละครั้ง" ภายใน 2 ชั่วโมงหลังเวลาที่ตั้ง (ไม่ต้องตรงนาที) ไม่ส่งถ้าวันนั้นไม่มีงาน และไม่ส่งในช่วง quiet hours · รวมหลายงานเป็นข้อความเดียว (1 push = นับโควตา 1) · รอบละไม่เกิน 5 push (เพดานของ Worker ฟรี ส่วนที่เหลือไปรอบถัดไป)
+
+**ทดสอบ Cron ในเครื่อง:**
+
+```bash
+npx wrangler dev --test-scheduled
+```
+
+```bash
+curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=*/5+*+*+*+*"
+```
+
+(wrangler รุ่นปัจจุบันใช้ `/cdn-cgi/handler/scheduled` — ไม่ใช่ `/__scheduled`) ผลดูได้ใน log ของ `wrangler dev` (`notifications run {...}`) และตาราง `notification_log` — ถ้าต้องการลองโดยไม่ยิง LINE จริง ตั้ง `LINE_API_BASE=http://localhost:9999` ใน `.dev.vars` ชี้ไป mock server (ตัวแปรนี้ใช้เฉพาะ dev ห้ามตั้งใน production)
+
 ## 5. Google OAuth (login) และ Google Calendar (Phase 1/4)
 
 ### 5.1 Login ด้วย Google
