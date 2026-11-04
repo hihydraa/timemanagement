@@ -30,6 +30,7 @@ const baseSecureHeaders = secureHeaders({
     scriptSrc: ["'self'"],
     styleSrc: ["'self'", "'unsafe-inline'"], // FullCalendar inject style
     imgSrc: ["'self'", 'data:', 'blob:'],
+    fontSrc: ["'self'", 'data:'],
     connectSrc: ["'self'"],
     manifestSrc: ["'self'"],
     workerSrc: ["'self'"],
