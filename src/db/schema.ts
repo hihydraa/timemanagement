@@ -133,3 +133,19 @@ export const focusSessions = sqliteTable('focus_sessions', {
   endedAt: text('ended_at'),
   minutes: integer('minutes').notNull().default(0),
 });
+
+/** กัน webhook event ซ้ำด้วย webhookEventId */
+export const lineEvents = sqliteTable('line_events', {
+  id: text('id').primaryKey(),
+  createdAt: text('created_at').notNull(),
+});
+
+/** state ต่อ LINE user: รายการล่าสุดที่แสดง (สำหรับ "เสร็จ 2"), ไฟล์ที่รอเลือกงาน, ตัวนับรหัสผูกบัญชีที่ผิด */
+export const lineState = sqliteTable('line_state', {
+  lineUserId: text('line_user_id').primaryKey(),
+  listJson: text('list_json'),
+  listAt: text('list_at'),
+  pendingMedia: text('pending_media'),
+  failCount: integer('fail_count').notNull().default(0),
+  failWindowAt: text('fail_window_at'),
+});

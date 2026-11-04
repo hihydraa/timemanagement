@@ -53,6 +53,14 @@ export const taskInput = z.object({
     .max(60 * 24)
     .nullable()
     .default(null),
+  recurrenceRule: z
+    .string()
+    .regex(
+      /^FREQ=(DAILY|WEEKLY|MONTHLY)(;INTERVAL=\d{1,2})?(;BYDAY=(MO|TU|WE|TH|FR|SA|SU)(,(MO|TU|WE|TH|FR|SA|SU))*)?(;UNTIL=\d{8})?$/,
+      'รูปแบบการทำซ้ำไม่ถูกต้อง',
+    )
+    .nullable()
+    .default(null),
   tags: z.array(tagSchema).max(20).default([]),
   source: z.enum(['web', 'line']).default('web'),
 });
@@ -144,6 +152,7 @@ export async function createTask(db: Db, userId: string, input: TaskInput): Prom
     dueAt: t.dueAt,
     dueDate: t.dueDate,
     estimateMinutes: t.estimateMinutes,
+    recurrenceRule: t.recurrenceRule,
     source: t.source,
     completedAt: t.status === 'done' ? ts : null,
     createdAt: ts,
@@ -186,6 +195,8 @@ export async function updateTask(
       dueDate: merged.dueDate,
       estimateMinutes:
         patch.estimateMinutes !== undefined ? patch.estimateMinutes : cur.estimateMinutes,
+      recurrenceRule:
+        patch.recurrenceRule !== undefined ? patch.recurrenceRule : cur.recurrenceRule,
       completedAt: status === 'done' ? (cur.completedAt ?? ts) : null,
       updatedAt: ts,
     })
@@ -318,5 +329,41 @@ export async function inboxTasks(db: Db, userId: string): Promise<TaskDto[]> {
     )
     .orderBy(desc(tasks.createdAt))
     .limit(200);
+  return withTags(db, rows);
+}
+
+/** เลื่อนงานตามจำนวนนาที/วัน (ใช้ร่วมกันระหว่างเว็บและ LINE) */
+export async function snoozeTask(
+  db: Db,
+  userId: string,
+  id: string,
+  by: { minutes?: number; days?: number },
+): Promise<TaskDto> {
+  const t = await getOwned(db, userId, id);
+  if (!t.startAt && !t.dueAt && !t.dueDate) {
+    throw new ApiError(400, 'validation_error', 'งานนี้ยังไม่มีกำหนดเวลา');
+  }
+  const shiftMs = by.minutes ? by.minutes * 60_000 : (by.days ?? 1) * 86_400_000;
+  const shift = (s: string | null) =>
+    s ? new Date(new Date(s).getTime() + shiftMs).toISOString() : null;
+  return updateTask(db, userId, t.id, {
+    startAt: shift(t.startAt),
+    endAt: shift(t.endAt),
+    dueAt: shift(t.dueAt),
+    dueDate: t.dueDate
+      ? addDays(t.dueDate, by.days ?? Math.max(1, Math.round(shiftMs / 86_400_000)))
+      : null,
+    status: 'todo',
+  });
+}
+
+/** งานที่ยังไม่เสร็จของผู้ใช้ (ใช้ค้นหาตามชื่อจาก LINE) */
+export async function openTasks(db: Db, userId: string): Promise<TaskDto[]> {
+  const rows = await db
+    .select()
+    .from(tasks)
+    .where(and(eq(tasks.userId, userId), inArray(tasks.status, ['todo', 'doing'])))
+    .orderBy(desc(tasks.createdAt))
+    .limit(300);
   return withTags(db, rows);
 }

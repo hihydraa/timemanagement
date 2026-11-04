@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { getDb } from '../db/client';
-import { ApiError, parseJson, parseQuery } from '../lib/http';
-import { addDays, now } from '../lib/time';
+import { parseJson, parseQuery } from '../lib/http';
+import { now } from '../lib/time';
 import {
   createTask,
   deleteTask,
@@ -10,6 +10,7 @@ import {
   inboxTasks,
   listQuery,
   listTasks,
+  snoozeTask,
   taskInput,
   taskPatch,
   todayBuckets,
@@ -69,24 +70,7 @@ const snoozeInput = z
 
 r.post('/tasks/:id/snooze', async (c) => {
   const body = await parseJson(c, snoozeInput);
-  const db = getDb(c.env.DB);
-  const userId = c.get('userId');
-  const t = await getOwned(db, userId, c.req.param('id'));
-  const shiftMs = body.minutes ? body.minutes * 60_000 : body.days! * 86_400_000;
-  const shift = (s: string | null) =>
-    s ? new Date(new Date(s).getTime() + shiftMs).toISOString() : null;
-  if (!t.startAt && !t.dueAt && !t.dueDate) {
-    throw new ApiError(400, 'validation_error', 'งานนี้ยังไม่มีกำหนดเวลา');
-  }
-  const task = await updateTask(db, userId, t.id, {
-    startAt: shift(t.startAt),
-    endAt: shift(t.endAt),
-    dueAt: shift(t.dueAt),
-    dueDate: t.dueDate
-      ? addDays(t.dueDate, body.days ?? Math.max(1, Math.round(shiftMs / 86_400_000)))
-      : null,
-    status: 'todo',
-  });
+  const task = await snoozeTask(getDb(c.env.DB), c.get('userId'), c.req.param('id'), body);
   return c.json({ task });
 });
 

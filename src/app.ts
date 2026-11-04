@@ -8,6 +8,7 @@ import { originCheck, requireAuth } from './middleware';
 import attachmentsRoutes from './routes/attachments';
 import auth from './routes/auth';
 import categoriesRoutes from './routes/categories';
+import { lineApi, lineWebhook } from './routes/line';
 import tasksRoutes from './routes/tasks';
 import type { AppEnv } from './types';
 import { nowIso } from './lib/time';
@@ -41,6 +42,7 @@ app.use('*', async (c, next) => {
 app.get('/api/health', (c) => c.json({ ok: true, name: 'dobby', time: nowIso() }));
 
 app.route('/auth', auth);
+app.route('/webhook/line', lineWebhook);
 
 const api = new Hono<AppEnv>();
 api.use('*', originCheck, requireAuth);
@@ -56,6 +58,7 @@ api.get('/me', async (c) => {
 api.route('/', tasksRoutes);
 api.route('/', categoriesRoutes);
 api.route('/', attachmentsRoutes);
+api.route('/line', lineApi);
 app.route('/api', api);
 
 app.onError((err, c) => {
