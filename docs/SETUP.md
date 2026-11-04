@@ -28,6 +28,9 @@ Production: `npx wrangler secret put <NAME>` สำหรับแต่ละ�
 openssl rand -base64 32   # SESSION_SECRET, TOKEN_ENC_KEY
 ```
 
+> ไฟล์แนบ: จำกัดไฟล์ละ `MAX_UPLOAD_MB` (ค่าเริ่มต้น 10), ครั้งละ 5 ไฟล์, รวมต่อผู้ใช้ `USER_STORAGE_QUOTA_MB` (500) ปรับได้ใน `wrangler.toml [vars]`
+> Local: wrangler จำลอง R2 ให้เอง ไม่ต้องสร้าง bucket
+
 ## 3. รัน local
 
 ```bash
