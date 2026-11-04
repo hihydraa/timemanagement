@@ -63,3 +63,8 @@ export function addDays(date: string, days: number): string {
   const t = new Date(Date.UTC(y!, m! - 1, d! + days));
   return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`;
 }
+
+/** ISO พร้อม offset ไทย เช่น 2026-11-05T14:00:00+07:00 (สำหรับ Google Calendar) */
+export function toBangkokIso(d: Date): string {
+  return `${new Date(d.getTime() + BANGKOK_OFFSET_MS).toISOString().slice(0, 19)}+07:00`;
+}

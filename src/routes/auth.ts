@@ -1,13 +1,28 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { getDb } from '../db/client';
 import { ApiError } from '../lib/http';
-import { clearSessionCookie, setSessionCookie, signSession } from '../lib/session';
+import { requireAuth } from '../middleware';
+import {
+  clearSessionCookie,
+  readSessionCookie,
+  setSessionCookie,
+  signSession,
+  verifySession,
+} from '../lib/session';
+import {
+  connectUrl,
+  exchangeCode,
+  fetchUserEmail,
+  gcalConfigured,
+  SCOPE_CALENDAR,
+  saveTokens,
+} from '../services/googleCalendar';
 import { isEmailAllowed, upsertUser } from '../services/users';
-import type { Env } from '../types';
+import type { AppEnv } from '../types';
 
 const STATE_COOKIE = 'dobby_oauth_state';
-const auth = new Hono<{ Bindings: Env }>();
+const auth = new Hono<AppEnv>();
 
 const randomState = () => {
   const b = crypto.getRandomValues(new Uint8Array(24));
@@ -43,14 +58,65 @@ auth.get('/google/login', (c) => {
   return c.redirect(u.toString());
 });
 
+/** เชื่อม Google Calendar (ต้องล็อกอินเว็บอยู่แล้ว) — ใช้ callback เดียวกับ login แยกด้วย state ที่ขึ้นต้น "c." */
+auth.get('/google/connect', requireAuth, (c) => {
+  if (!gcalConfigured(c.env)) {
+    throw new ApiError(
+      400,
+      'not_configured',
+      'ยังไม่ได้ตั้งค่า Google Calendar (ต้องมี GOOGLE_* และ TOKEN_ENC_KEY)',
+    );
+  }
+  const state = `c.${randomState()}`;
+  setCookie(c, STATE_COOKIE, state, {
+    httpOnly: true,
+    secure: c.env.APP_BASE_URL.startsWith('https://'),
+    sameSite: 'Lax',
+    path: '/auth',
+    maxAge: 600,
+  });
+  return c.redirect(connectUrl(c.env, state));
+});
+
+async function connectCallback(c: Context<AppEnv>, code: string) {
+  const base = c.env.APP_BASE_URL.replace(/\/$/, '');
+  const token = readSessionCookie(c);
+  const userId = token ? await verifySession(c.env, token) : null;
+  if (!userId) throw new ApiError(401, 'unauthorized', 'กรุณาเข้าสู่ระบบ');
+
+  const tokens = await exchangeCode(c.env, code);
+  if (!tokens) return c.redirect(`${base}/?gcal=error&reason=token`);
+  // ผู้ใช้อาจติ๊กไม่ให้สิทธิ์ปฏิทิน (granular consent) หรือไม่ได้ refresh token
+  if (!(tokens.scope ?? '').split(' ').includes(SCOPE_CALENDAR)) {
+    return c.redirect(`${base}/?gcal=error&reason=scope`);
+  }
+  if (!tokens.refresh_token) return c.redirect(`${base}/?gcal=error&reason=refresh`);
+
+  await saveTokens(c.env, getDb(c.env.DB), userId, {
+    refreshToken: tokens.refresh_token,
+    accessToken: tokens.access_token,
+    expiresIn: tokens.expires_in,
+    scope: tokens.scope ?? SCOPE_CALENDAR,
+    email: await fetchUserEmail(tokens.access_token),
+  });
+  return c.redirect(`${base}/?gcal=connected`);
+}
+
 auth.get('/google/callback', async (c) => {
   const state = c.req.query('state');
   const code = c.req.query('code');
   const saved = getCookie(c, STATE_COOKIE);
   deleteCookie(c, STATE_COOKIE, { path: '/auth' });
+  const base = c.env.APP_BASE_URL.replace(/\/$/, '');
+  const isConnect = !!state?.startsWith('c.');
+  if (c.req.query('error')) {
+    // ผู้ใช้กดปฏิเสธที่หน้า consent
+    return c.redirect(`${base}/?${isConnect ? 'gcal' : 'login'}=denied`);
+  }
   if (!state || !saved || !code || !timingSafeEqual(state, saved)) {
     throw new ApiError(400, 'bad_state', 'การยืนยันตัวตนไม่ถูกต้อง กรุณาลองใหม่');
   }
+  if (isConnect) return connectCallback(c, code);
 
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',

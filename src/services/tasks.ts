@@ -20,8 +20,9 @@ import { countsByTask, deleteTaskFiles } from './attachments';
 import { addDays, bangkokDate, fromBangkok, nowIso } from '../lib/time';
 
 type TaskRow = typeof tasks.$inferSelect;
-export interface TaskDto extends Omit<TaskRow, 'allDay'> {
+export interface TaskDto extends Omit<TaskRow, 'allDay' | 'gcalSync'> {
   allDay: boolean;
+  gcalSync: boolean;
   tags: string[];
   attachmentCount: number;
 }
@@ -63,6 +64,7 @@ export const taskInput = z.object({
     .default(null),
   tags: z.array(tagSchema).max(20).default([]),
   source: z.enum(['web', 'line']).default('web'),
+  gcalSync: z.boolean().default(true),
 });
 export const taskPatch = taskInput.partial();
 export type TaskInput = z.infer<typeof taskInput>;
@@ -101,6 +103,7 @@ export async function withTags(db: Db, rows: TaskRow[]): Promise<TaskDto[]> {
   return rows.map((r) => ({
     ...r,
     allDay: r.allDay === 1,
+    gcalSync: r.gcalSync === 1,
     tags: (byTask.get(r.id) ?? []).sort(),
     attachmentCount: counts.get(r.id) ?? 0,
   }));
@@ -153,6 +156,7 @@ export async function createTask(db: Db, userId: string, input: TaskInput): Prom
     dueDate: t.dueDate,
     estimateMinutes: t.estimateMinutes,
     recurrenceRule: t.recurrenceRule,
+    gcalSync: t.gcalSync ? 1 : 0,
     source: t.source,
     completedAt: t.status === 'done' ? ts : null,
     createdAt: ts,
@@ -197,6 +201,7 @@ export async function updateTask(
         patch.estimateMinutes !== undefined ? patch.estimateMinutes : cur.estimateMinutes,
       recurrenceRule:
         patch.recurrenceRule !== undefined ? patch.recurrenceRule : cur.recurrenceRule,
+      gcalSync: patch.gcalSync !== undefined ? (patch.gcalSync ? 1 : 0) : cur.gcalSync,
       completedAt: status === 'done' ? (cur.completedAt ?? ts) : null,
       updatedAt: ts,
     })
@@ -210,11 +215,12 @@ export async function deleteTask(
   bucket: R2Bucket,
   userId: string,
   id: string,
-): Promise<void> {
-  await getOwned(db, userId, id);
+): Promise<{ gcalEventId: string | null }> {
+  const row = await getOwned(db, userId, id);
   await deleteTaskFiles(db, bucket, userId, id);
   await db.delete(taskTags).where(eq(taskTags.taskId, id));
   await db.delete(tasks).where(and(eq(tasks.id, id), eq(tasks.userId, userId)));
+  return { gcalEventId: row.gcalEventId };
 }
 
 export const listQuery = z.object({

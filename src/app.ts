@@ -8,6 +8,7 @@ import { originCheck, requireAuth } from './middleware';
 import attachmentsRoutes from './routes/attachments';
 import auth from './routes/auth';
 import categoriesRoutes from './routes/categories';
+import gcalRoutes from './routes/gcal';
 import { lineApi, lineWebhook } from './routes/line';
 import tasksRoutes from './routes/tasks';
 import type { AppEnv } from './types';
@@ -59,6 +60,7 @@ api.route('/', tasksRoutes);
 api.route('/', categoriesRoutes);
 api.route('/', attachmentsRoutes);
 api.route('/line', lineApi);
+api.route('/gcal', gcalRoutes);
 app.route('/api', api);
 
 app.onError((err, c) => {

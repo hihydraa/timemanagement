@@ -14,7 +14,7 @@ export function makeEnv(over: Partial<Env> = {}): Env & { FILES: FakeR2 & R2Buck
     GOOGLE_CLIENT_SECRET: 'cs',
     GOOGLE_REDIRECT_URI: 'http://localhost:5173/auth/google/callback',
     SESSION_SECRET: 'test-secret-test-secret-test-secret-32',
-    TOKEN_ENC_KEY: '',
+    TOKEN_ENC_KEY: Buffer.alloc(32, 7).toString('base64'),
     APP_BASE_URL: 'http://localhost:5173',
     ALLOWED_EMAILS: 'a@x.com,b@x.com',
     PUSH_MONTHLY_LIMIT: '200',
@@ -65,6 +65,15 @@ export class Client {
     );
     const text = await res.text();
     return { status: res.status, json: text ? JSON.parse(text) : null };
+  }
+
+  /** เรียกดิบ ไม่ parse JSON และไม่ตาม redirect (ใช้ทดสอบ OAuth) */
+  async raw(method: string, path: string, headers: Record<string, string> = {}) {
+    return app.request(
+      `${this.base}${path}`,
+      { method, headers: { ...(this.cookie ? { Cookie: this.cookie } : {}), ...headers } },
+      this.env,
+    );
   }
 
   async download(path: string) {

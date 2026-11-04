@@ -28,6 +28,8 @@ export const googleTokens = sqliteTable('google_tokens', {
   accessTokenEnc: text('access_token_enc'),
   expiresAt: text('expires_at'),
   scope: text('scope'),
+  /** บัญชี Google ที่เชื่อมปฏิทิน */
+  email: text('email'),
 });
 
 export const categories = sqliteTable(
@@ -66,6 +68,8 @@ export const tasks = sqliteTable(
     parentTaskId: text('parent_task_id'),
     gcalEventId: text('gcal_event_id'),
     gcalSyncedAt: text('gcal_synced_at'),
+    /** ผู้ใช้เปิด/ปิดการซิงก์งานนี้ไป Google Calendar (ผลจริงต้องเปิด gcal_sync_enabled ด้วย) */
+    gcalSync: integer('gcal_sync').notNull().default(1),
     source: text('source', { enum: ['web', 'line'] })
       .notNull()
       .default('web'),

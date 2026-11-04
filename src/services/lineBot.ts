@@ -15,6 +15,7 @@ import { addDays, bangkokDate, bangkokParts, fromBangkok, now, nowIso } from '..
 import type { Env } from '../types';
 import { limitsFrom, saveUploads } from './attachments';
 import { matchesMagic, sanitizeFilename } from './files';
+import { removeEventSafe, syncTaskSafe } from './googleCalendar';
 import {
   clip,
   confirmDelete,
@@ -80,6 +81,12 @@ interface PendingMedia {
 const MIN = 60_000;
 const send = (ctx: Ctx, msgs: LineMessage[]) =>
   ctx.replyToken ? replyMessages(ctx.env, ctx.replyToken, msgs) : Promise.resolve();
+
+/** ตอบ LINE ก่อน แล้วค่อยซิงก์ Google Calendar (best-effort ไม่กระทบการตอบ) */
+async function replyThenSync(ctx: Ctx, userId: string, taskId: string, msgs: LineMessage[]) {
+  await send(ctx, msgs);
+  await syncTaskSafe(ctx.env, userId, taskId);
+}
 
 // ---------------------------------------------------------------- entry
 export async function processEvents(env: Env, events: LineEvent[]): Promise<void> {
@@ -391,7 +398,7 @@ async function cmdDone(ctx: Ctx, user: User, ref: string) {
   if (r.task.status === 'done')
     return send(ctx, [text(`งานนี้เสร็จไปแล้ว: ${clip(r.task.title, 80)}`)]);
   await updateTask(ctx.db, user.id, r.task.id, { status: 'done' });
-  return send(ctx, [text(`✅ เสร็จแล้ว: ${clip(r.task.title, 80)}`)]);
+  return replyThenSync(ctx, user.id, r.task.id, [text(`✅ เสร็จแล้ว: ${clip(r.task.title, 80)}`)]);
 }
 
 async function cmdDelete(ctx: Ctx, user: User, ref: string) {
@@ -501,7 +508,7 @@ async function cmdSnooze(ctx: Ctx, user: User, rest: string) {
   const r = await resolveRef(ctx, user, ref);
   if (!r.ok) return send(ctx, r.reply);
   const moved = await reschedule(ctx.db, user.id, r.task, newDate, newTime);
-  return send(ctx, [await card(ctx, moved, '⏰ เลื่อนแล้ว')]);
+  return replyThenSync(ctx, user.id, moved.id, [await card(ctx, moved, '⏰ เลื่อนแล้ว')]);
 }
 
 // ---------------------------------------------------------------- create
@@ -599,7 +606,7 @@ async function cmdCreate(ctx: Ctx, user: User, t: string) {
       ]),
     );
   }
-  return send(ctx, msgs);
+  return replyThenSync(ctx, user.id, task.id, msgs);
 }
 
 // ---------------------------------------------------------------- postback
@@ -612,7 +619,7 @@ async function handlePostback(ctx: Ctx, user: User, data: string) {
     case 'done': {
       const t = await getOwned(db, user.id, id);
       await updateTask(db, user.id, id, { status: 'done' });
-      return send(ctx, [text(`✅ เสร็จแล้ว: ${clip(t.title, 80)}`)]);
+      return replyThenSync(ctx, user.id, id, [text(`✅ เสร็จแล้ว: ${clip(t.title, 80)}`)]);
     }
     case 'snz': {
       const minutes = Number(q.get('m') ?? 0);
@@ -624,7 +631,8 @@ async function handlePostback(ctx: Ctx, user: User, data: string) {
             ? { days }
             : null;
       if (!by) return send(ctx, [text('คำสั่งไม่ถูกต้อง')]);
-      return send(ctx, [await card(ctx, await snoozeTask(db, user.id, id, by), '⏰ เลื่อนแล้ว')]);
+      const moved = await snoozeTask(db, user.id, id, by);
+      return replyThenSync(ctx, user.id, id, [await card(ctx, moved, '⏰ เลื่อนแล้ว')]);
     }
     case 'del': {
       const t = await getOwned(db, user.id, id);
@@ -632,8 +640,9 @@ async function handlePostback(ctx: Ctx, user: User, data: string) {
     }
     case 'delok': {
       const t = await getOwned(db, user.id, id);
-      await deleteTask(db, ctx.env.FILES, user.id, id);
-      return send(ctx, [text(`🗑 ลบแล้ว: ${clip(t.title, 80)}`)]);
+      const { gcalEventId } = await deleteTask(db, ctx.env.FILES, user.id, id);
+      await send(ctx, [text(`🗑 ลบแล้ว: ${clip(t.title, 80)}`)]);
+      return removeEventSafe(ctx.env, user.id, gcalEventId);
     }
     case 'cancel':
       return send(ctx, [text('ยกเลิกแล้ว')]);
@@ -650,13 +659,8 @@ async function handlePostback(ctx: Ctx, user: User, data: string) {
               : null;
       if (!date) return send(ctx, [text('คำสั่งไม่ถูกต้อง')]);
       await getOwned(db, user.id, id);
-      return send(ctx, [
-        await card(
-          ctx,
-          await updateTask(db, user.id, id, { allDay: true, dueDate: date }),
-          '📅 กำหนดวันแล้ว',
-        ),
-      ]);
+      const scheduled = await updateTask(db, user.id, id, { allDay: true, dueDate: date });
+      return replyThenSync(ctx, user.id, id, [await card(ctx, scheduled, '📅 กำหนดวันแล้ว')]);
     }
     case 'att': {
       await getOwned(db, user.id, id);

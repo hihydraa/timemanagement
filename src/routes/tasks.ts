@@ -1,8 +1,10 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { getDb } from '../db/client';
+import { background } from '../lib/background';
 import { parseJson, parseQuery } from '../lib/http';
 import { now } from '../lib/time';
+import { removeEventSafe, syncTaskSafe } from '../services/googleCalendar';
 import {
   createTask,
   deleteTask,
@@ -28,7 +30,9 @@ r.get('/tasks', async (c) => {
 
 r.post('/tasks', async (c) => {
   const body = await parseJson(c, taskInput);
-  return c.json({ task: await createTask(getDb(c.env.DB), c.get('userId'), body) }, 201);
+  const task = await createTask(getDb(c.env.DB), c.get('userId'), body);
+  await background(c, syncTaskSafe(c.env, c.get('userId'), task.id));
+  return c.json({ task }, 201);
 });
 
 r.get('/tasks/:id', async (c) => {
@@ -39,13 +43,19 @@ r.get('/tasks/:id', async (c) => {
 
 r.patch('/tasks/:id', async (c) => {
   const body = await parseJson(c, taskPatch);
-  return c.json({
-    task: await updateTask(getDb(c.env.DB), c.get('userId'), c.req.param('id'), body),
-  });
+  const task = await updateTask(getDb(c.env.DB), c.get('userId'), c.req.param('id'), body);
+  await background(c, syncTaskSafe(c.env, c.get('userId'), task.id));
+  return c.json({ task });
 });
 
 r.delete('/tasks/:id', async (c) => {
-  await deleteTask(getDb(c.env.DB), c.env.FILES, c.get('userId'), c.req.param('id'));
+  const { gcalEventId } = await deleteTask(
+    getDb(c.env.DB),
+    c.env.FILES,
+    c.get('userId'),
+    c.req.param('id'),
+  );
+  await background(c, removeEventSafe(c.env, c.get('userId'), gcalEventId));
   return c.json({ ok: true });
 });
 
@@ -53,6 +63,7 @@ r.post('/tasks/:id/complete', async (c) => {
   const task = await updateTask(getDb(c.env.DB), c.get('userId'), c.req.param('id'), {
     status: 'done',
   });
+  await background(c, syncTaskSafe(c.env, c.get('userId'), task.id));
   return c.json({ task });
 });
 
@@ -71,6 +82,7 @@ const snoozeInput = z
 r.post('/tasks/:id/snooze', async (c) => {
   const body = await parseJson(c, snoozeInput);
   const task = await snoozeTask(getDb(c.env.DB), c.get('userId'), c.req.param('id'), body);
+  await background(c, syncTaskSafe(c.env, c.get('userId'), task.id));
   return c.json({ task });
 });
 

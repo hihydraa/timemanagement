@@ -33,7 +33,7 @@ export async function verifySession(env: Env, token: string): Promise<string | n
 
 const isHttps = (env: Env) => env.APP_BASE_URL.startsWith('https://');
 
-export function setSessionCookie(c: Context<{ Bindings: Env }>, token: string): void {
+export function setSessionCookie<E extends { Bindings: Env }>(c: Context<E>, token: string): void {
   // Secure เฉพาะเมื่อใช้ https (localhost dev เป็น http)
   setCookie(c, SESSION_COOKIE, token, {
     httpOnly: true,
@@ -44,7 +44,7 @@ export function setSessionCookie(c: Context<{ Bindings: Env }>, token: string): 
   });
 }
 
-export function clearSessionCookie(c: Context<{ Bindings: Env }>): void {
+export function clearSessionCookie<E extends { Bindings: Env }>(c: Context<E>): void {
   deleteCookie(c, SESSION_COOKIE, { path: '/' });
 }
 
