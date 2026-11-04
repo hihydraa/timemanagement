@@ -45,11 +45,42 @@ npm run dev        # เว็บ http://localhost:5173 , API http://localhost:8
 
 ## 4. LINE OA (Phase 3)
 
-1. สร้าง LINE Official Account → เปิด Messaging API ใน LINE Developers Console
-2. เก็บ **Channel secret** และออก **Channel access token (long-lived)**
-3. ตั้ง Webhook URL = `https://<worker-domain>/webhook/line` และเปิด "Use webhook"
-4. ปิด "Auto-reply messages" และ "Greeting messages" ใน OA Manager
-5. ตรวจโควตา push ของแพ็กเกจ แล้วตั้ง `PUSH_MONTHLY_LIMIT`
+1. สร้าง LINE Official Account ที่ https://manager.line.biz แล้วเปิด **Messaging API** (Settings → Messaging API) ผูกกับ Provider ใน LINE Developers Console
+2. ที่ LINE Developers Console → Channel ของคุณ:
+   - แท็บ **Basic settings** เก็บ **Channel secret**
+   - แท็บ **Messaging API** กด Issue **Channel access token (long-lived)** แล้วเก็บไว้
+3. ตั้ง secrets บน Cloudflare:
+
+```bash
+npx wrangler secret put LINE_CHANNEL_SECRET
+```
+
+```bash
+npx wrangler secret put LINE_CHANNEL_ACCESS_TOKEN
+```
+
+4. รัน migration ใหม่ของ Phase 3 (เพิ่มตาราง `line_events`, `line_state`) แล้ว deploy ใหม่:
+
+```bash
+npm run db:migrate:remote
+```
+
+```bash
+npm run deploy
+```
+
+5. ตั้ง **Webhook URL** = `https://<worker-domain>/webhook/line` เปิด **Use webhook** แล้วกด **Verify** (ต้องขึ้น Success)
+6. ใน LINE Official Account Manager → Settings → Response settings: **ปิด** "Auto-reply messages" และ "Greeting messages" (ให้บอทของเราตอบเอง)
+7. ตั้ง Rich Menu (เมนู 4 ปุ่มใต้แชท):
+
+```bash
+LINE_CHANNEL_ACCESS_TOKEN=<token> APP_BASE_URL=https://<worker-domain> npm run richmenu
+```
+
+(ลองดูก่อนได้ด้วย `npm run richmenu -- --dry-run`; เปลี่ยนรูปที่ `scripts/richmenu.png` ขนาด 2500x843) 8. ผูกบัญชี: เปิดเว็บ Dobby → ปุ่ม **เชื่อม LINE** → กด "สร้างรหัสผูกบัญชี" → พิมพ์ในแชท OA ว่า `ผูกบัญชี 123456` (รหัสหมดอายุใน 10 นาที) 9. ทดสอบ: พิมพ์ `ส่งรายงาน พรุ่งนี้ 14:00 #งาน !ด่วน` — ควรได้การ์ดยืนยันและเห็นงานในเว็บ
+
+> บอทตอบด้วย reply token เท่านั้น (ไม่นับโควตา push) การแจ้งเตือนแบบ push จะมาใน Phase 5
+> เพิ่ม `LINE_CHANNEL_SECRET` ผิดค่า/ไม่ตั้ง = webhook ตอบ 401 ทุกคำขอ (ตั้งใจ)
 
 ## 5. Google OAuth + Calendar (Phase 1/4)
 

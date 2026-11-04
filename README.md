@@ -9,4 +9,4 @@ npm run dev          # เว็บ :5173 + API :8787
 npm run lint && npm run test && npm run build
 ```
 
-สถานะ: Phase 0 (Scaffold), Phase 1 (Core Web) และ Phase 2 (Attachments) เสร็จแล้ว
+สถานะ: Phase 0–3 (Scaffold, Core Web, Attachments, LINE OA) เสร็จแล้ว
