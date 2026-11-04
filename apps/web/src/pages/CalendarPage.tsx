@@ -1,6 +1,7 @@
 import type {
   DateSelectArg,
   DatesSetArg,
+  DayHeaderContentArg,
   EventClickArg,
   EventContentArg,
   EventDropArg,
@@ -143,6 +144,26 @@ function taskToEvent(task: Task, mode: ColorMode, cats: Map<string, Category>): 
 const onEventMount = (info: { el: HTMLElement; event: Parameters<typeof EVENT_TIP>[0] }) => {
   info.el.title = EVENT_TIP(info.event);
 };
+
+const DAY_NAMES = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
+
+/** หัวคอลัมน์วัน 2 แถว: ชื่อวัน / วันที่ (วันนี้เน้นเป็นวงกลม) — ใช้กับมุมมองวัน/สัปดาห์ ส่วนเดือนใช้ชื่อวันเดิม */
+function renderDayHeader(arg: DayHeaderContentArg) {
+  if (arg.view.type === 'dayGridMonth') return arg.text;
+  const d = arg.date;
+  return (
+    <div className="flex flex-col items-center leading-tight">
+      <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+        {DAY_NAMES[d.getUTCDay()]}
+      </span>
+      <span
+        className={`mt-0.5 inline-flex min-w-[2.25rem] items-center justify-center rounded-full px-1.5 py-0.5 text-sm font-semibold tabular-nums ${arg.isToday ? 'bg-brand-600 text-white' : ''}`}
+      >
+        {d.getUTCDate()}/{d.getUTCMonth() + 1}
+      </span>
+    </div>
+  );
+}
 
 const hm = (d: Date | null) => (d ? d.toISOString().slice(11, 16) : '');
 
@@ -473,6 +494,7 @@ export default function CalendarPage() {
         selectMirror
         dayMaxEvents
         events={events}
+        dayHeaderContent={renderDayHeader}
         eventContent={renderEvent}
         eventShortHeight={40}
         eventDidMount={onEventMount}
