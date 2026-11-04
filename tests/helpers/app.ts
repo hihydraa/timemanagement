@@ -1,0 +1,58 @@
+import { app } from '../../src/app';
+import type { Env } from '../../src/types';
+import { createTestD1 } from './d1';
+
+export function makeEnv(over: Partial<Env> = {}): Env {
+  return {
+    DB: createTestD1(),
+    FILES: {} as R2Bucket,
+    ASSETS: { fetch: async () => new Response('asset') } as unknown as Fetcher,
+    LINE_CHANNEL_SECRET: '',
+    LINE_CHANNEL_ACCESS_TOKEN: '',
+    GOOGLE_CLIENT_ID: 'cid',
+    GOOGLE_CLIENT_SECRET: 'cs',
+    GOOGLE_REDIRECT_URI: 'http://localhost:5173/auth/google/callback',
+    SESSION_SECRET: 'test-secret-test-secret-test-secret-32',
+    TOKEN_ENC_KEY: '',
+    APP_BASE_URL: 'http://localhost:5173',
+    ALLOWED_EMAILS: 'a@x.com,b@x.com',
+    PUSH_MONTHLY_LIMIT: '200',
+    MAX_UPLOAD_MB: '10',
+    USER_STORAGE_QUOTA_MB: '500',
+    DEV_LOGIN: '1',
+    ...over,
+  };
+}
+
+export class Client {
+  cookie = '';
+  constructor(
+    private env: Env,
+    private base = 'http://localhost:8787',
+  ) {}
+
+  async login(email: string) {
+    const res = await app.request(`${this.base}/auth/dev-login?email=${email}`, {}, this.env);
+    const sc = res.headers.get('set-cookie') ?? '';
+    this.cookie = sc.split(';')[0] ?? '';
+    return res;
+  }
+
+  async call(method: string, path: string, body?: unknown, headers: Record<string, string> = {}) {
+    const res = await app.request(
+      `${this.base}${path}`,
+      {
+        method,
+        headers: {
+          ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+          ...(this.cookie ? { Cookie: this.cookie } : {}),
+          ...headers,
+        },
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      },
+      this.env,
+    );
+    const text = await res.text();
+    return { status: res.status, headers: res.headers, json: text ? JSON.parse(text) : null };
+  }
+}

@@ -14,4 +14,8 @@ export interface Env {
   PUSH_MONTHLY_LIMIT: string;
   MAX_UPLOAD_MB: string;
   USER_STORAGE_QUOTA_MB: string;
+  /** '1' เปิด /auth/dev-login สำหรับ local เท่านั้น */
+  DEV_LOGIN?: string;
 }
+
+export type AppEnv = { Bindings: Env; Variables: { userId: string } };
