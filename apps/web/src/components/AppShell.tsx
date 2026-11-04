@@ -1,18 +1,20 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import { AppContext, type AppCtx, type View } from '../lib/appContext';
 import { t } from '../lib/i18n';
 import type { Category, GcalStatus, PushStatus, User } from '../lib/types';
-import CalendarPage from '../pages/CalendarPage';
-import FocusPage from '../pages/FocusPage';
-import InboxPage from '../pages/InboxPage';
-import MatrixPage from '../pages/MatrixPage';
-import ReviewPage from '../pages/ReviewPage';
-import StatsPage from '../pages/StatsPage';
+import { useOnline } from '../lib/pwa';
 import ExportDialog from './ExportDialog';
 import GcalDialog from './GcalDialog';
 import LineDialog from './LineDialog';
 import SettingsDialog from './SettingsDialog';
+
+const CalendarPage = lazy(() => import('../pages/CalendarPage'));
+const FocusPage = lazy(() => import('../pages/FocusPage'));
+const InboxPage = lazy(() => import('../pages/InboxPage'));
+const MatrixPage = lazy(() => import('../pages/MatrixPage'));
+const ReviewPage = lazy(() => import('../pages/ReviewPage'));
+const StatsPage = lazy(() => import('../pages/StatsPage'));
 
 const VIEWS: View[] = ['calendar', 'inbox', 'matrix', 'focus', 'review', 'stats'];
 const viewFromHash = (): View => {
@@ -29,6 +31,7 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
   const [gcalNotice, setGcalNotice] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const online = useOnline();
 
   // แท็บเก็บใน URL hash → ปุ่มย้อนกลับของเบราว์เซอร์ใช้ได้ และแชร์ลิงก์ได้
   useEffect(() => {
@@ -55,12 +58,24 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
   }, []);
 
   useEffect(() => {
-    reloadCategories();
-    refreshPush();
-    api
-      .gcalStatus()
-      .then(setGcal)
-      .catch(() => undefined);
+    reloadCategories(); // จำเป็นต่อสีของ event
+    // สถานะ Google/โควตา ไม่จำเป็นต่อการแสดงผลครั้งแรก: รอให้เบราว์เซอร์ว่างก่อน เพื่อไม่แย่งเวลากับการ render ปฏิทิน
+    const run = () => {
+      refreshPush();
+      api
+        .gcalStatus()
+        .then(setGcal)
+        .catch(() => undefined);
+    };
+    const idle = (
+      window as unknown as {
+        requestIdleCallback?: (f: () => void, o?: { timeout: number }) => number;
+      }
+    ).requestIdleCallback;
+    const id = idle ? idle(run, { timeout: 3000 }) : window.setTimeout(run, 1200);
+    return () => {
+      if (!idle) window.clearTimeout(id);
+    };
   }, [reloadCategories, refreshPush]);
 
   // ผลจากการ redirect กลับจาก Google (?gcal=connected|denied|error&reason=...)
@@ -132,6 +147,12 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
   return (
     <AppContext.Provider value={ctx}>
       <div className="mx-auto flex min-h-screen max-w-[1600px] flex-col">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:text-indigo-700 focus:shadow dark:focus:bg-slate-900"
+        >
+          {t.skip}
+        </a>
         <header className="flex items-center gap-2 border-b border-slate-200 px-3 pt-2 dark:border-slate-700">
           <h1 className="text-lg font-bold">{t.appName}</h1>
           <nav aria-label="หน้าหลัก" className="-mb-px flex flex-1 gap-1 overflow-x-auto">
@@ -191,6 +212,15 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
           </div>
         </header>
 
+        {!online && (
+          <p
+            role="status"
+            className="mx-3 mt-2 rounded bg-slate-100 p-2 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          >
+            {t.offlineBanner}
+          </p>
+        )}
+
         {push && push.limitConfigured && (push.nearLimit || push.exhausted) && (
           <p
             role="status"
@@ -202,13 +232,21 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
           </p>
         )}
 
-        <div className="flex-1">
-          {view === 'calendar' && <CalendarPage />}
-          {view === 'inbox' && <InboxPage />}
-          {view === 'matrix' && <MatrixPage />}
-          {view === 'focus' && <FocusPage />}
-          {view === 'review' && <ReviewPage />}
-          {view === 'stats' && <StatsPage />}
+        <div id="main" tabIndex={-1} className="flex-1 outline-none">
+          <Suspense
+            fallback={
+              <p role="status" className="p-4 text-slate-500">
+                {t.loading}
+              </p>
+            }
+          >
+            {view === 'calendar' && <CalendarPage />}
+            {view === 'inbox' && <InboxPage />}
+            {view === 'matrix' && <MatrixPage />}
+            {view === 'focus' && <FocusPage />}
+            {view === 'review' && <ReviewPage />}
+            {view === 'stats' && <StatsPage />}
+          </Suspense>
         </div>
 
         {dialog === 'line' && <LineDialog onClose={() => setDialog(null)} />}

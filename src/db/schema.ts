@@ -182,3 +182,10 @@ export const subtasks = sqliteTable(
   },
   (t) => [index('subtasks_task_idx').on(t.taskId)],
 );
+
+/** ตัวนับ rate limit แบบ fixed window (key = scope:ผู้เรียก:เริ่มหน้าต่าง) */
+export const rateLimits = sqliteTable('rate_limits', {
+  key: text('key').primaryKey(),
+  count: integer('count').notNull().default(0),
+  expiresAt: text('expires_at').notNull(),
+});

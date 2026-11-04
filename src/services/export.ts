@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import {
   attachments,
@@ -38,8 +38,12 @@ export async function gatherExport(db: Db, userId: string): Promise<ExportData> 
     .where(eq(users.id, userId));
   const cats = await db.select().from(categories).where(eq(categories.userId, userId));
   const rows = await db.select().from(tasks).where(eq(tasks.userId, userId)).limit(20_000);
-  const ids = new Set(rows.map((r) => r.id));
-  const tagRows = (await db.select().from(taskTags)).filter((t) => ids.has(t.taskId)); // เฉพาะของงานเรา
+  const tagRows: (typeof taskTags.$inferSelect)[] = [];
+  // อ่านแท็กเฉพาะของงานเราเท่านั้น (ไม่ดึงของผู้ใช้อื่นมากรองทีหลัง)
+  for (let i = 0; i < rows.length; i += 50) {
+    const ids = rows.slice(i, i + 50).map((r) => r.id);
+    tagRows.push(...(await db.select().from(taskTags).where(inArray(taskTags.taskId, ids))));
+  }
   const subRows = await db.select().from(subtasks).where(eq(subtasks.userId, userId));
   const attRows = await db.select().from(attachments).where(eq(attachments.userId, userId));
   const fs = await db

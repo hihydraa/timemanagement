@@ -179,3 +179,12 @@ npm run deploy
 npm run db:migrate:remote
 npm run deploy
 ```
+
+### Deploy จริง (Phase 7)
+
+1. ตั้ง `database_id` และ `APP_BASE_URL` (https) ใน `wrangler.toml`, ตั้ง `PUSH_MONTHLY_LIMIT` ตามโควตา LINE OA
+2. `npm run db:migrate:remote` (จะใช้ migration 0004–0005 ด้วย; 0005 สร้างตาราง `rate_limits`)
+3. ตั้ง secrets ด้วย `wrangler secret put` ทั้งหมด (`SESSION_SECRET` ต้อง ≥ 32 ตัวอักษร)
+4. `npm run deploy` — ถ้ายังเป็นค่า placeholder สคริปต์ตรวจจะหยุดก่อน
+5. Google Cloud Console → OAuth consent screen → **Publish app** (ไม่งั้น refresh token หมดอายุทุก 7 วัน)
+6. รัน Lighthouse (mobile) บนโดเมนจริงเพื่อยืนยัน

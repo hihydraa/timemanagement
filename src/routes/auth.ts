@@ -2,7 +2,8 @@ import { Hono, type Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { getDb } from '../db/client';
 import { ApiError } from '../lib/http';
-import { requireAuth } from '../middleware';
+import { originCheck, requireAuth } from '../middleware';
+import { rateLimit } from '../lib/rateLimit';
 import {
   clearSessionCookie,
   readSessionCookie,
@@ -39,7 +40,8 @@ function timingSafeEqual(a: string, b: string): boolean {
   return r === 0;
 }
 
-auth.get('/google/login', (c) => {
+const authLimit = rateLimit({ scope: 'auth', limit: 20, windowSec: 60 });
+auth.get('/google/login', authLimit, (c) => {
   const state = randomState();
   setCookie(c, STATE_COOKIE, state, {
     httpOnly: true,
@@ -102,7 +104,7 @@ async function connectCallback(c: Context<AppEnv>, code: string) {
   return c.redirect(`${base}/?gcal=connected`);
 }
 
-auth.get('/google/callback', async (c) => {
+auth.get('/google/callback', authLimit, async (c) => {
   const state = c.req.query('state');
   const code = c.req.query('code');
   const saved = getCookie(c, STATE_COOKIE);
@@ -159,7 +161,7 @@ auth.get('/google/callback', async (c) => {
 });
 
 /** เฉพาะ local: DEV_LOGIN=1 ใน .dev.vars */
-auth.get('/dev-login', async (c) => {
+auth.get('/dev-login', authLimit, async (c) => {
   if (c.env.DEV_LOGIN !== '1') throw new ApiError(404, 'not_found', 'ไม่พบเส้นทางนี้');
   const email = c.req.query('email') ?? '';
   if (!isEmailAllowed(c.env.ALLOWED_EMAILS ?? '', email)) {
@@ -174,7 +176,7 @@ auth.get('/dev-login', async (c) => {
   return c.redirect(c.env.APP_BASE_URL);
 });
 
-auth.post('/logout', (c) => {
+auth.post('/logout', originCheck, (c) => {
   clearSessionCookie(c);
   return c.json({ ok: true });
 });

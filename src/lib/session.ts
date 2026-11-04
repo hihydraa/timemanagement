@@ -7,7 +7,14 @@ import { now } from './time';
 export const SESSION_COOKIE = 'dobby_session';
 const MAX_AGE_SEC = 60 * 60 * 24 * 30;
 
-const key = (env: Env) => new TextEncoder().encode(env.SESSION_SECRET);
+/** SESSION_SECRET สั้นเกินไป = เดาลายเซ็นได้ง่าย: ปฏิเสธการออก/ตรวจ session (fail closed) */
+const MIN_SECRET_LENGTH = 32;
+const key = (env: Env) => {
+  if (!env.SESSION_SECRET || env.SESSION_SECRET.length < MIN_SECRET_LENGTH) {
+    throw new Error(`SESSION_SECRET must be at least ${MIN_SECRET_LENGTH} characters`);
+  }
+  return new TextEncoder().encode(env.SESSION_SECRET);
+};
 
 export async function signSession(env: Env, userId: string): Promise<string> {
   const iat = Math.floor(now().getTime() / 1000);

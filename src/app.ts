@@ -1,10 +1,12 @@
 import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
 import { getDb } from './db/client';
 import { users } from './db/schema';
 import { ApiError, errorBody } from './lib/http';
 import { originCheck, requireAuth } from './middleware';
+import { readSessionCookie, verifySession } from './lib/session';
 import attachmentsRoutes from './routes/attachments';
 import auth from './routes/auth';
 import categoriesRoutes from './routes/categories';
@@ -21,6 +23,7 @@ import { nowIso } from './lib/time';
 
 export const app = new Hono<AppEnv>();
 
+// ต้องตรงกับ apps/web/public/_headers (ของไฟล์ static) — ตรวจโดย tests/headers.test.ts
 const baseSecureHeaders = secureHeaders({
   contentSecurityPolicy: {
     defaultSrc: ["'self'"],
@@ -28,10 +31,17 @@ const baseSecureHeaders = secureHeaders({
     styleSrc: ["'self'", "'unsafe-inline'"], // FullCalendar inject style
     imgSrc: ["'self'", 'data:', 'blob:'],
     connectSrc: ["'self'"],
+    manifestSrc: ["'self'"],
+    workerSrc: ["'self'"],
+    baseUri: ["'self'"],
+    formAction: ["'self'"],
+    objectSrc: ["'none'"],
     frameAncestors: ["'none'"],
   },
   referrerPolicy: 'strict-origin-when-cross-origin',
   xContentTypeOptions: 'nosniff',
+  xFrameOptions: 'DENY',
+  permissionsPolicy: { camera: [], microphone: [], geolocation: [], payment: [], usb: [] },
 });
 
 // ไฟล์ดาวน์โหลดตั้ง CSP แบบ sandbox + nosniff เอง (ดู routes/attachments.ts) จึงไม่ให้ global CSP ทับ
@@ -47,10 +57,36 @@ app.use('*', async (c, next) => {
 
 app.get('/api/health', (c) => c.json({ ok: true, name: 'dobby', time: nowIso() }));
 
+/**
+ * สถานะ session แบบสาธารณะ: ตอบ 200 เสมอ ({ user: null } ถ้ายังไม่ล็อกอิน)
+ * ให้หน้าเว็บเช็คได้โดยไม่เกิด 401 ใน console; ไม่เปิดเผยข้อมูลอื่นนอกจากของเจ้าของ session
+ */
+app.get('/api/session', async (c) => {
+  const token = readSessionCookie(c);
+  const userId = token ? await verifySession(c.env, token) : null;
+  const u = userId
+    ? await getDb(c.env.DB)
+        .select({ id: users.id, email: users.email, name: users.name })
+        .from(users)
+        .where(eq(users.id, userId))
+        .get()
+    : undefined;
+  c.header('Cache-Control', 'no-store');
+  return c.json({ user: u ?? null });
+});
+
 app.route('/auth', auth);
 app.route('/webhook/line', lineWebhook);
 
 const api = new Hono<AppEnv>();
+// JSON ของ API เล็กเสมอ (รายละเอียดงาน ≤ 5,000 ตัวอักษร): จำกัด 256 KB; การอัปโหลดไฟล์มีเพดานของตัวเอง
+const isUpload = (method: string, path: string) =>
+  method === 'POST' && /^\/api\/tasks\/[^/]+\/attachments$/.test(path);
+const jsonLimit = bodyLimit({
+  maxSize: 256 * 1024,
+  onError: (c) => c.json(errorBody('request_too_large', 'ขนาดคำขอใหญ่เกินกำหนด'), 413),
+});
+api.use('*', (c, next) => (isUpload(c.req.method, c.req.path) ? next() : jsonLimit(c, next)));
 api.use('*', originCheck, requireAuth);
 api.get('/me', async (c) => {
   const u = await getDb(c.env.DB)
@@ -74,7 +110,10 @@ api.route('/', statsRoutes);
 app.route('/api', api);
 
 app.onError((err, c) => {
-  if (err instanceof ApiError) return c.json(errorBody(err.code, err.message), err.status);
+  if (err instanceof ApiError) {
+    if (err.retryAfter) c.header('Retry-After', String(err.retryAfter));
+    return c.json(errorBody(err.code, err.message), err.status);
+  }
   console.error('unhandled error', err.message);
   return c.json(errorBody('internal_error', 'เกิดข้อผิดพลาดภายในระบบ'), 500);
 });

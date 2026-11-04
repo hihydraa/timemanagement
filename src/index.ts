@@ -1,4 +1,7 @@
 import { app } from './app';
+import { getDb } from './db/client';
+import { now } from './lib/time';
+import { purgeRateLimits } from './lib/rateLimit';
 import { runNotifications } from './services/notifications';
 import type { Env } from './types';
 
@@ -6,6 +9,10 @@ export default {
   fetch: app.fetch,
   /** Cron ทุก 5 นาที: เตือนก่อนเวลา / สรุปเช้า / เดดไลน์วันนี้ / สรุปเย็น (ดู services/notifications.ts) */
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    // ล้างตัวนับ rate limit ที่หมดอายุ ชั่วโมงละครั้ง (รอบแรกของทุกชั่วโมง)
+    if (now().getUTCMinutes() < 5) {
+      ctx.waitUntil(purgeRateLimits(getDb(env.DB)).catch(() => undefined));
+    }
     ctx.waitUntil(
       runNotifications(env).then(
         (r) => console.log('notifications run', JSON.stringify(r)),

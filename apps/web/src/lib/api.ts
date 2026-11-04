@@ -1,3 +1,5 @@
+import { clearApiCache } from './pwa';
+import { t } from './i18n';
 import type {
   Attachment,
   Category,
@@ -29,13 +31,19 @@ export class ApiClientError extends Error {
 
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
   const isForm = body instanceof FormData;
-  const res = await fetch(path, {
-    method,
-    credentials: 'same-origin',
-    // FormData: ปล่อยให้เบราว์เซอร์ตั้ง Content-Type (พร้อม boundary) เอง
-    headers: body !== undefined && !isForm ? { 'Content-Type': 'application/json' } : undefined,
-    body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
-  });
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      method,
+      credentials: 'same-origin',
+      // FormData: ปล่อยให้เบราว์เซอร์ตั้ง Content-Type (พร้อม boundary) เอง
+      headers: body !== undefined && !isForm ? { 'Content-Type': 'application/json' } : undefined,
+      body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiClientError(0, 'offline', t.error.offline); // เครือข่ายล่ม/ออฟไลน์
+  }
+  if (res.status === 401) void clearApiCache(); // session หมดอายุ: ไม่เก็บข้อมูลส่วนตัวค้างไว้ในเครื่อง
   if (!res.ok) {
     const j = (await res.json().catch(() => null)) as {
       error?: { code: string; message: string };
@@ -51,7 +59,9 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
 
 export const api = {
   me: () => req<{ user: User }>('GET', '/api/me').then((r) => r.user),
-  logout: () => req<{ ok: true }>('POST', '/auth/logout'),
+  /** ตอบ 200 เสมอ: user = null เมื่อยังไม่ล็อกอิน (ไม่มี 401 ใน console) */
+  session: () => req<{ user: User | null }>('GET', '/api/session').then((r) => r.user),
+  logout: () => req<{ ok: true }>('POST', '/auth/logout').finally(() => clearApiCache()),
   listTasks: (fromIso: string, toIso: string) =>
     req<{ tasks: Task[] }>(
       'GET',

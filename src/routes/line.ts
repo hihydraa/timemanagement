@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { getDb } from '../db/client';
 import { lineLinkCodes, users } from '../db/schema';
 import { ApiError } from '../lib/http';
+import { rateLimit } from '../lib/rateLimit';
 import { now } from '../lib/time';
 import { verifyLineSignature } from '../services/line';
 import { processEvents, type LineEvent } from '../services/lineBot';
@@ -13,7 +14,8 @@ const MAX_BODY = 1_000_000;
 /** POST /webhook/line — ต้องผ่านการตรวจลายเซ็นก่อนทำอย่างอื่นทั้งหมด */
 export const lineWebhook = new Hono<AppEnv>();
 
-lineWebhook.post('/', async (c) => {
+// จำกัดต่อ IP ก่อนอ่าน body/ตรวจลายเซ็น (กัน flood); ปริมาณปกติของ LINE ต่ำกว่านี้มาก
+lineWebhook.post('/', rateLimit({ scope: 'webhook', limit: 300, windowSec: 60 }), async (c) => {
   if (Number(c.req.header('Content-Length') ?? 0) > MAX_BODY) {
     throw new ApiError(413, 'request_too_large', 'ขนาดคำขอใหญ่เกินกำหนด');
   }
@@ -59,22 +61,26 @@ const randomCode = (): string => {
   return String(n % 1_000_000).padStart(6, '0');
 };
 
-lineApi.post('/link-code', async (c) => {
-  const db = getDb(c.env.DB);
-  const userId = c.get('userId');
-  await db.delete(lineLinkCodes).where(eq(lineLinkCodes.userId, userId));
-  const expiresAt = new Date(now().getTime() + 10 * 60_000).toISOString();
-  for (let i = 0; i < 5; i++) {
-    const code = randomCode();
-    const ins = await db
-      .insert(lineLinkCodes)
-      .values({ code, userId, expiresAt })
-      .onConflictDoNothing()
-      .returning({ code: lineLinkCodes.code });
-    if (ins.length) return c.json({ code, expiresAt });
-  }
-  throw new Error('could not allocate link code');
-});
+lineApi.post(
+  '/link-code',
+  rateLimit({ scope: 'linkcode', limit: 10, windowSec: 600, key: (c) => c.get('userId') }),
+  async (c) => {
+    const db = getDb(c.env.DB);
+    const userId = c.get('userId');
+    await db.delete(lineLinkCodes).where(eq(lineLinkCodes.userId, userId));
+    const expiresAt = new Date(now().getTime() + 10 * 60_000).toISOString();
+    for (let i = 0; i < 5; i++) {
+      const code = randomCode();
+      const ins = await db
+        .insert(lineLinkCodes)
+        .values({ code, userId, expiresAt })
+        .onConflictDoNothing()
+        .returning({ code: lineLinkCodes.code });
+      if (ins.length) return c.json({ code, expiresAt });
+    }
+    throw new Error('could not allocate link code');
+  },
+);
 
 lineApi.get('/status', async (c) => {
   const u = await getDb(c.env.DB)

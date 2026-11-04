@@ -6,6 +6,8 @@ export class ApiError extends Error {
     public status: 400 | 401 | 403 | 404 | 409 | 413 | 429,
     public code: string,
     message: string,
+    /** วินาทีที่ควรรอ (ใช้กับ 429) */
+    public retryAfter?: number,
   ) {
     super(message);
   }

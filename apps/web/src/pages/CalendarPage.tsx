@@ -15,11 +15,11 @@ import interactionPlugin, {
 import listPlugin from '@fullcalendar/list';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import InboxDock from '../components/InboxDock';
 import Filters, { applyFilters, emptyFilters, type FilterState } from '../components/Filters';
 import Legend from '../components/Legend';
-import TaskDrawer, { type DrawerInit } from '../components/TaskDrawer';
+import type { DrawerInit } from '../components/TaskDrawer';
 import TodayPanel from '../components/TodayPanel';
 import { api, ApiClientError } from '../lib/api';
 import { useApp } from '../lib/appContext';
@@ -27,6 +27,21 @@ import { eventColors } from '../lib/colors';
 import { t } from '../lib/i18n';
 import { addMinutesWall, calDateToIso, calDateToYmd, isoToWall, wallNow } from '../lib/time';
 import type { Category, ColorMode, Task, TaskPayload, TodayData } from '../lib/types';
+
+// ฟอร์มงานโหลดเมื่อเปิดใช้ครั้งแรกเท่านั้น (ไม่อยู่ใน chunk ที่ต้องใช้ตอนแสดงปฏิทินครั้งแรก)
+const TaskDrawer = lazy(() => import('../components/TaskDrawer'));
+
+// ค่าคงที่ของ FullCalendar อยู่นอกคอมโพเนนต์ เพื่อให้ identity คงที่ (ไม่ทำให้ปฏิทินเทียบ options/re-render ทุกครั้ง)
+const PLUGINS = [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin];
+const LOCALES = [thLocale];
+const BUTTON_TEXT = { list: t.nav.listView };
+const HEADER_MOBILE = { left: 'prev,next', center: 'title', right: 'today' };
+const HEADER_DESKTOP = {
+  left: 'prev,next today',
+  center: 'title',
+  right: 'timeGridDay,timeGridWeek,dayGridMonth,listWeek',
+};
+const FOOTER_MOBILE = { center: 'timeGridDay,timeGridWeek,dayGridMonth,listWeek' };
 
 const MODE_KEY = 'dobby.colorMode';
 const loadMode = (): ColorMode => {
@@ -291,6 +306,54 @@ export default function CalendarPage() {
     }
   }
 
+  // handler ที่ identity คงที่ (อ้างค่าล่าสุดผ่าน ref) เพื่อไม่ให้ FullCalendar re-render ทุกครั้งที่ state อื่นเปลี่ยน
+  const latest = useRef({ onExternalDrop, onSelect, onEventClick, persistMove });
+  latest.current = { onExternalDrop, onSelect, onEventClick, persistMove };
+  const h = useMemo(
+    () => ({
+      drop: (i: DropArg) => latest.current.onExternalDrop(i),
+      select: (i: DateSelectArg) => latest.current.onSelect(i),
+      eventClick: (i: EventClickArg) => latest.current.onEventClick(i),
+      move: (i: EventDropArg | EventResizeDoneArg) => latest.current.persistMove(i),
+    }),
+    [],
+  );
+  const calendar = useMemo(
+    () => (
+      <FullCalendar
+        ref={calRef}
+        plugins={PLUGINS}
+        locales={LOCALES}
+        locale="th"
+        buttonText={BUTTON_TEXT}
+        timeZone="UTC"
+        now={wallNow}
+        nowIndicator
+        firstDay={1}
+        initialView={isMobile ? 'timeGridDay' : 'timeGridWeek'}
+        headerToolbar={isMobile ? HEADER_MOBILE : HEADER_DESKTOP}
+        footerToolbar={isMobile ? FOOTER_MOBILE : false}
+        height={isMobile ? 'auto' : 'calc(100vh - 7rem)'}
+        scrollTime="07:00:00"
+        slotEventOverlap={false}
+        editable
+        droppable
+        drop={h.drop}
+        selectable
+        selectMirror
+        dayMaxEvents
+        events={events}
+        eventContent={renderEvent}
+        select={h.select}
+        eventClick={h.eventClick}
+        eventDrop={h.move}
+        eventResize={h.move}
+        datesSet={onDatesSet}
+      />
+    ),
+    [isMobile, events, h, onDatesSet],
+  );
+
   const modeBtn = (m: ColorMode) => (
     <button
       key={m}
@@ -373,48 +436,7 @@ export default function CalendarPage() {
           <Legend categories={categories} onChanged={reloadCategories} />
         </aside>
 
-        <main className="min-w-0 order-first lg:order-none">
-          <FullCalendar
-            ref={calRef}
-            plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
-            locales={[thLocale]}
-            locale="th"
-            buttonText={{ list: t.nav.listView }}
-            timeZone="UTC"
-            now={wallNow}
-            nowIndicator
-            firstDay={1}
-            initialView={isMobile ? 'timeGridDay' : 'timeGridWeek'}
-            headerToolbar={
-              isMobile
-                ? { left: 'prev,next', center: 'title', right: 'today' }
-                : {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'timeGridDay,timeGridWeek,dayGridMonth,listWeek',
-                  }
-            }
-            footerToolbar={
-              isMobile ? { center: 'timeGridDay,timeGridWeek,dayGridMonth,listWeek' } : false
-            }
-            height={isMobile ? 'auto' : 'calc(100vh - 7rem)'}
-            scrollTime="07:00:00"
-            slotEventOverlap={false}
-            editable
-            droppable
-            drop={onExternalDrop}
-            selectable
-            selectMirror
-            dayMaxEvents
-            events={events}
-            eventContent={renderEvent}
-            select={onSelect}
-            eventClick={onEventClick}
-            eventDrop={persistMove}
-            eventResize={persistMove}
-            datesSet={onDatesSet}
-          />
-        </main>
+        <main className="min-w-0 order-first lg:order-none">{calendar}</main>
 
         <aside className="lg:block">
           <TodayPanel data={today} onOpen={(task) => setDrawer({ task })} onChanged={refreshAll} />
@@ -423,20 +445,22 @@ export default function CalendarPage() {
       </div>
 
       {drawer && (
-        <TaskDrawer
-          key={drawer.task?.id ?? 'new'}
-          init={drawer}
-          categories={categories}
-          gcalAvailable={gcalAvailable}
-          onClose={() => setDrawer(null)}
-          onSaved={(warning) => {
-            setDrawer(null);
-            if (warning) setError(warning);
-            refreshAll();
-          }}
-          onAttachmentsChanged={refreshAll}
-          onOpenTask={(task) => setDrawer({ task })}
-        />
+        <Suspense fallback={null}>
+          <TaskDrawer
+            key={drawer.task?.id ?? 'new'}
+            init={drawer}
+            categories={categories}
+            gcalAvailable={gcalAvailable}
+            onClose={() => setDrawer(null)}
+            onSaved={(warning) => {
+              setDrawer(null);
+              if (warning) setError(warning);
+              refreshAll();
+            }}
+            onAttachmentsChanged={refreshAll}
+            onOpenTask={(task) => setDrawer({ task })}
+          />
+        </Suspense>
       )}
     </div>
   );
