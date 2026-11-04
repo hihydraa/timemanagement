@@ -8,32 +8,25 @@ import type {
 } from '@fullcalendar/core';
 import thLocale from '@fullcalendar/core/locales/th';
 import dayGridPlugin from '@fullcalendar/daygrid';
-import interactionPlugin, { type EventResizeDoneArg } from '@fullcalendar/interaction';
+import interactionPlugin, {
+  type DropArg,
+  type EventResizeDoneArg,
+} from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import InboxDock from '../components/InboxDock';
 import Filters, { applyFilters, emptyFilters, type FilterState } from '../components/Filters';
 import Legend from '../components/Legend';
-import GcalDialog from '../components/GcalDialog';
-import LineDialog from '../components/LineDialog';
-import SettingsDialog from '../components/SettingsDialog';
 import TaskDrawer, { type DrawerInit } from '../components/TaskDrawer';
 import TodayPanel from '../components/TodayPanel';
 import { api, ApiClientError } from '../lib/api';
+import { useApp } from '../lib/appContext';
 import { eventColors } from '../lib/colors';
 import { t } from '../lib/i18n';
 import { addMinutesWall, calDateToIso, calDateToYmd, isoToWall, wallNow } from '../lib/time';
-import type {
-  Category,
-  ColorMode,
-  GcalStatus,
-  PushStatus,
-  Task,
-  TaskPayload,
-  TodayData,
-  User,
-} from '../lib/types';
+import type { Category, ColorMode, Task, TaskPayload, TodayData } from '../lib/types';
 
 const MODE_KEY = 'dobby.colorMode';
 const loadMode = (): ColorMode => {
@@ -60,6 +53,9 @@ function taskToEvent(task: Task, mode: ColorMode, cats: Map<string, Category>): 
       urgency: task.urgency,
       importance: task.importance,
       attachmentCount: task.attachmentCount,
+      recurring: !!(task.recurrenceRule || task.recurrenceId),
+      subtaskTotal: task.subtaskTotal,
+      subtaskDone: task.subtaskDone,
     },
   };
   if (task.allDay && task.dueDate) {
@@ -113,6 +109,17 @@ function renderEvent(arg: EventContentArg) {
       <div className="min-w-0 flex-1 truncate text-xs leading-tight">
         {arg.timeText && <span className="mr-1 font-semibold">{arg.timeText}</span>}
         <span>{arg.event.title}</span>
+        {arg.event.extendedProps.recurring && (
+          <span role="img" aria-label={t.series.badge} className="ml-1">
+            🔁
+          </span>
+        )}
+        {(arg.event.extendedProps.subtaskTotal as number) > 0 && (
+          <span className="ml-1">
+            ☑{arg.event.extendedProps.subtaskDone as number}/
+            {arg.event.extendedProps.subtaskTotal as number}
+          </span>
+        )}
         {(arg.event.extendedProps.attachmentCount as number) > 0 && (
           <span role="img" aria-label={t.attach.title} className="ml-1">
             📎
@@ -142,24 +149,18 @@ function useIsMobile() {
   return m;
 }
 
-export default function CalendarPage({ user, onLogout }: { user: User; onLogout: () => void }) {
+export default function CalendarPage() {
+  const { categories, reloadCategories, gcalAvailable } = useApp();
   const calRef = useRef<FullCalendar>(null);
   const isMobile = useIsMobile();
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [today, setToday] = useState<TodayData | null>(null);
   const [filters, setFilters] = useState<FilterState>(emptyFilters);
   const [mode, setModeState] = useState<ColorMode>(loadMode);
   const [drawer, setDrawer] = useState<DrawerInit | null>(null);
   const [error, setError] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [showLine, setShowLine] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [push, setPush] = useState<PushStatus | null>(null);
-  const [gcal, setGcal] = useState<GcalStatus | null>(null);
-  const [showGcal, setShowGcal] = useState(false);
-  const [gcalNotice, setGcalNotice] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
 
   const setMode = (m: ColorMode) => {
     setModeState(m);
@@ -196,56 +197,11 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
         .catch(() => setError(t.error.loadFailed)),
     [],
   );
-  const loadCategories = useCallback(
-    () =>
-      api
-        .listCategories()
-        .then(setCategories)
-        .catch(() => setError(t.error.loadFailed)),
-    [],
-  );
 
   useEffect(() => void loadTasks(), [loadTasks]);
   useEffect(() => {
     void loadToday();
-    void loadCategories();
-  }, [loadToday, loadCategories]);
-
-  // ผลจากการ redirect กลับจาก Google (?gcal=connected|denied|error&reason=...)
-  useEffect(() => {
-    const q = new URLSearchParams(window.location.search);
-    const r = q.get('gcal');
-    if (!r) return;
-    window.history.replaceState(null, '', window.location.pathname);
-    const reason = q.get('reason');
-    setGcalNotice(
-      r === 'connected'
-        ? { kind: 'ok', text: t.gcal.connectedOk }
-        : r === 'denied'
-          ? { kind: 'error', text: t.gcal.denied }
-          : {
-              kind: 'error',
-              text:
-                reason === 'scope'
-                  ? t.gcal.errScope
-                  : reason === 'refresh'
-                    ? t.gcal.errRefresh
-                    : t.gcal.errToken,
-            },
-    );
-    setShowGcal(true);
-  }, []);
-
-  useEffect(() => {
-    api
-      .gcalStatus()
-      .then(setGcal)
-      .catch(() => undefined);
-    api
-      .pushStatus()
-      .then(setPush)
-      .catch(() => undefined);
-  }, []);
+  }, [loadToday]);
 
   // ลิงก์ "แก้ไข" จาก LINE: /?task=<id> เปิดฟอร์มงานนั้นทันที
   useEffect(() => {
@@ -257,6 +213,30 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
       .then((task) => setDrawer({ task }))
       .catch(() => setError(t.error.loadFailed));
   }, []);
+
+  const [dockKey, setDockKey] = useState(0);
+
+  // time blocking: ลากงานจาก Inbox มาวางในปฏิทิน (ช่องเวลา = กำหนดเวลาเริ่ม 1 ชม./ตามที่ประมาณไว้, ช่องทั้งวัน/เดือน = งานทั้งวัน)
+  const onExternalDrop = async (info: DropArg) => {
+    const id = info.draggedEl.dataset.inboxId;
+    if (!id) return;
+    const est = Number(info.draggedEl.dataset.estimate) || 60;
+    const patch: TaskPayload = info.allDay
+      ? { allDay: true, dueDate: calDateToYmd(info.date) }
+      : {
+          allDay: false,
+          dueDate: null,
+          startAt: calDateToIso(info.date),
+          endAt: calDateToIso(new Date(info.date.getTime() + est * 60_000)),
+        };
+    try {
+      await api.updateTask(id, patch);
+      refreshAll();
+      setDockKey((k) => k + 1);
+    } catch (e) {
+      setError(e instanceof ApiClientError ? e.message : t.error.moveFailed);
+    }
+  };
 
   const refreshAll = useCallback(() => {
     void loadTasks();
@@ -324,9 +304,8 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
   );
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-[1600px] flex-col">
-      <header className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-700">
-        <h1 className="mr-auto text-lg font-bold">{t.appName}</h1>
+    <div className="flex flex-col">
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-700">
         <div
           role="group"
           aria-label={t.colorBy.label}
@@ -338,7 +317,7 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
         <button
           type="button"
           onClick={() => setDrawer({ prefill: { allDay: false } })}
-          className="rounded bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+          className="ml-auto rounded bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
         >
           + {t.nav.newTask}
         </button>
@@ -350,57 +329,7 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
         >
           {showFilters ? t.nav.hideFilters : t.nav.filters}
         </button>
-        <button
-          type="button"
-          onClick={() => setShowSettings(true)}
-          className="rounded px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
-        >
-          {t.settings.button}
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowGcal(true)}
-          className="rounded px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
-        >
-          {t.gcal.button}
-          {gcal?.connected && gcal.syncEnabled && (
-            <span aria-label="เชื่อมอยู่" className="ml-1 text-green-600">
-              ●
-            </span>
-          )}
-          {gcal?.needsReconnect && (
-            <span aria-label="ต้องเชื่อมใหม่" className="ml-1 text-amber-600">
-              ⚠
-            </span>
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowLine(true)}
-          className="rounded px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
-        >
-          {t.line.button}
-        </button>
-        <button
-          type="button"
-          title={user.email}
-          onClick={() => api.logout().finally(onLogout)}
-          className="rounded px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
-        >
-          {t.nav.logout}
-        </button>
-      </header>
-
-      {push && push.limitConfigured && (push.nearLimit || push.exhausted) && (
-        <p
-          role="status"
-          className={`mx-3 mt-2 rounded p-2 text-sm ${push.exhausted ? 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300'}`}
-        >
-          {push.exhausted
-            ? t.settings.quotaFull
-            : `${t.settings.quotaBanner} (${push.used}/${push.limit})`}
-        </p>
-      )}
+      </div>
 
       {error && (
         <p
@@ -441,7 +370,7 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
             categories={categories}
             allTags={allTags}
           />
-          <Legend categories={categories} onChanged={() => void loadCategories()} />
+          <Legend categories={categories} onChanged={reloadCategories} />
         </aside>
 
         <main className="min-w-0 order-first lg:order-none">
@@ -472,6 +401,8 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
             scrollTime="07:00:00"
             slotEventOverlap={false}
             editable
+            droppable
+            drop={onExternalDrop}
             selectable
             selectMirror
             dayMaxEvents
@@ -487,48 +418,16 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
 
         <aside className="lg:block">
           <TodayPanel data={today} onOpen={(task) => setDrawer({ task })} onChanged={refreshAll} />
+          <InboxDock reloadKey={dockKey} onOpen={(task) => setDrawer({ task })} />
         </aside>
       </div>
 
-      {showLine && <LineDialog onClose={() => setShowLine(false)} />}
-      {showSettings && (
-        <SettingsDialog
-          onClose={() => {
-            setShowSettings(false);
-            api
-              .pushStatus()
-              .then(setPush)
-              .catch(() => undefined);
-          }}
-          onOpenLine={() => {
-            setShowSettings(false);
-            setShowLine(true);
-          }}
-          onSaved={() =>
-            api
-              .pushStatus()
-              .then(setPush)
-              .catch(() => undefined)
-          }
-        />
-      )}
-      {showGcal && (
-        <GcalDialog
-          notice={gcalNotice}
-          onClose={() => {
-            setShowGcal(false);
-            setGcalNotice(null);
-            refreshAll();
-          }}
-          onStatusChange={setGcal}
-        />
-      )}
-
       {drawer && (
         <TaskDrawer
+          key={drawer.task?.id ?? 'new'}
           init={drawer}
           categories={categories}
-          gcalAvailable={!!gcal?.connected && gcal.syncEnabled}
+          gcalAvailable={gcalAvailable}
           onClose={() => setDrawer(null)}
           onSaved={(warning) => {
             setDrawer(null);
@@ -536,6 +435,7 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
             refreshAll();
           }}
           onAttachmentsChanged={refreshAll}
+          onOpenTask={(task) => setDrawer({ task })}
         />
       )}
     </div>

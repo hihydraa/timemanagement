@@ -16,6 +16,11 @@ export interface Task {
   estimateMinutes: number | null;
   tags: string[];
   attachmentCount: number;
+  subtaskTotal: number;
+  subtaskDone: number;
+  parentTaskId: string | null;
+  recurrenceId: string | null;
+  recurrenceRule: string | null;
   gcalSync: boolean;
   gcalEventId: string | null;
   gcalSyncedAt: string | null;
@@ -44,7 +49,18 @@ export interface TodayData {
 }
 
 export type TaskPayload = Partial<
-  Omit<Task, 'id' | 'completedAt' | 'attachmentCount' | 'gcalEventId' | 'gcalSyncedAt'>
+  Omit<
+    Task,
+    | 'id'
+    | 'completedAt'
+    | 'attachmentCount'
+    | 'gcalEventId'
+    | 'gcalSyncedAt'
+    | 'subtaskTotal'
+    | 'subtaskDone'
+    | 'parentTaskId'
+    | 'recurrenceId'
+  >
 >;
 
 export type ColorMode = 'category' | 'urgency' | 'importance';
@@ -110,4 +126,71 @@ export interface PushStatus {
   blocked: boolean;
   nearLimit: boolean;
   exhausted: boolean;
+}
+
+export interface Subtask {
+  id: string;
+  taskId: string;
+  title: string;
+  done: boolean;
+  sortOrder: number;
+}
+
+export interface FocusSession {
+  id: string;
+  taskId: string | null;
+  title: string | null;
+  startedAt: string;
+  endedAt: string | null;
+  minutes: number;
+}
+
+export interface BriefTask {
+  id: string;
+  title: string;
+  status: Status;
+  categoryId: string | null;
+  date: string | null;
+  completedAt: string | null;
+  urgency: number;
+  importance: number;
+}
+
+export interface CategoryStat {
+  categoryId: string | null;
+  name: string;
+  color: string;
+  focusMinutes: number;
+  plannedMinutes?: number;
+  completed: number;
+}
+
+export interface WeeklyStats {
+  weekStart: string;
+  weekEnd: string;
+  completed: number;
+  scheduled: number;
+  scheduledDone: number;
+  completionRate: number | null;
+  overdueOpen: number;
+  focusMinutes: number;
+  byCategory: CategoryStat[];
+  completedTasks: BriefTask[];
+  notDoneTasks: BriefTask[];
+  nextWeek: { weekStart: string; weekEnd: string; total: number; tasks: BriefTask[] };
+}
+
+export interface OverviewStats {
+  days: number;
+  from: string;
+  to: string;
+  scheduled: number;
+  scheduledDone: number;
+  completionRate: number | null;
+  completedTotal: number;
+  focusMinutes: number;
+  daily: { date: string; completed: number; scheduled: number }[];
+  byCategory: CategoryStat[];
+  streak: { current: number; best: number };
+  totals: { open: number; doneThisWeek: number };
 }

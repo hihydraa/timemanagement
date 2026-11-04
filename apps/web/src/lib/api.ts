@@ -1,16 +1,20 @@
 import type {
   Attachment,
   Category,
+  FocusSession,
   GcalStatus,
   NotificationSettings,
+  OverviewStats,
   PushStatus,
   ResyncResult,
   SettingsView,
   StorageInfo,
+  Subtask,
   Task,
   TaskPayload,
   TodayData,
   User,
+  WeeklyStats,
 } from './types';
 
 export class ApiClientError extends Error {
@@ -57,7 +61,33 @@ export const api = {
   createTask: (p: TaskPayload) => req<{ task: Task }>('POST', '/api/tasks', p).then((r) => r.task),
   updateTask: (id: string, p: TaskPayload) =>
     req<{ task: Task }>('PATCH', `/api/tasks/${id}`, p).then((r) => r.task),
-  deleteTask: (id: string) => req<{ ok: true }>('DELETE', `/api/tasks/${id}`),
+  deleteTask: (id: string, scope: 'one' | 'series' = 'one') =>
+    req<{ ok: true }>('DELETE', `/api/tasks/${id}${scope === 'series' ? '?scope=series' : ''}`),
+  materialize: (id: string) =>
+    req<{ task: Task }>('POST', `/api/tasks/${id}/materialize`).then((r) => r.task),
+  inbox: () => req<{ tasks: Task[] }>('GET', '/api/inbox').then((r) => r.tasks),
+  matrix: () => req<{ tasks: Task[] }>('GET', '/api/matrix').then((r) => r.tasks),
+  listSubtasks: (taskId: string) =>
+    req<{ subtasks: Subtask[]; template: boolean }>('GET', `/api/tasks/${taskId}/subtasks`),
+  addSubtask: (taskId: string, title: string) =>
+    req<{ subtask: Subtask; taskId: string }>('POST', `/api/tasks/${taskId}/subtasks`, { title }),
+  updateSubtask: (id: string, p: { title?: string; done?: boolean }) =>
+    req<{ subtask: Subtask }>('PATCH', `/api/subtasks/${id}`, p).then((r) => r.subtask),
+  deleteSubtask: (id: string) => req<{ ok: true }>('DELETE', `/api/subtasks/${id}`),
+  createFocusSession: (p: {
+    taskId: string | null;
+    startedAt: string;
+    endedAt: string;
+    minutes: number;
+  }) => req<{ session: FocusSession }>('POST', '/api/focus-sessions', p),
+  focusSessions: (date?: string) =>
+    req<{ date: string; sessions: FocusSession[]; totalMinutes: number }>(
+      'GET',
+      `/api/focus-sessions${date ? `?date=${date}` : ''}`,
+    ),
+  weekly: (week?: string) =>
+    req<WeeklyStats>('GET', `/api/stats/weekly${week ? `?week=${week}` : ''}`),
+  overview: (days: number) => req<OverviewStats>('GET', `/api/stats/overview?days=${days}`),
   completeTask: (id: string) =>
     req<{ task: Task }>('POST', `/api/tasks/${id}/complete`).then((r) => r.task),
   listCategories: () =>
@@ -84,8 +114,10 @@ export const api = {
   uploadAttachments: (taskId: string, files: File[]) => {
     const fd = new FormData();
     files.forEach((f) => fd.append('files', f));
-    return req<{ attachments: Attachment[] }>('POST', `/api/tasks/${taskId}/attachments`, fd).then(
-      (r) => r.attachments,
+    return req<{ attachments: Attachment[]; taskId: string }>(
+      'POST',
+      `/api/tasks/${taskId}/attachments`,
+      fd,
     );
   },
   deleteAttachment: (id: string) => req<{ ok: true }>('DELETE', `/api/attachments/${id}`),

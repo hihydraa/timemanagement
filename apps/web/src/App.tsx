@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, ApiClientError } from './lib/api';
 import { t } from './lib/i18n';
 import type { User } from './lib/types';
-import CalendarPage from './pages/CalendarPage';
+import AppShell from './components/AppShell';
 import LoginPage from './pages/LoginPage';
 
 type State =
@@ -35,5 +35,5 @@ export default function App() {
       </p>
     );
   if (state.kind === 'anon') return <LoginPage />;
-  return <CalendarPage user={state.user} onLogout={() => setState({ kind: 'anon' })} />;
+  return <AppShell user={state.user} onLogout={() => setState({ kind: 'anon' })} />;
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, ApiClientError } from '../lib/api';
 import Attachments from './Attachments';
+import Subtasks from './Subtasks';
 import { t } from '../lib/i18n';
 import { inputToIso, isoToInput } from '../lib/time';
 import type { Category, Status, Task, TaskPayload } from '../lib/types';
@@ -21,6 +22,55 @@ interface Props {
   onSaved: (warning?: string) => void;
   /** ไฟล์แนบของงานที่มีอยู่เปลี่ยน โดยไม่ปิดฟอร์ม */
   onAttachmentsChanged: () => void;
+  /** เปิดงานอื่นในฟอร์ม (เช่น งานแม่ของซีรีส์) */
+  onOpenTask?: (task: Task) => void;
+}
+
+// ---- การทำซ้ำ (RRULE subset ตรงกับฝั่งเซิร์ฟเวอร์) ----
+type Freq = 'NONE' | 'DAILY' | 'WEEKLY' | 'MONTHLY';
+interface RecForm {
+  freq: Freq;
+  interval: string;
+  days: number[]; // 0 = อาทิตย์
+  until: string;
+}
+const CODES = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+const isVirtual = (id: string | null) => !!id && /~\d{4}-\d{2}-\d{2}$/.test(id);
+
+function parseRec(rule: string | null | undefined): RecForm {
+  const f: RecForm = { freq: 'NONE', interval: '1', days: [], until: '' };
+  if (!rule) return f;
+  const kv = Object.fromEntries(rule.split(';').map((p) => p.split('=') as [string, string]));
+  if (kv.FREQ === 'DAILY' || kv.FREQ === 'WEEKLY' || kv.FREQ === 'MONTHLY') f.freq = kv.FREQ;
+  if (kv.INTERVAL) f.interval = kv.INTERVAL;
+  if (kv.BYDAY)
+    f.days = kv.BYDAY.split(',')
+      .map((c) => CODES.indexOf(c))
+      .filter((d) => d >= 0);
+  if (kv.UNTIL && /^\d{8}$/.test(kv.UNTIL))
+    f.until = `${kv.UNTIL.slice(0, 4)}-${kv.UNTIL.slice(4, 6)}-${kv.UNTIL.slice(6)}`;
+  return f;
+}
+
+/** สร้างกฎ; งานรายสัปดาห์ต้องรวมวันของวันเริ่มต้น (anchor) เสมอ */
+function buildRule(f: RecForm, anchorWeekday: number | null): string | null {
+  if (f.freq === 'NONE') return null;
+  const parts = [`FREQ=${f.freq}`];
+  const n = Math.min(99, Math.max(1, Math.round(Number(f.interval) || 1)));
+  if (n > 1) parts.push(`INTERVAL=${n}`);
+  if (f.freq === 'WEEKLY') {
+    const days = new Set(f.days);
+    if (anchorWeekday !== null) days.add(anchorWeekday);
+    if (days.size)
+      parts.push(
+        `BYDAY=${DAY_ORDER.filter((d) => days.has(d))
+          .map((d) => CODES[d])
+          .join(',')}`,
+      );
+  }
+  if (f.until) parts.push(`UNTIL=${f.until.replace(/-/g, '')}`);
+  return parts.join(';');
 }
 
 const LEVELS = [1, 2, 3, 4];
@@ -36,6 +86,7 @@ export default function TaskDrawer({
   onClose,
   onSaved,
   onAttachmentsChanged,
+  onOpenTask,
 }: Props) {
   const { task, prefill } = init;
   const [title, setTitle] = useState(task?.title ?? '');
@@ -55,6 +106,11 @@ export default function TaskDrawer({
   const [tags, setTags] = useState(task?.tags.join(', ') ?? '');
   const [gcalSync, setGcalSync] = useState(task?.gcalSync ?? true);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pendingSubs, setPendingSubs] = useState<string[]>([]);
+  const [taskId, setTaskId] = useState<string | null>(task?.id ?? null);
+  const [rec, setRec] = useState<RecForm>(() => parseRec(task?.recurrenceRule));
+  const isOccurrence = !!(task?.parentTaskId && task.recurrenceId);
+  const inSeries = !!task?.recurrenceRule || isOccurrence;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const titleRef = useRef<HTMLInputElement>(null);
@@ -66,9 +122,35 @@ export default function TaskDrawer({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  /** instance เสมือนของงานทำซ้ำ → สร้างแถวจริงก่อนแก้ checklist/ไฟล์ (คืน id จริง) */
+  async function resolveId(): Promise<string | null> {
+    if (taskId && isVirtual(taskId)) {
+      const real = await api.materialize(taskId);
+      setTaskId(real.id);
+      return real.id;
+    }
+    return taskId;
+  }
+
+  const anchorDate = allDay ? date : (start || due).slice(0, 10);
+  const anchorWeekday = anchorDate ? new Date(`${anchorDate}T00:00:00Z`).getUTCDay() : null;
+
+  async function openSeries() {
+    if (!task?.parentTaskId || !onOpenTask) return;
+    try {
+      onOpenTask(await api.getTask(task.parentTaskId));
+    } catch (err) {
+      setError(err instanceof ApiClientError ? err.message : t.error.generic);
+    }
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    if (!isOccurrence && rec.freq !== 'NONE' && !anchorDate) {
+      setError(t.series.needsStart);
+      return;
+    }
     const payload: TaskPayload = {
       title,
       description,
@@ -78,6 +160,8 @@ export default function TaskDrawer({
       status,
       allDay,
       ...(gcalAvailable ? { gcalSync } : {}),
+      // การทำซ้ำตั้งได้เฉพาะงานแม่ (ครั้งที่แก้เฉพาะครั้งไม่ส่ง)
+      ...(isOccurrence ? {} : { recurrenceRule: buildRule(rec, anchorWeekday) }),
       estimateMinutes: estimate ? Number(estimate) : null,
       tags: tags
         .split(',')
@@ -95,7 +179,7 @@ export default function TaskDrawer({
     setBusy(true);
     try {
       if (task) {
-        await api.updateTask(task.id, payload);
+        await api.updateTask(taskId ?? task.id, payload);
         onSaved();
         return;
       }
@@ -109,6 +193,13 @@ export default function TaskDrawer({
           warning = `${t.attach.partial}: ${msg}`;
         }
       }
+      for (const title of pendingSubs) {
+        try {
+          await api.addSubtask(created.id, title);
+        } catch {
+          warning ??= `${t.attach.partial}: ${t.subtasks.title}`;
+        }
+      }
       onSaved(warning);
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : t.error.generic);
@@ -117,11 +208,17 @@ export default function TaskDrawer({
     }
   }
 
-  async function remove() {
-    if (!task || !window.confirm(t.form.confirmDelete)) return;
+  async function remove(scope: 'one' | 'series' = 'one') {
+    if (!task) return;
+    const msg = inSeries
+      ? scope === 'series'
+        ? t.series.confirmDeleteSeries
+        : t.series.confirmDeleteOne
+      : t.form.confirmDelete;
+    if (!window.confirm(msg)) return;
     setBusy(true);
     try {
-      await api.deleteTask(task.id);
+      await api.deleteTask(taskId ?? task.id, scope);
       onSaved();
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : t.error.generic);
@@ -159,6 +256,21 @@ export default function TaskDrawer({
             ×
           </button>
         </div>
+
+        {isOccurrence && (
+          <p className="rounded bg-indigo-50 p-2 text-xs text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200">
+            🔁 {t.series.occurrenceNote}{' '}
+            {onOpenTask && (
+              <button
+                type="button"
+                onClick={() => void openSeries()}
+                className="font-medium underline"
+              >
+                {t.series.editSeries}
+              </button>
+            )}
+          </p>
+        )}
 
         <div>
           <label htmlFor="f-title" className={labelCls}>
@@ -333,6 +445,98 @@ export default function TaskDrawer({
             onChange={(e) => setTags(e.target.value)}
           />
         </div>
+        {!isOccurrence && (
+          <fieldset className="space-y-2 rounded border border-slate-200 p-2 dark:border-slate-700">
+            <legend className="px-1 text-xs font-medium text-slate-600 dark:text-slate-300">
+              {t.series.repeat}
+            </legend>
+            <label htmlFor="f-rec" className="sr-only">
+              {t.series.repeat}
+            </label>
+            <select
+              id="f-rec"
+              className={inputCls}
+              value={rec.freq}
+              onChange={(e) => setRec({ ...rec, freq: e.target.value as Freq })}
+            >
+              <option value="NONE">{t.series.none}</option>
+              <option value="DAILY">{t.series.daily}</option>
+              <option value="WEEKLY">{t.series.weekly}</option>
+              <option value="MONTHLY">{t.series.monthly}</option>
+            </select>
+            {rec.freq !== 'NONE' && (
+              <>
+                <div className="flex items-center gap-2 text-sm">
+                  <label htmlFor="f-rec-int">{t.series.every}</label>
+                  <input
+                    id="f-rec-int"
+                    type="number"
+                    min={1}
+                    max={99}
+                    className="w-16 rounded border border-slate-300 bg-white px-2 py-1 dark:border-slate-600 dark:bg-slate-800"
+                    value={rec.interval}
+                    onChange={(e) => setRec({ ...rec, interval: e.target.value })}
+                  />
+                  <span>
+                    {rec.freq === 'DAILY'
+                      ? t.series.unitDay
+                      : rec.freq === 'WEEKLY'
+                        ? t.series.unitWeek
+                        : t.series.unitMonth}
+                  </span>
+                </div>
+                {rec.freq === 'WEEKLY' && (
+                  <div role="group" aria-label={t.series.onDays} className="flex flex-wrap gap-1">
+                    {DAY_ORDER.map((d) => {
+                      const on = rec.days.includes(d) || d === anchorWeekday; // วันของวันเริ่มต้นรวมอยู่เสมอ
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          aria-pressed={on}
+                          disabled={d === anchorWeekday}
+                          onClick={() =>
+                            setRec({
+                              ...rec,
+                              days: rec.days.includes(d)
+                                ? rec.days.filter((x) => x !== d)
+                                : [...rec.days, d],
+                            })
+                          }
+                          className={`h-8 w-9 rounded-full border text-xs ${on ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800'}`}
+                        >
+                          {t.series.weekdays[d]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                <div>
+                  <label htmlFor="f-rec-until" className={labelCls}>
+                    {t.series.until}
+                  </label>
+                  <input
+                    id="f-rec-until"
+                    type="date"
+                    className={inputCls}
+                    value={rec.until}
+                    min={anchorDate || undefined}
+                    onChange={(e) => setRec({ ...rec, until: e.target.value })}
+                  />
+                </div>
+              </>
+            )}
+          </fieldset>
+        )}
+
+        <Subtasks
+          taskId={taskId}
+          pending={pendingSubs}
+          onPendingChange={setPendingSubs}
+          resolveId={resolveId}
+          onChanged={onAttachmentsChanged}
+        />
+
         {gcalAvailable && (
           <div>
             <label className="flex items-center gap-2 text-sm">
@@ -353,7 +557,8 @@ export default function TaskDrawer({
         )}
 
         <Attachments
-          taskId={task?.id ?? null}
+          taskId={taskId}
+          onResolved={setTaskId}
           pending={pendingFiles}
           onPendingChange={setPendingFiles}
           onChanged={onAttachmentsChanged}
@@ -398,14 +603,26 @@ export default function TaskDrawer({
             {t.form.cancel}
           </button>
           {task && (
-            <button
-              type="button"
-              onClick={remove}
-              disabled={busy}
-              className="ml-auto rounded px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-            >
-              {t.form.delete}
-            </button>
+            <div className="ml-auto flex gap-1">
+              <button
+                type="button"
+                onClick={() => void remove('one')}
+                disabled={busy}
+                className="rounded px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+              >
+                {inSeries ? t.series.deleteOne : t.form.delete}
+              </button>
+              {inSeries && (
+                <button
+                  type="button"
+                  onClick={() => void remove('series')}
+                  disabled={busy}
+                  className="rounded px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                >
+                  {t.series.deleteSeries}
+                </button>
+              )}
+            </div>
           )}
         </div>
       </form>

@@ -11,9 +11,17 @@ interface Props {
   onPendingChange: (files: File[]) => void;
   /** เรียกเมื่อรายการไฟล์ของงานที่มีอยู่เปลี่ยน (ให้ปฏิทินอัปเดตไอคอน 📎) */
   onChanged: () => void;
+  /** เซิร์ฟเวอร์สร้างแถวจริงของ instance เสมือนให้ตอนอัปโหลด → แจ้ง id จริง */
+  onResolved?: (taskId: string) => void;
 }
 
-export default function Attachments({ taskId, pending, onPendingChange, onChanged }: Props) {
+export default function Attachments({
+  taskId,
+  pending,
+  onPendingChange,
+  onChanged,
+  onResolved,
+}: Props) {
   const [items, setItems] = useState<Attachment[]>([]);
   const [storage, setStorage] = useState<StorageInfo | null>(null);
   const [busy, setBusy] = useState(false);
@@ -60,8 +68,10 @@ export default function Attachments({ taskId, pending, onPendingChange, onChange
     }
     setBusy(true);
     try {
-      await api.uploadAttachments(taskId, files);
-      await reload();
+      const r = await api.uploadAttachments(taskId, files);
+      if (r.taskId !== taskId)
+        onResolved?.(r.taskId); // จะโหลดรายการใหม่ตาม id จริง
+      else await reload();
       onChanged();
     } catch (e) {
       setError(e instanceof ApiClientError ? e.message : t.error.generic);
