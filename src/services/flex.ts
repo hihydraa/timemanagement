@@ -178,14 +178,22 @@ export function taskCard(
           { type: 'box', layout: 'vertical', flex: 1, contents: body },
         ],
       },
+      // ปุ่มหลักเต็มความกว้าง + ปุ่มรองสองปุ่มแถวล่าง (สามปุ่มแนวนอนในการ์ด kilo ทำให้ข้อความถูกตัด)
       footer: {
         type: 'box',
-        layout: 'horizontal',
+        layout: 'vertical',
         spacing: 'sm',
         contents: [
           button('✅ เสร็จ', pb(`a=done&id=${t.id}`), 'primary', '#16a34a'),
-          button('แก้ไข', { type: 'uri', uri: `${o.baseUrl}/?task=${t.id}` }),
-          button('ลบ', pb(`a=del&id=${t.id}`)),
+          {
+            type: 'box',
+            layout: 'horizontal',
+            spacing: 'sm',
+            contents: [
+              button('แก้ไข', { type: 'uri', uri: `${o.baseUrl}/?task=${t.id}` }),
+              button('ลบ', pb(`a=del&id=${t.id}`)),
+            ],
+          },
         ],
       },
     },
