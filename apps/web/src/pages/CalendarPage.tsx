@@ -15,6 +15,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Filters, { applyFilters, emptyFilters, type FilterState } from '../components/Filters';
 import Legend from '../components/Legend';
+import LineDialog from '../components/LineDialog';
 import TaskDrawer, { type DrawerInit } from '../components/TaskDrawer';
 import TodayPanel from '../components/TodayPanel';
 import { api, ApiClientError } from '../lib/api';
@@ -142,6 +143,7 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
   const [drawer, setDrawer] = useState<DrawerInit | null>(null);
   const [error, setError] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [showLine, setShowLine] = useState(false);
 
   const setMode = (m: ColorMode) => {
     setModeState(m);
@@ -192,6 +194,17 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
     void loadToday();
     void loadCategories();
   }, [loadToday, loadCategories]);
+
+  // ลิงก์ "แก้ไข" จาก LINE: /?task=<id> เปิดฟอร์มงานนั้นทันที
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('task');
+    if (!id) return;
+    window.history.replaceState(null, '', window.location.pathname);
+    api
+      .getTask(id)
+      .then((task) => setDrawer({ task }))
+      .catch(() => setError(t.error.loadFailed));
+  }, []);
 
   const refreshAll = useCallback(() => {
     void loadTasks();
@@ -284,6 +297,13 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
           onClick={() => setShowFilters((v) => !v)}
         >
           {showFilters ? t.nav.hideFilters : t.nav.filters}
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowLine(true)}
+          className="rounded px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+        >
+          {t.line.button}
         </button>
         <button
           type="button"
@@ -382,6 +402,8 @@ export default function CalendarPage({ user, onLogout }: { user: User; onLogout:
           <TodayPanel data={today} onOpen={(task) => setDrawer({ task })} onChanged={refreshAll} />
         </aside>
       </div>
+
+      {showLine && <LineDialog onClose={() => setShowLine(false)} />}
 
       {drawer && (
         <TaskDrawer

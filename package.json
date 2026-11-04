@@ -17,7 +17,8 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply dobby --local",
-    "db:migrate:remote": "wrangler d1 migrations apply dobby --remote"
+    "db:migrate:remote": "wrangler d1 migrations apply dobby --remote",
+    "richmenu": "node scripts/setup-richmenu.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.44.0",

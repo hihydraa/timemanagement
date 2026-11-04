@@ -59,6 +59,10 @@ export const api = {
     req<{ categories: Category[] }>('GET', '/api/categories').then((r) => r.categories),
   updateCategory: (id: string, p: Partial<Pick<Category, 'name' | 'color'>>) =>
     req<{ category: Category }>('PATCH', `/api/categories/${id}`, p).then((r) => r.category),
+  getTask: (id: string) => req<{ task: Task }>('GET', `/api/tasks/${id}`).then((r) => r.task),
+  lineStatus: () => req<{ linked: boolean }>('GET', '/api/line/status'),
+  lineLinkCode: () => req<{ code: string; expiresAt: string }>('POST', '/api/line/link-code'),
+  lineUnlink: () => req<{ ok: true }>('DELETE', '/api/line/link'),
   listAttachments: (taskId: string) =>
     req<{ attachments: Attachment[] }>('GET', `/api/tasks/${taskId}/attachments`).then(
       (r) => r.attachments,
