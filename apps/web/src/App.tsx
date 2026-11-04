@@ -20,7 +20,12 @@ const hasHint = (() => {
 })();
 const preloadApp = () => {
   void loadShell();
-  void import('./pages/CalendarPage');
+  // หน้าแรกคือ "วันนี้" (ยกเว้นเปิดลิงก์ปฏิทินโดยตรง)
+  void import(
+    window.location.hash.startsWith('#/calendar') || window.location.search.includes('task=')
+      ? './pages/CalendarPage'
+      : './pages/TodayPage'
+  );
 };
 if (hasHint) preloadApp();
 

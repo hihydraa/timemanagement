@@ -22,6 +22,7 @@ import {
   updateTask,
   withTags,
 } from '../services/tasks';
+import { cockpit, rescheduleOverdue } from '../services/cockpit';
 import type { AppEnv } from '../types';
 
 const r = new Hono<AppEnv>();
@@ -112,5 +113,19 @@ r.post('/tasks/:id/snooze', async (c) => {
 r.get('/inbox', async (c) => c.json({ tasks: await inboxTasks(getDb(c.env.DB), c.get('userId')) }));
 
 r.get('/today', async (c) => c.json(await todayBuckets(getDb(c.env.DB), c.get('userId'), now())));
+
+/** ข้อมูลทั้งหมดของหน้า "วันนี้" ในคำขอเดียว */
+r.get('/cockpit', async (c) => c.json(await cockpit(getDb(c.env.DB), c.get('userId'), now())));
+
+const rescheduleInput = z.object({ to: z.enum(['today', 'tomorrow']) }).strict();
+
+/** เลื่อนงานที่เลยกำหนดทั้งหมดไปวันนี้/พรุ่งนี้ (ครั้งละไม่เกิน 15 งาน; hasMore = ยังเหลือ) */
+r.post('/today/reschedule-overdue', async (c) => {
+  const body = await parseJson(c, rescheduleInput);
+  const userId = c.get('userId');
+  const res = await rescheduleOverdue(getDb(c.env.DB), userId, body.to, now());
+  for (const id of res.movedIds) await background(c, syncTaskSafe(c.env, userId, id));
+  return c.json(res);
+});
 
 export default r;

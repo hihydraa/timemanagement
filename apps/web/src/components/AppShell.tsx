@@ -12,6 +12,7 @@ import GcalDialog from './GcalDialog';
 import LineDialog from './LineDialog';
 import SettingsDialog from './SettingsDialog';
 
+const TodayPage = lazy(() => import('../pages/TodayPage'));
 const CalendarPage = lazy(() => import('../pages/CalendarPage'));
 const FocusPage = lazy(() => import('../pages/FocusPage'));
 const InboxPage = lazy(() => import('../pages/InboxPage'));
@@ -19,10 +20,13 @@ const MatrixPage = lazy(() => import('../pages/MatrixPage'));
 const ReviewPage = lazy(() => import('../pages/ReviewPage'));
 const StatsPage = lazy(() => import('../pages/StatsPage'));
 
-const VIEWS: View[] = ['calendar', 'inbox', 'matrix', 'focus', 'review', 'stats'];
+const VIEWS: View[] = ['today', 'calendar', 'inbox', 'matrix', 'focus', 'review', 'stats'];
 const viewFromHash = (): View => {
   const h = window.location.hash.replace(/^#\/?/, '');
-  return (VIEWS as string[]).includes(h) ? (h as View) : 'calendar';
+  if ((VIEWS as string[]).includes(h)) return h as View;
+  // ลิงก์ "แก้ไข" จาก LINE (/?task=<id>) เปิดฟอร์มงานในหน้าปฏิทิน
+  if (!h && new URLSearchParams(window.location.search).has('task')) return 'calendar';
+  return 'today';
 };
 
 export default function AppShell({ user, onLogout }: { user: User; onLogout: () => void }) {
@@ -43,7 +47,7 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
     return () => window.removeEventListener('hashchange', fn);
   }, []);
   const goTo = useCallback((v: View) => {
-    window.location.hash = v === 'calendar' ? '' : `/${v}`;
+    window.location.hash = v === 'today' ? '' : `/${v}`;
     setView(v);
   }, []);
 
@@ -263,6 +267,7 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
                 </div>
               }
             >
+              {view === 'today' && <TodayPage />}
               {view === 'calendar' && <CalendarPage />}
               {view === 'inbox' && <InboxPage />}
               {view === 'matrix' && <MatrixPage />}

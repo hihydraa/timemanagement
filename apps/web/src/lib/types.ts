@@ -25,6 +25,8 @@ export interface Task {
   gcalEventId: string | null;
   gcalSyncedAt: string | null;
   completedAt: string | null;
+  /** จำนวนครั้งที่ถูกเลื่อน */
+  snoozeCount: number;
 }
 
 export interface Category {
@@ -116,8 +118,27 @@ export interface NotificationSettings {
 export type SidebarSection =
   'mini' | 'search' | 'category' | 'urgency' | 'importance' | 'status' | 'tag' | 'legend';
 
+export interface WorkSettings {
+  start: string;
+  end: string;
+  /** ISO 1=จันทร์ … 7=อาทิตย์ */
+  days: number[];
+}
+
+export interface CockpitData {
+  date: string;
+  now: string;
+  work: WorkSettings;
+  overdue: Task[];
+  dueToday: Task[];
+  today: Task[];
+  doneToday: Task[];
+  focusMinutes: number;
+}
+
 export interface SettingsView {
   settings: NotificationSettings;
+  work: WorkSettings;
   sidebarSections: SidebarSection[];
   lineLinked: boolean;
 }

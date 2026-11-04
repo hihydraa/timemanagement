@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, ApiClientError } from '../lib/api';
 import { t } from '../lib/i18n';
 import DeleteAccount from './DeleteAccount';
-import type { NotificationSettings, PushStatus } from '../lib/types';
+import type { NotificationSettings, PushStatus, WorkSettings } from '../lib/types';
 
 interface Props {
   onClose: () => void;
@@ -16,6 +16,7 @@ const field =
 export default function SettingsDialog({ onClose, onOpenLine, onSaved }: Props) {
   const [s, setS] = useState<NotificationSettings | null>(null);
   const [linked, setLinked] = useState(true);
+  const [work, setWork] = useState<WorkSettings | null>(null);
   const [push, setPush] = useState<PushStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -29,6 +30,7 @@ export default function SettingsDialog({ onClose, onOpenLine, onSaved }: Props) 
       .getSettings()
       .then((v) => {
         setS(v.settings);
+        setWork(v.work);
         setLinked(v.lineLinked);
       })
       .catch((e) => setError(e instanceof ApiClientError ? e.message : t.error.generic));
@@ -53,8 +55,12 @@ export default function SettingsDialog({ onClose, onOpenLine, onSaved }: Props) 
     setBusy(true);
     setError('');
     try {
-      const v = await api.patchSettings(s);
+      const v = await api.patchSettings({
+        ...s,
+        ...(work ? { workStart: work.start, workEnd: work.end, workDays: work.days } : {}),
+      });
       setS(v.settings);
+      setWork(v.work);
       setSaved(true);
       onSaved();
     } catch (err) {
@@ -228,6 +234,70 @@ export default function SettingsDialog({ onClose, onOpenLine, onSaved }: Props) 
               <p className="text-amber-700 dark:text-amber-400">{t.settings.quotaNear}</p>
             )}
           </div>
+        )}
+
+        {work && (
+          <fieldset className="space-y-2 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+            <legend className="px-1 text-sm font-semibold">{t.work.title}</legend>
+            <p className="text-xs text-slate-600 dark:text-slate-300">{t.work.hint}</p>
+            <div className="grid grid-cols-2 gap-3">
+              {(
+                [
+                  ['work-start', t.work.start, 'start'],
+                  ['work-end', t.work.end, 'end'],
+                ] as const
+              ).map(([id, label, key]) => (
+                <div key={id}>
+                  <label
+                    htmlFor={id}
+                    className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
+                  >
+                    {label}
+                  </label>
+                  <input
+                    id={id}
+                    type="time"
+                    required
+                    value={work[key]}
+                    onChange={(e) => {
+                      setSaved(false);
+                      setWork({ ...work, [key]: e.target.value });
+                    }}
+                    className={`${field} w-full`}
+                  />
+                </div>
+              ))}
+            </div>
+            <div role="group" aria-label={t.work.days}>
+              <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                {t.work.days}
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {t.work.dayNames.map((name, i) => {
+                  const d = i + 1;
+                  const on = work.days.includes(d);
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      aria-pressed={on}
+                      title={t.work.dayFull[i]}
+                      onClick={() => {
+                        setSaved(false);
+                        const days = on
+                          ? work.days.filter((x) => x !== d)
+                          : [...work.days, d].sort();
+                        if (days.length) setWork({ ...work, days });
+                      }}
+                      className={`h-9 min-w-9 rounded-full border px-2 text-sm ${on ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700'}`}
+                    >
+                      {name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </fieldset>
         )}
 
         {error && (

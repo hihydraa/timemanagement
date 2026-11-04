@@ -81,7 +81,16 @@ export default function FocusPage() {
   const saved = store.get<{ focusMin: number; breakMin: number }>(SET_KEY);
   const [focusMin, setFocusMin] = useState(saved?.focusMin ?? 25);
   const [breakMin, setBreakMin] = useState(saved?.breakMin ?? 5);
-  const [taskId, setTaskId] = useState('');
+  // มาจากปุ่ม "เริ่มโฟกัส" ในหน้าวันนี้: เลือกงานนั้นไว้ล่วงหน้า (อ่านครั้งเดียวแล้วลบ)
+  const [taskId, setTaskId] = useState(() => {
+    try {
+      const v = sessionStorage.getItem('dobby.focusTask') ?? '';
+      sessionStorage.removeItem('dobby.focusTask');
+      return v;
+    } catch {
+      return '';
+    }
+  });
   const [tasks, setTasks] = useState<Task[]>([]);
   const [run, setRun] = useState<Run | null>(() => store.get<Run>(RUN_KEY));
   const [now, setNow] = useState(Date.now());

@@ -3,7 +3,8 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { getDb } from '../db/client';
 import { userSettings, users } from '../db/schema';
-import { parseJson } from '../lib/http';
+import { ApiError, parseJson } from '../lib/http';
+import { parseWorkDays } from '../lib/work';
 import { notificationStatus } from '../services/notifications';
 import type { AppEnv } from '../types';
 
@@ -48,6 +49,9 @@ const patchInput = z
     quietHoursEnd: hm,
     lineNotifyEnabled: z.boolean(),
     sidebarSections: z.array(z.enum(SIDEBAR_SECTIONS)).max(SIDEBAR_SECTIONS.length),
+    workStart: hm,
+    workEnd: hm,
+    workDays: z.array(z.number().int().min(1).max(7)).min(1, 'เลือกวันทำงานอย่างน้อย 1 วัน').max(7),
   })
   .partial()
   .strict();
@@ -71,6 +75,11 @@ async function view(db: ReturnType<typeof getDb>, userId: string) {
     },
     /** แยกจาก settings (การแจ้งเตือน) เพื่อไม่ให้หน้าตั้งค่าแจ้งเตือนเขียนทับโดยไม่ตั้งใจ */
     sidebarSections: parseSidebar(d.sidebarSections),
+    work: {
+      start: d.workStart ?? '09:00',
+      end: d.workEnd ?? '18:00',
+      days: parseWorkDays(d.workDays),
+    },
     lineLinked: !!u?.lineUserId,
   };
 }
@@ -91,6 +100,16 @@ r.patch('/settings', async (c) => {
   if (body.quietHoursStart !== undefined) set.quietHoursStart = body.quietHoursStart;
   if (body.quietHoursEnd !== undefined) set.quietHoursEnd = body.quietHoursEnd;
   if (body.lineNotifyEnabled !== undefined) set.lineNotifyEnabled = body.lineNotifyEnabled ? 1 : 0;
+  if (body.workStart !== undefined || body.workEnd !== undefined) {
+    const cur = await db.select().from(userSettings).where(eq(userSettings.userId, userId)).get();
+    const start = body.workStart ?? cur?.workStart ?? '09:00';
+    const end = body.workEnd ?? cur?.workEnd ?? '18:00';
+    if (end <= start)
+      throw new ApiError(400, 'validation_error', 'workEnd: เวลาเลิกงานต้องหลังเวลาเริ่มงาน');
+    if (body.workStart !== undefined) set.workStart = body.workStart;
+    if (body.workEnd !== undefined) set.workEnd = body.workEnd;
+  }
+  if (body.workDays !== undefined) set.workDays = [...new Set(body.workDays)].sort().join(',');
   if (body.sidebarSections !== undefined)
     set.sidebarSections = JSON.stringify([...new Set(body.sidebarSections)]);
   if (Object.keys(set).length) {

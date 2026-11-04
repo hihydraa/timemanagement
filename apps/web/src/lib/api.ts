@@ -9,6 +9,7 @@ import type {
   OverviewStats,
   PushStatus,
   ResyncResult,
+  CockpitData,
   SettingsView,
   SidebarSection,
   StorageInfo,
@@ -83,6 +84,11 @@ export const api = {
       `/api/tasks?from=${encodeURIComponent(fromIso)}&to=${encodeURIComponent(toIso)}`,
     ).then((r) => r.tasks),
   today: () => req<TodayData>('GET', '/api/today'),
+  cockpit: () => req<CockpitData>('GET', '/api/cockpit'),
+  rescheduleOverdue: (to: 'today' | 'tomorrow') =>
+    req<{ movedIds: string[]; hasMore: boolean }>('POST', '/api/today/reschedule-overdue', { to }),
+  snoozeTask: (id: string, body: { minutes?: number; days?: number }) =>
+    req<{ task: Task }>('POST', `/api/tasks/${id}/snooze`, body).then((r) => r.task),
   createTask: (p: TaskPayload) => req<{ task: Task }>('POST', '/api/tasks', p).then((r) => r.task),
   updateTask: (id: string, p: TaskPayload) =>
     req<{ task: Task }>('PATCH', `/api/tasks/${id}`, p).then((r) => {
@@ -135,8 +141,14 @@ export const api = {
   gcalDisconnect: () => req<GcalStatus>('POST', '/api/gcal/disconnect', {}),
   gcalResync: (cursor: string | null) => req<ResyncResult>('POST', '/api/gcal/resync', { cursor }),
   getSettings: () => req<SettingsView>('GET', '/api/settings'),
-  patchSettings: (p: Partial<NotificationSettings> & { sidebarSections?: SidebarSection[] }) =>
-    req<SettingsView>('PATCH', '/api/settings', p),
+  patchSettings: (
+    p: Partial<NotificationSettings> & {
+      sidebarSections?: SidebarSection[];
+      workStart?: string;
+      workEnd?: string;
+      workDays?: number[];
+    },
+  ) => req<SettingsView>('PATCH', '/api/settings', p),
   pushStatus: () => req<PushStatus>('GET', '/api/notifications/status'),
   listAttachments: (taskId: string) =>
     req<{ attachments: Attachment[] }>('GET', `/api/tasks/${taskId}/attachments`).then(

@@ -474,7 +474,7 @@ export async function snoozeTask(
   const shiftMs = by.minutes ? by.minutes * 60_000 : (by.days ?? 1) * 86_400_000;
   const shift = (s: string | null) =>
     s ? new Date(new Date(s).getTime() + shiftMs).toISOString() : null;
-  return updateTask(db, userId, t.id, {
+  const moved = await updateTask(db, userId, t.id, {
     startAt: shift(t.startAt),
     endAt: shift(t.endAt),
     dueAt: shift(t.dueAt),
@@ -483,6 +483,11 @@ export async function snoozeTask(
       : null,
     status: 'todo',
   });
+  await db
+    .update(tasks)
+    .set({ snoozeCount: sql`${tasks.snoozeCount} + 1` })
+    .where(and(eq(tasks.id, t.id), eq(tasks.userId, userId)));
+  return { ...moved, snoozeCount: t.snoozeCount + 1 };
 }
 
 /** งานที่ยังไม่เสร็จของผู้ใช้ (ใช้ค้นหาตามชื่อจาก LINE) */
@@ -540,6 +545,7 @@ export async function carryOver(
       endAt: shift(tasks.endAt),
       dueAt: shift(tasks.dueAt),
       dueDate: sql`case when ${tasks.dueDate} is null then null else date(${tasks.dueDate}, '+1 day') end`,
+      snoozeCount: sql`${tasks.snoozeCount} + 1`,
       updatedAt: nowIso(),
     })
     .where(and(eq(tasks.userId, userId), inArray(tasks.id, ids)));

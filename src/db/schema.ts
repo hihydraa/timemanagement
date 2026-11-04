@@ -32,6 +32,11 @@ export const userSettings = sqliteTable('user_settings', {
   eveningReviewEnabled: integer('evening_review_enabled').notNull().default(1),
   /** ส่วนที่แสดงในแถบด้านข้างของปฏิทิน (JSON array ของชื่อส่วน; null = ค่าเริ่มต้น) */
   sidebarSections: text('sidebar_sections'),
+  /** ชั่วโมงทำงานต่อวัน (ใช้คำนวณภาระงาน): HH:mm เวลาไทย */
+  workStart: text('work_start').notNull().default('09:00'),
+  workEnd: text('work_end').notNull().default('18:00'),
+  /** วันทำงาน: เลขวัน ISO 1=จันทร์ … 7=อาทิตย์ คั่นด้วย comma */
+  workDays: text('work_days').notNull().default('1,2,3,4,5'),
 });
 
 export const googleTokens = sqliteTable('google_tokens', {
@@ -87,6 +92,8 @@ export const tasks = sqliteTable(
     source: text('source', { enum: ['web', 'line'] })
       .notNull()
       .default('web'),
+    /** จำนวนครั้งที่ถูกเลื่อน (ใช้ลดคะแนนแนะนำ ไม่ให้งานเดิมถูกดันไปเรื่อย ๆ) */
+    snoozeCount: integer('snooze_count').notNull().default(0),
     completedAt: text('completed_at'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),

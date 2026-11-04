@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { Category, User } from './types';
 
-export type View = 'calendar' | 'inbox' | 'matrix' | 'focus' | 'review' | 'stats';
+export type View = 'today' | 'calendar' | 'inbox' | 'matrix' | 'focus' | 'review' | 'stats';
 
 export interface AppCtx {
   user: User;
