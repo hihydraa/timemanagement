@@ -10,6 +10,7 @@ import auth from './routes/auth';
 import categoriesRoutes from './routes/categories';
 import gcalRoutes from './routes/gcal';
 import { lineApi, lineWebhook } from './routes/line';
+import settingsRoutes from './routes/settings';
 import tasksRoutes from './routes/tasks';
 import type { AppEnv } from './types';
 import { nowIso } from './lib/time';
@@ -61,6 +62,7 @@ api.route('/', categoriesRoutes);
 api.route('/', attachmentsRoutes);
 api.route('/line', lineApi);
 api.route('/gcal', gcalRoutes);
+api.route('/', settingsRoutes);
 app.route('/api', api);
 
 app.onError((err, c) => {

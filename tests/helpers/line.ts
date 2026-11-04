@@ -15,6 +15,16 @@ interface Sent {
 export class LineHarness {
   replies: Sent[] = [];
   fetched: string[] = [];
+  /** push ทั้งหมดที่บอทส่ง (รวมครั้งที่ล้มเหลว) */
+  pushes: {
+    to: string;
+    messages: Record<string, unknown>[];
+    retryKey: string | null;
+    auth: string | null;
+    status: number;
+  }[] = [];
+  /** สถานะที่จะตอบ push ครั้งถัดไปแทนปกติ (ใช้จำลอง 500/403/429) */
+  pushFail: number[] = [];
   contents = new Map<string, { bytes: Uint8Array; type: string }>();
   private n = 0;
   private pending: Promise<unknown>[] = [];
@@ -27,6 +37,22 @@ export class LineHarness {
         if (String(url).endsWith('/v2/bot/message/reply')) {
           this.replies.push(JSON.parse(String(init?.body)) as Sent);
           return new Response('{}', { status: 200 });
+        }
+        if (String(url).endsWith('/v2/bot/message/push')) {
+          const h = new Headers(init?.headers);
+          const b = JSON.parse(String(init?.body)) as {
+            to: string;
+            messages: Record<string, unknown>[];
+          };
+          const status = this.pushFail.shift() ?? 200;
+          this.pushes.push({
+            to: b.to,
+            messages: b.messages,
+            retryKey: h.get('X-Line-Retry-Key'),
+            auth: h.get('Authorization'),
+            status,
+          });
+          return new Response('{}', { status });
         }
         const m = /message\/([^/]+)\/content$/.exec(String(url));
         if (m) {

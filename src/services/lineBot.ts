@@ -35,6 +35,7 @@ import {
 import { getMessageContent, replyMessages, type LineMessage } from './line';
 import { confirmAlternatives, parseTask, type ParsedTask } from './parser';
 import {
+  carryOver,
   createTask,
   getOwned,
   inboxTasks,
@@ -166,7 +167,7 @@ async function upsertState(
     .values({ lineUserId, ...patch })
     .onConflictDoUpdate({ target: lineState.lineUserId, set: patch });
 }
-const setList = (db: Db, lineUserId: string, ids: string[]) =>
+export const setList = (db: Db, lineUserId: string, ids: string[]) =>
   upsertState(db, lineUserId, { listJson: JSON.stringify(ids), listAt: nowIso() });
 async function getList(db: Db, lineUserId: string): Promise<string[]> {
   const s = await getState(db, lineUserId);
@@ -643,6 +644,24 @@ async function handlePostback(ctx: Ctx, user: User, data: string) {
       const { gcalEventId } = await deleteTask(db, ctx.env.FILES, user.id, id);
       await send(ctx, [text(`🗑 ลบแล้ว: ${clip(t.title, 80)}`)]);
       return removeEventSafe(ctx.env, user.id, gcalEventId);
+    }
+    case 'carry': {
+      // ปุ่มจากสรุปเย็น: เลื่อนงานค้างของวัน d ไปวันถัดไป (d ต้องเป็นวันล่าสุด กันปุ่มเก่าทำงานผิดวัน)
+      const d = q.get('d') ?? '';
+      const today = bangkokDate(now());
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || d > today || d < addDays(today, -3)) {
+        return send(ctx, [text('ปุ่มนี้หมดอายุแล้ว')]);
+      }
+      const { movedIds, hasMore } = await carryOver(db, user.id, d);
+      await send(ctx, [
+        text(
+          movedIds.length
+            ? `⏭ เลื่อน ${movedIds.length} งานไป ${dayLabel(addDays(d, 1))} แล้ว${hasMore ? '\n(ยังมีงานเหลืออีก กดปุ่มอีกครั้งเพื่อเลื่อนต่อ)' : ''}`
+            : 'ไม่มีงานค้างให้เลื่อนแล้ว',
+        ),
+      ]);
+      for (const id of movedIds) await syncTaskSafe(ctx.env, user.id, id);
+      return;
     }
     case 'cancel':
       return send(ctx, [text('ยกเลิกแล้ว')]);

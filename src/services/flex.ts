@@ -318,3 +318,177 @@ export const HELP_TEXT = [
 
 export const LINK_HELP =
   'ยังไม่ได้ผูกบัญชี Dobby 🔗\n\n1) เปิดเว็บ Dobby แล้วกดปุ่ม "เชื่อม LINE" เพื่อรับรหัส 6 หลัก\n2) พิมพ์ที่นี่: ผูกบัญชี 123456\n\n(รหัสหมดอายุใน 10 นาที)';
+
+// ---------------------------------------------------------------- notifications
+export interface AlertItem {
+  task: TaskDto;
+  /** หัวการ์ด เช่น "⏰ อีก 25 นาที" */
+  label: string;
+}
+
+const MAX_ALERT_BUBBLES = 8;
+
+/**
+ * Flex Carousel ของงานที่ต้องเตือน — เป็น "ข้อความเดียว" ต่อการ push (นับโควตา 1)
+ * แต่ละงานมีปุ่ม ✅ เสร็จ / ⏰ เลื่อน 1 ชม. / พรุ่งนี้ / 🔗 เปิดในเว็บ
+ */
+export function alertCarousel(items: AlertItem[], baseUrl: string): LineMessage {
+  const shown = items.slice(0, MAX_ALERT_BUBBLES);
+  const bubbles: unknown[] = shown.map(({ task: t, label }) => ({
+    type: 'bubble',
+    size: 'kilo',
+    body: {
+      type: 'box',
+      layout: 'horizontal',
+      spacing: 'md',
+      contents: [
+        {
+          type: 'box',
+          layout: 'vertical',
+          width: '5px',
+          backgroundColor: URGENCY_COLOR[t.urgency] ?? '#9ca3af',
+          cornerRadius: '3px',
+          contents: [{ type: 'filler' }],
+        },
+        {
+          type: 'box',
+          layout: 'vertical',
+          flex: 1,
+          contents: [
+            txt(label, { size: 'xs', weight: 'bold', color: '#4f46e5' }),
+            txt(clip(t.title, 100), { weight: 'bold', size: 'md', margin: 'sm' }),
+            txt(`🕒 ${whenText(t)}`, { size: 'sm', margin: 'md' }),
+            txt(`เร่งด่วน ${bangs(t.urgency)}  สำคัญ ${stars(t.importance)}`, {
+              size: 'xs',
+              color: '#6b7280',
+              margin: 'sm',
+            }),
+          ],
+        },
+      ],
+    },
+    footer: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'sm',
+      contents: [
+        {
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
+            button('✅ เสร็จ', pb(`a=done&id=${t.id}`), 'primary', '#16a34a'),
+            button('⏰ +1 ชม.', pb(`a=snz&id=${t.id}&m=60`)),
+          ],
+        },
+        {
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
+            button('พรุ่งนี้', pb(`a=snz&id=${t.id}&d=1`)),
+            button('🔗 เปิดเว็บ', { type: 'uri', uri: `${baseUrl}/?task=${t.id}` }),
+          ],
+        },
+      ],
+    },
+  }));
+  if (items.length > shown.length) {
+    bubbles.push({
+      type: 'bubble',
+      size: 'kilo',
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [txt(`…และอีก ${items.length - shown.length} งาน`, { weight: 'bold' })],
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [button('เปิดในเว็บ', { type: 'uri', uri: baseUrl }, 'link')],
+      },
+    });
+  }
+  const first = items[0]!;
+  return {
+    type: 'flex',
+    altText: clip(
+      `${first.label}: ${first.task.title}${items.length > 1 ? ` และอีก ${items.length - 1} งาน` : ''}`,
+      380,
+    ),
+    contents: { type: 'carousel', contents: bubbles },
+  };
+}
+
+/** สรุปตอนเย็น: เสร็จกี่งาน / ยังค้างอะไร + ปุ่มเลื่อนงานค้างไปพรุ่งนี้ */
+export function eveningCard(
+  date: string,
+  done: TaskDto[],
+  pending: TaskDto[],
+  overdueBefore: number,
+  baseUrl: string,
+): { message: LineMessage; ids: string[] } {
+  const ids: string[] = [];
+  const body: unknown[] = [
+    txt(`🌙 สรุปวันนี้ ${dayLabel(date)}`, { weight: 'bold', size: 'md' }),
+    { type: 'separator', margin: 'md' },
+  ];
+  body.push(
+    txt(`✅ เสร็จแล้ว ${done.length} งาน`, {
+      weight: 'bold',
+      size: 'sm',
+      color: '#16a34a',
+      margin: 'md',
+    }),
+  );
+  for (const t of done.slice(0, 5))
+    body.push(txt(`• ${clip(t.title, 60)}`, { size: 'sm', color: '#6b7280', margin: 'xs' }));
+  if (done.length > 5)
+    body.push(
+      txt(`…และอีก ${done.length - 5} งาน`, { size: 'xs', color: '#6b7280', margin: 'xs' }),
+    );
+
+  body.push(
+    txt(`⏳ ยังค้าง ${pending.length} งาน`, {
+      weight: 'bold',
+      size: 'sm',
+      color: pending.length ? '#ea580c' : '#6b7280',
+      margin: 'lg',
+    }),
+  );
+  for (const t of pending.slice(0, 8)) {
+    ids.push(t.id);
+    body.push(
+      txt(`${ids.length}. ${clip(t.title, 60)}  (${timeText(t)})`, { size: 'sm', margin: 'xs' }),
+    );
+  }
+  if (pending.length > 8)
+    body.push(
+      txt(`…และอีก ${pending.length - 8} งาน`, { size: 'xs', color: '#6b7280', margin: 'xs' }),
+    );
+  if (overdueBefore > 0)
+    body.push(
+      txt(`🔴 ค้างจากวันก่อนหน้าอีก ${overdueBefore} งาน`, {
+        size: 'xs',
+        color: '#dc2626',
+        margin: 'md',
+      }),
+    );
+
+  const footer: unknown[] = [];
+  if (pending.length)
+    footer.push(button('เลื่อนงานค้างไปพรุ่งนี้', pb(`a=carry&d=${date}`), 'primary', '#4f46e5'));
+  footer.push(button('เปิดในเว็บ', { type: 'uri', uri: baseUrl }, 'link'));
+  return {
+    ids,
+    message: {
+      type: 'flex',
+      altText: clip(`สรุปวันนี้: เสร็จ ${done.length} · ค้าง ${pending.length}`, 380),
+      contents: {
+        type: 'bubble',
+        body: { type: 'box', layout: 'vertical', contents: body },
+        footer: { type: 'box', layout: 'vertical', spacing: 'sm', contents: footer },
+      },
+    },
+  };
+}

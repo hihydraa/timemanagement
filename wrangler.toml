@@ -25,6 +25,7 @@ crons = ["*/5 * * * *"]
 
 [vars]
 APP_BASE_URL = "http://localhost:5173"
+# โควตา push ฟรีต่อเดือนของ LINE OA คุณ (ดูใน OA Manager) — ค่านี้เป็นตัวอย่าง ต้องแก้ให้ตรงของจริง
 PUSH_MONTHLY_LIMIT = "200"
 MAX_UPLOAD_MB = "10"
 USER_STORAGE_QUOTA_MB = "500"

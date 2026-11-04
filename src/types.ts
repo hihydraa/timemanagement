@@ -14,6 +14,9 @@ export interface Env {
   PUSH_MONTHLY_LIMIT: string;
   MAX_UPLOAD_MB: string;
   USER_STORAGE_QUOTA_MB: string;
+  /** เฉพาะ dev/test: ชี้ LINE API ไปที่ mock (ค่าเริ่มต้น https://api.line.me / https://api-data.line.me) */
+  LINE_API_BASE?: string;
+  LINE_API_DATA_BASE?: string;
   /** '1' เปิด /auth/dev-login สำหรับ local เท่านั้น */
   DEV_LOGIN?: string;
 }

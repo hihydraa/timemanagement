@@ -1,8 +1,9 @@
 import { ApiError } from '../lib/http';
 import type { Env } from '../types';
 
-const API = 'https://api.line.me';
-const API_DATA = 'https://api-data.line.me';
+const apiBase = (env: Env) => (env.LINE_API_BASE || 'https://api.line.me').replace(/\/$/, '');
+const dataBase = (env: Env) =>
+  (env.LINE_API_DATA_BASE || 'https://api-data.line.me').replace(/\/$/, '');
 
 const enc = new TextEncoder();
 
@@ -44,7 +45,7 @@ export async function replyMessages(
   replyToken: string,
   messages: LineMessage[],
 ): Promise<void> {
-  const res = await fetch(`${API}/v2/bot/message/reply`, {
+  const res = await fetch(`${apiBase(env)}/v2/bot/message/reply`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -64,9 +65,12 @@ export async function getMessageContent(
   messageId: string,
   maxBytes: number,
 ): Promise<{ bytes: ArrayBuffer; contentType: string }> {
-  const res = await fetch(`${API_DATA}/v2/bot/message/${encodeURIComponent(messageId)}/content`, {
-    headers: { Authorization: `Bearer ${env.LINE_CHANNEL_ACCESS_TOKEN}` },
-  });
+  const res = await fetch(
+    `${dataBase(env)}/v2/bot/message/${encodeURIComponent(messageId)}/content`,
+    {
+      headers: { Authorization: `Bearer ${env.LINE_CHANNEL_ACCESS_TOKEN}` },
+    },
+  );
   if (!res.ok)
     throw new ApiError(
       404,
@@ -78,4 +82,36 @@ export async function getMessageContent(
   const bytes = await res.arrayBuffer();
   if (bytes.byteLength > maxBytes) throw new ApiError(413, 'file_too_large', 'ไฟล์ใหญ่เกินกำหนด');
   return { bytes, contentType: res.headers.get('Content-Type') ?? '' };
+}
+
+export interface PushResult {
+  ok: boolean;
+  /** 0 = ติดต่อ LINE ไม่ได้ (เครือข่าย) */
+  status: number;
+}
+
+/**
+ * ส่ง push ถึงผู้ใช้ 1 ข้อความ (1 message object = นับโควตา 1)
+ * `retryKey` ทำให้ retry ปลอดภัย: ถ้าครั้งแรกสำเร็จแต่ตอบไม่ถึง LINE จะไม่ส่งซ้ำ (409 = รับไปแล้ว)
+ */
+export async function pushMessage(
+  env: Env,
+  to: string,
+  message: LineMessage,
+  retryKey: string,
+): Promise<PushResult> {
+  try {
+    const res = await fetch(`${apiBase(env)}/v2/bot/message/push`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${env.LINE_CHANNEL_ACCESS_TOKEN}`,
+        'X-Line-Retry-Key': retryKey,
+      },
+      body: JSON.stringify({ to, messages: [message] }),
+    });
+    return { ok: res.ok || res.status === 409, status: res.status };
+  } catch {
+    return { ok: false, status: 0 };
+  }
 }

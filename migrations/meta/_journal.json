@@ -22,6 +22,13 @@
       "when": 1793767738274,
       "tag": "0002_thick_puppet_master",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1793772827505,
+      "tag": "0003_organic_albert_cleary",
+      "breakpoints": true
     }
   ]
 }

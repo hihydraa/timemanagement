@@ -373,3 +373,50 @@ export async function openTasks(db: Db, userId: string): Promise<TaskDto[]> {
     .limit(300);
   return withTags(db, rows);
 }
+
+export const CARRY_MAX = 15;
+
+/**
+ * เลื่อนงานที่ยังไม่เสร็จของ "วัน date" ไปวันถัดไป (+1 วัน) ด้วยคำสั่ง UPDATE เดียว
+ * (งานของวันนั้น = เริ่ม/เดดไลน์ภายในวันนั้น หรือเป็นงานทั้งวันของวันนั้น)
+ * คืน id ที่เลื่อน และ hasMore (ยังมีเหลือเกินเพดาน CARRY_MAX ต่อครั้ง) — เรียกซ้ำปลอดภัย: งานที่เลื่อนแล้วไม่ตรงเงื่อนไขอีก
+ */
+export async function carryOver(
+  db: Db,
+  userId: string,
+  date: string,
+): Promise<{ movedIds: string[]; hasMore: boolean }> {
+  const start = fromBangkok(date).toISOString();
+  const end = fromBangkok(addDays(date, 1)).toISOString();
+  const rows = await db
+    .select({ id: tasks.id })
+    .from(tasks)
+    .where(
+      and(
+        eq(tasks.userId, userId),
+        inArray(tasks.status, ['todo', 'doing']),
+        or(
+          and(gte(tasks.startAt, start), lt(tasks.startAt, end)),
+          and(isNull(tasks.startAt), gte(tasks.dueAt, start), lt(tasks.dueAt, end)),
+          eq(tasks.dueDate, date),
+        ),
+      ),
+    )
+    .orderBy(desc(sql`${tasks.urgency} * ${tasks.importance}`), asc(tasks.id))
+    .limit(CARRY_MAX + 1);
+  const ids = rows.slice(0, CARRY_MAX).map((r) => r.id);
+  if (!ids.length) return { movedIds: [], hasMore: false };
+  const shift = (col: unknown) =>
+    sql`case when ${col} is null then null else strftime('%Y-%m-%dT%H:%M:%fZ', ${col}, '+1 day') end`;
+  await db
+    .update(tasks)
+    .set({
+      startAt: shift(tasks.startAt),
+      endAt: shift(tasks.endAt),
+      dueAt: shift(tasks.dueAt),
+      dueDate: sql`case when ${tasks.dueDate} is null then null else date(${tasks.dueDate}, '+1 day') end`,
+      updatedAt: nowIso(),
+    })
+    .where(and(eq(tasks.userId, userId), inArray(tasks.id, ids)));
+  return { movedIds: ids, hasMore: rows.length > CARRY_MAX };
+}

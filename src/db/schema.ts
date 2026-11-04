@@ -20,6 +20,9 @@ export const userSettings = sqliteTable('user_settings', {
   lineNotifyEnabled: integer('line_notify_enabled').notNull().default(1),
   gcalSyncEnabled: integer('gcal_sync_enabled').notNull().default(0),
   gcalCalendarId: text('gcal_calendar_id').notNull().default('primary'),
+  /** เวลาเตือนเดดไลน์วันนี้ (บ่าย) */
+  deadlineAlertTime: text('deadline_alert_time').notNull().default('15:00'),
+  eveningReviewEnabled: integer('evening_review_enabled').notNull().default(1),
 });
 
 export const googleTokens = sqliteTable('google_tokens', {
