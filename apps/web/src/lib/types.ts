@@ -125,6 +125,13 @@ export interface WorkSettings {
   days: number[];
 }
 
+export interface TrayData {
+  /** มีวัน/เดดไลน์ แต่ยังไม่มีเวลาเริ่ม เรียงตามเดดไลน์ */
+  dated: Task[];
+  /** ยังไม่มีวันเลย */
+  inbox: Task[];
+}
+
 export interface CockpitData {
   date: string;
   now: string;

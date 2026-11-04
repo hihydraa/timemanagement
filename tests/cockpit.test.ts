@@ -126,3 +126,30 @@ describe('POST /api/today/reschedule-overdue', () => {
     ).toBe(401);
   });
 });
+
+describe('GET /api/tray (ถาดงาน)', () => {
+  it('รวม inbox + งานมีวันแต่ไม่มีเวลาเริ่ม (เลยกำหนด/ภายใน 14 วัน) เรียงตามเดดไลน์; ไม่รวมงานที่จัดเวลาแล้ว/ไกลเกิน/เสร็จ/ซีรีส์/ของคนอื่น', async () => {
+    const inbox = await create(a, { title: 'ยังไม่มีวัน' });
+    const late = await create(a, { title: 'ค้าง', allDay: true, dueDate: '2026-11-02' });
+    const soon = await create(a, { title: 'ส่งพฤหัส', dueAt: at('17:00', '2026-11-05') });
+    const near = await create(a, { title: 'ใกล้', allDay: true, dueDate: '2026-11-10' });
+    await create(a, { title: 'ไกล', allDay: true, dueDate: '2026-12-25' });
+    await create(a, { title: 'จัดเวลาแล้ว', startAt: at('13:00'), endAt: at('14:00') });
+    const done = await create(a, { title: 'เสร็จ', allDay: true, dueDate: '2026-11-05' });
+    await a.call('POST', `/api/tasks/${done.id}/complete`);
+    await create(a, {
+      title: 'ซีรีส์',
+      startAt: at('09:00', '2026-11-05'),
+      recurrenceRule: 'FREQ=DAILY',
+    });
+    await create(b, { title: 'ของ B', allDay: true, dueDate: '2026-11-05' });
+
+    const r = (await a.call('GET', '/api/tray')).json;
+    expect(r.inbox.map((t: { id: string }) => t.id)).toEqual([inbox.id]);
+    expect(r.dated.map((t: { id: string }) => t.id)).toEqual([late.id, soon.id, near.id]);
+    expect(JSON.stringify(r)).not.toContain('ของ B');
+  });
+  it('ต้องล็อกอิน', async () => {
+    expect((await new Client(env).call('GET', '/api/tray')).status).toBe(401);
+  });
+});

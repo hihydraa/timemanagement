@@ -22,7 +22,7 @@ import {
   updateTask,
   withTags,
 } from '../services/tasks';
-import { cockpit, rescheduleOverdue } from '../services/cockpit';
+import { cockpit, rescheduleOverdue, trayTasks } from '../services/cockpit';
 import type { AppEnv } from '../types';
 
 const r = new Hono<AppEnv>();
@@ -116,6 +116,9 @@ r.get('/today', async (c) => c.json(await todayBuckets(getDb(c.env.DB), c.get('u
 
 /** ข้อมูลทั้งหมดของหน้า "วันนี้" ในคำขอเดียว */
 r.get('/cockpit', async (c) => c.json(await cockpit(getDb(c.env.DB), c.get('userId'), now())));
+
+/** ถาดงาน: งานที่ยังไม่ได้จัดเวลา (inbox + งานมีวัน/เดดไลน์แต่ไม่มีเวลาเริ่ม) */
+r.get('/tray', async (c) => c.json(await trayTasks(getDb(c.env.DB), c.get('userId'), now())));
 
 const rescheduleInput = z.object({ to: z.enum(['today', 'tomorrow']) }).strict();
 

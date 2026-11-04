@@ -1,3 +1,4 @@
+import { addDaysYmd, mondayOf } from './dates';
 import type { Task } from './types';
 
 /**
@@ -420,4 +421,170 @@ export function buildTimeline(
   }
   if (!nowPlaced) out.push({ kind: 'now', min: nowMin });
   return out;
+}
+
+// ================================================================ Week Planner (Step 3)
+export interface SchedulePatch {
+  allDay: boolean;
+  startAt: string | null;
+  endAt: string | null;
+  dueAt: string | null;
+  dueDate: string | null;
+}
+
+/** 7 วันของสัปดาห์ (จันทร์–อาทิตย์) ที่ ymd อยู่ */
+export const weekDays = (ymd: string): string[] => {
+  const mon = mondayOf(ymd);
+  return Array.from({ length: 7 }, (_, i) => addDaysYmd(mon, i));
+};
+
+/** งาน "กำหนดไว้ในวัน" ymd: เริ่มวันนั้น หรือ (ไม่มีเวลาเริ่ม และ เดดไลน์/วันที่ เป็นวันนั้น) — ใช้คำนวณภาระงานรายวัน */
+export function scheduledOn(t: PlanTask, ymd: string): boolean {
+  if (!isLive(t)) return false;
+  if (t.startAt) return bkYmd(t.startAt) === ymd;
+  return (!!t.dueAt && bkYmd(t.dueAt) === ymd) || t.dueDate === ymd;
+}
+
+/** ธงเดดไลน์: งานที่ยังไม่เสร็จซึ่งจัดเวลาทำไว้วันอื่น แต่เดดไลน์ตกวัน ymd */
+export function deadlineFlagOn(t: PlanTask, ymd: string): boolean {
+  if (!isOpen(t) || !t.startAt) return false;
+  const d = t.dueAt ? bkYmd(t.dueAt) : t.dueDate;
+  return !!d && d === ymd && bkYmd(t.startAt) !== ymd;
+}
+
+export const endOfDayIso = (ymd: string): string => new Date(`${ymd}T23:59:00+07:00`).toISOString();
+const bkIso = (ymd: string, min: number): string =>
+  new Date(`${ymd}T${minToHm(min)}:00+07:00`).toISOString();
+const preserveDeadline = (t: PlanTask): string | null =>
+  t.dueAt ?? (t.dueDate ? endOfDayIso(t.dueDate) : null);
+const DAY_MS = 86_400_000;
+
+/**
+ * ช่วงเวลาว่างแรกในชั่วโมงทำงานของวัน ymd ที่ยาว ≥ minutes (หลบงาน/นัดที่มีเวลาแล้ว);
+ * วันนี้เริ่มนับจากตอนนี้ (ปัดขึ้นเป็นทวีคูณของ 5 นาที) ; ไม่พอคืน null
+ */
+export function firstFreeSlot(
+  tasks: PlanTask[],
+  ymd: string,
+  work: WorkHours,
+  minutes: number,
+  nowMin?: number,
+): number | null {
+  const ws = hmToMin(work.start);
+  const we = Math.max(ws, hmToMin(work.end));
+  const busy: Interval[] = [];
+  for (const t of tasks) {
+    if (!isLive(t) || t.allDay || !t.startAt || bkYmd(t.startAt) !== ymd) continue;
+    const s = bkMinute(t.startAt);
+    const hasEnd = !!t.endAt && t.endAt > t.startAt && bkYmd(t.endAt) === ymd;
+    busy.push([s, hasEnd ? bkMinute(t.endAt!) : s + (t.estimateMinutes ?? DEFAULT_ESTIMATE)]);
+  }
+  let cursor = ws;
+  if (nowMin !== undefined) cursor = Math.max(ws, Math.ceil(nowMin / 5) * 5);
+  for (const [a, b] of merge(busy)) {
+    if (b <= cursor) continue;
+    if (a - cursor >= minutes) return cursor;
+    cursor = Math.max(cursor, b);
+  }
+  return we - cursor >= minutes ? cursor : null;
+}
+
+export interface DropResult {
+  patch: SchedulePatch;
+  /** false = ไม่มีช่วงว่างพอในวันนั้น (วางที่ต้นช่วงทำงานแบบซ้อนทับ ให้ผู้ใช้ปรับเอง) */
+  fits: boolean;
+}
+
+/**
+ * วางงานลง "วัน" (มุมมองการ์ด):
+ *  - source 'card' (ลากการ์ดที่อยู่ในปฏิทินข้ามวัน) = ย้ายวันหลักของงาน คงเวลาเดิม:
+ *      มีเวลาเริ่ม → เลื่อนเริ่ม/จบตามจำนวนวัน (เดดไลน์ไม่ขยับ) ; มีแต่เดดไลน์ → เลื่อนเดดไลน์ ; งานทั้งวัน → เปลี่ยนวัน
+ *  - source 'tray' (ลากจากถาดงาน) = จัดเวลาทำงาน: เลือกช่วงว่างแรกของวัน ความยาวตาม estimate (ไม่มี = 30 นาที)
+ *      โดย "คงเดดไลน์เดิมไว้" (งานที่มีแค่วันที่ → เดดไลน์สิ้นวันนั้น) ไม่ให้เดดไลน์หายเมื่อจัดเวลา
+ * คืน null ถ้าไม่มีอะไรต้องเปลี่ยน
+ */
+export function planDrop(
+  task: PlanTask,
+  day: string,
+  o: {
+    source: 'card' | 'tray';
+    work: WorkHours;
+    dayTasks: PlanTask[];
+    nowMin?: number;
+  },
+): DropResult | null {
+  const t = task;
+  if (o.source === 'card' && !(!t.startAt && !t.dueAt && !t.dueDate)) {
+    if (t.startAt) {
+      const delta = Math.round(
+        (Date.parse(`${day}T00:00:00Z`) - Date.parse(`${bkYmd(t.startAt)}T00:00:00Z`)) / DAY_MS,
+      );
+      if (delta === 0) return null;
+      const sh = (s: string | null) =>
+        s ? new Date(Date.parse(s) + delta * DAY_MS).toISOString() : null;
+      return {
+        fits: true,
+        patch: {
+          allDay: false,
+          startAt: sh(t.startAt),
+          endAt: sh(t.endAt),
+          dueAt: t.dueAt,
+          dueDate: null,
+        },
+      };
+    }
+    if (t.dueAt) {
+      const delta = Math.round(
+        (Date.parse(`${day}T00:00:00Z`) - Date.parse(`${bkYmd(t.dueAt)}T00:00:00Z`)) / DAY_MS,
+      );
+      if (delta === 0) return null;
+      return {
+        fits: true,
+        patch: {
+          allDay: false,
+          startAt: null,
+          endAt: null,
+          dueAt: new Date(Date.parse(t.dueAt) + delta * DAY_MS).toISOString(),
+          dueDate: null,
+        },
+      };
+    }
+    if (t.dueDate === day) return null;
+    return {
+      fits: true,
+      patch: { allDay: true, startAt: null, endAt: null, dueAt: null, dueDate: day },
+    };
+  }
+  const minutes = t.estimateMinutes && t.estimateMinutes > 0 ? t.estimateMinutes : DEFAULT_ESTIMATE;
+  const isToday = o.nowMin !== undefined;
+  const slot = firstFreeSlot(o.dayTasks, day, o.work, minutes, isToday ? o.nowMin : undefined);
+  const start =
+    slot ??
+    (isToday
+      ? Math.max(hmToMin(o.work.start), Math.ceil((o.nowMin ?? 0) / 5) * 5)
+      : hmToMin(o.work.start));
+  const startAt = bkIso(day, Math.min(start, DAY_MIN - 1));
+  return {
+    fits: slot !== null,
+    patch: {
+      allDay: false,
+      startAt,
+      endAt: new Date(Date.parse(startAt) + minutes * 60_000).toISOString(),
+      dueAt: preserveDeadline(t),
+      dueDate: null,
+    },
+  };
+}
+
+/** วางงานลงช่องเวลาที่ระบุบนตารางเวลา (time grid): ความยาว = estimate (ไม่มี = 30 นาที) และคงเดดไลน์เดิม */
+export function planDropAt(task: PlanTask, startIso: string): SchedulePatch {
+  const minutes =
+    task.estimateMinutes && task.estimateMinutes > 0 ? task.estimateMinutes : DEFAULT_ESTIMATE;
+  return {
+    allDay: false,
+    startAt: startIso,
+    endAt: new Date(Date.parse(startIso) + minutes * 60_000).toISOString(),
+    dueAt: preserveDeadline(task),
+    dueDate: null,
+  };
 }

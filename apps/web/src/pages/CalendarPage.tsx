@@ -17,19 +17,34 @@ import listPlugin from '@fullcalendar/list';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import InboxDock from '../components/InboxDock';
-import Filters, { applyFilters, emptyFilters, type FilterState } from '../components/Filters';
+import Filters, {
+  activeCount,
+  applyFilters,
+  emptyFilters,
+  type FilterState,
+} from '../components/Filters';
 import Legend from '../components/Legend';
 import type { DrawerInit } from '../components/TaskDrawer';
-import TodayPanel from '../components/TodayPanel';
 import { api, ApiClientError } from '../lib/api';
 import { useApp } from '../lib/appContext';
 import { eventColors } from '../lib/colors';
+import CalToolbar, { type CalMode } from '../components/calendar/CalToolbar';
+import TaskTray from '../components/calendar/TaskTray';
+import WeekCards, { type DropSource } from '../components/calendar/WeekCards';
 import MiniCalendar from '../components/MiniCalendar';
 import Popover from '../components/Popover';
 import SidebarCustomize from '../components/SidebarCustomize';
 import { t } from '../lib/i18n';
 import { CountdownChip, ImportanceChip, UrgencyText } from '../components/TaskChips';
+import { addDaysYmd, mondayOf } from '../lib/dates';
+import {
+  DEFAULT_WORK,
+  deadlineFlagOn,
+  planDrop,
+  planDropAt,
+  scheduledOn,
+  type WorkHours,
+} from '../lib/planner';
 import { SIDEBAR_DEFAULT, sortSections } from '../lib/sidebar';
 import {
   addMinutesWall,
@@ -39,15 +54,9 @@ import {
   isPointInTime,
   todayYmd,
   wallNow,
+  wallToIso,
 } from '../lib/time';
-import type {
-  Category,
-  ColorMode,
-  SidebarSection,
-  Task,
-  TaskPayload,
-  TodayData,
-} from '../lib/types';
+import type { Category, ColorMode, SidebarSection, Task, TaskPayload } from '../lib/types';
 
 // ฟอร์มงานโหลดเมื่อเปิดใช้ครั้งแรกเท่านั้น (ไม่อยู่ใน chunk ที่ต้องใช้ตอนแสดงปฏิทินครั้งแรก)
 const TaskDrawer = lazy(() => import('../components/TaskDrawer'));
@@ -56,13 +65,27 @@ const TaskDrawer = lazy(() => import('../components/TaskDrawer'));
 const PLUGINS = [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin];
 const LOCALES = [thLocale];
 const BUTTON_TEXT = { list: t.nav.listView };
-const HEADER_MOBILE = { left: 'prev,next', center: 'title', right: 'today' };
-const HEADER_DESKTOP = {
-  left: 'prev,next today',
-  center: 'title',
-  right: 'timeGridDay,timeGridWeek,dayGridMonth,listWeek',
+const VIEW_KEY = 'dobby.calView';
+const loadViewMode = (): CalMode => {
+  try {
+    const v = localStorage.getItem(VIEW_KEY);
+    if (v === 'cards' || v === 'grid' || v === 'month' || v === 'list') return v;
+  } catch {
+    /* ไม่มี storage ก็ใช้ค่าเริ่มต้น */
+  }
+  return 'cards';
 };
-const FOOTER_MOBILE = { center: 'timeGridDay,timeGridWeek,dayGridMonth,listWeek' };
+
+function useMedia(query: string) {
+  const [m, setM] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const fn = () => setM(mq.matches);
+    mq.addEventListener('change', fn);
+    return () => mq.removeEventListener('change', fn);
+  }, [query]);
+  return m;
+}
 
 const MODE_KEY = 'dobby.colorMode';
 const loadMode = (): ColorMode => {
@@ -139,6 +162,37 @@ function taskToEvent(task: Task, mode: ColorMode, cats: Map<string, Category>): 
     };
   }
   return null;
+}
+
+/** ธงเดดไลน์บนปฏิทิน (ตารางเวลา/เดือน/รายการ): งานที่จัดเวลาทำไว้วันอื่น แต่เดดไลน์ตกวันนี้ — กดเปิดงาน ลากไม่ได้ */
+function deadlineFlagEvent(task: Task): EventInput {
+  const due = task.dueAt ?? `${task.dueDate}T23:59:00+07:00`;
+  const wall = isoToWall(new Date(Date.parse(due)).toISOString());
+  return {
+    id: `${task.id}#due`,
+    title: task.title,
+    start: wall,
+    end: addMinutesWall(wall, 30),
+    allDay: false,
+    editable: false,
+    classNames: ['dobby-flag'],
+    backgroundColor: '#fef2f2',
+    borderColor: '#f87171',
+    textColor: '#7f1d1d',
+    extendedProps: {
+      kind: 'flag',
+      flag: true,
+      point: true,
+      urgency: task.urgency,
+      importance: task.importance,
+      stripe: '#dc2626',
+      dueAt: task.dueAt,
+      dueDate: task.dueDate,
+      status: task.status,
+      finished: false,
+      category: '',
+    },
+  };
 }
 
 const onEventMount = (info: { el: HTMLElement; event: Parameters<typeof EVENT_TIP>[0] }) => {
@@ -269,7 +323,16 @@ export default function CalendarPage() {
   const [viewDate, setViewDate] = useState(todayYmd);
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [today, setToday] = useState<TodayData | null>(null);
+  const [work, setWork] = useState<WorkHours>(DEFAULT_WORK);
+  const [viewMode, setViewModeState] = useState<CalMode>(loadViewMode);
+  const [calTitle, setCalTitle] = useState('');
+  const [trayKey, setTrayKey] = useState(0);
+  const [trayCount, setTrayCount] = useState(0);
+  const [trayOpen, setTrayOpen] = useState(false);
+  const [notice, setNotice] = useState('');
+  const trayMap = useRef(new Map<string, Task>());
+  const initialDate = useRef(viewDate);
+  const isNarrow = useMedia('(max-width: 1023px)');
   const [filters, setFilters] = useState<FilterState>(emptyFilters);
   const [mode, setModeState] = useState<ColorMode>(loadMode);
   const [drawer, setDrawer] = useState<DrawerInit | null>(null);
@@ -303,6 +366,7 @@ export default function CalendarPage() {
       .then((r) => {
         if (!alive) return;
         setSections(sortSections(r.sidebarSections));
+        setWork({ start: r.work.start, end: r.work.end, days: r.work.days });
         try {
           localStorage.setItem(sbKey, JSON.stringify(r.sidebarSections));
         } catch {
@@ -336,12 +400,18 @@ export default function CalendarPage() {
 
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const allTags = useMemo(() => [...new Set(tasks.flatMap((x) => x.tags))].sort(), [tasks]);
+  const filtered = useMemo(() => applyFilters(tasks, filters), [tasks, filters]);
   const events = useMemo(
     () =>
-      applyFilters(tasks, filters)
-        .map((x) => taskToEvent(x, mode, catMap))
-        .filter((e): e is EventInput => e !== null),
-    [tasks, filters, mode, catMap],
+      filtered.flatMap((x) => {
+        const main = taskToEvent(x, mode, catMap);
+        const flag =
+          x.startAt && (x.dueAt || x.dueDate) && x.status !== 'done' && x.status !== 'cancelled'
+            ? deadlineFlagEvent(x)
+            : null;
+        return [main, flag].filter((e): e is EventInput => e !== null);
+      }),
+    [filtered, mode, catMap],
   );
 
   const loadTasks = useCallback(async () => {
@@ -352,19 +422,7 @@ export default function CalendarPage() {
       setError(t.error.loadFailed);
     }
   }, [range]);
-  const loadToday = useCallback(
-    () =>
-      api
-        .today()
-        .then(setToday)
-        .catch(() => setError(t.error.loadFailed)),
-    [],
-  );
-
   useEffect(() => void loadTasks(), [loadTasks]);
-  useEffect(() => {
-    void loadToday();
-  }, [loadToday]);
 
   // ลิงก์ "แก้ไข" จาก LINE: /?task=<id> เปิดฟอร์มงานนั้นทันที
   useEffect(() => {
@@ -377,34 +435,118 @@ export default function CalendarPage() {
       .catch(() => setError(t.error.loadFailed));
   }, []);
 
-  const [dockKey, setDockKey] = useState(0);
+  const refreshAll = useCallback(() => {
+    void loadTasks();
+    setTrayKey((k) => k + 1);
+  }, [loadTasks]);
 
-  // time blocking: ลากงานจาก Inbox มาวางในปฏิทิน (ช่องเวลา = กำหนดเวลาเริ่ม 1 ชม./ตามที่ประมาณไว้, ช่องทั้งวัน/เดือน = งานทั้งวัน)
-  const onExternalDrop = async (info: DropArg) => {
-    const id = info.draggedEl.dataset.inboxId;
-    if (!id) return;
-    const est = Number(info.draggedEl.dataset.estimate) || 60;
+  /** บันทึกการจัดงานแบบ optimistic: อัปเดตจอ (รวมแถบภาระงาน) ทันที แล้วค่อยบันทึก ถ้าล้มเหลวย้อนกลับและแจ้งผู้ใช้ */
+  const commit = useCallback(
+    async (task: Task, patch: TaskPayload) => {
+      const snapshot = tasks;
+      setNotice('');
+      setTasks((prev) => {
+        const next = { ...task, ...patch } as Task;
+        return prev.some((x) => x.id === task.id)
+          ? prev.map((x) => (x.id === task.id ? next : x))
+          : [...prev, next];
+      });
+      try {
+        await api.updateTask(task.id, patch);
+        refreshAll();
+      } catch (e) {
+        setTasks(snapshot);
+        setError(e instanceof ApiClientError ? e.message : t.cal.moveFailed);
+      }
+    },
+    [tasks, refreshAll],
+  );
+
+  const nowMinute = () => {
+    const w = wallNow();
+    return w.getUTCHours() * 60 + w.getUTCMinutes();
+  };
+
+  /** วางงานลงวัน (มุมมองการ์ด / เมนู "จัดลง…" ในถาด) */
+  const dropOnDay = (id: string, day: string, source: DropSource) => {
+    const task = source === 'tray' ? trayMap.current.get(id) : tasks.find((x) => x.id === id);
+    if (!task) return;
+    const dayTasks = tasks.filter((x) => x.id !== task.id && scheduledOn(x, day));
+    const r = planDrop(task, day, {
+      source,
+      work,
+      dayTasks,
+      nowMin: day === todayYmd() ? nowMinute() : undefined,
+    });
+    if (!r) return;
+    if (!r.fits) setNotice(t.cal.dayFull);
+    void commit(task, r.patch);
+  };
+
+  // time blocking บนตารางเวลา: ลากงานจากถาดมาวางที่ช่องเวลา (ความยาว = estimate, คงเดดไลน์เดิม) / ช่องทั้งวัน = งานทั้งวัน
+  const onExternalDrop = (info: DropArg) => {
+    const task = trayMap.current.get(info.draggedEl.dataset.inboxId ?? '');
+    if (!task) return;
     const patch: TaskPayload = info.allDay
-      ? { allDay: true, dueDate: calDateToYmd(info.date) }
-      : {
-          allDay: false,
-          dueDate: null,
-          startAt: calDateToIso(info.date),
-          endAt: calDateToIso(new Date(info.date.getTime() + est * 60_000)),
-        };
+      ? { allDay: true, dueDate: calDateToYmd(info.date), startAt: null, endAt: null, dueAt: null }
+      : planDropAt(task, calDateToIso(info.date));
+    void commit(task, patch);
+  };
+
+  const completeTask = (task: Task) => {
+    setTasks((prev) => prev.map((x) => (x.id === task.id ? { ...x, status: 'done' } : x)));
+    api
+      .completeTask(task.id)
+      .then(refreshAll)
+      .catch((e) => {
+        setError(e instanceof ApiClientError ? e.message : t.error.generic);
+        void loadTasks();
+      });
+  };
+
+  const setViewMode = (m: CalMode) => {
+    initialDate.current = viewDate;
+    setViewModeState(m);
     try {
-      await api.updateTask(id, patch);
-      refreshAll();
-      setDockKey((k) => k + 1);
-    } catch (e) {
-      setError(e instanceof ApiClientError ? e.message : t.error.moveFailed);
+      localStorage.setItem(VIEW_KEY, m);
+    } catch {
+      /* ignore */
+    }
+  };
+  const gotoDate = (d: string) => {
+    if (viewMode === 'cards') setViewDate(d);
+    else calRef.current?.getApi().gotoDate(d);
+  };
+  const step = (dir: -1 | 0 | 1) => {
+    if (viewMode === 'cards') setViewDate(dir === 0 ? todayYmd() : addDaysYmd(viewDate, dir * 7));
+    else {
+      const api = calRef.current?.getApi();
+      if (dir === 0) api?.today();
+      else if (dir < 0) api?.prev();
+      else api?.next();
     }
   };
 
-  const refreshAll = useCallback(() => {
-    void loadTasks();
-    void loadToday();
-  }, [loadTasks, loadToday]);
+  // มุมมองการ์ด: ช่วงข้อมูล = สัปดาห์ (จันทร์–อาทิตย์) ที่ viewDate อยู่ ; มุมมอง FullCalendar: ช่วงมาจาก datesSet
+  useEffect(() => {
+    if (viewMode !== 'cards') return;
+    const mon = mondayOf(viewDate);
+    const from = wallToIso(`${mon}T00:00`);
+    const to = wallToIso(`${addDaysYmd(mon, 7)}T00:00`);
+    setRange((prev) => (prev && prev.from === from && prev.to === to ? prev : { from, to }));
+  }, [viewMode, viewDate]);
+
+  const weekTitle = useMemo(() => {
+    const mon = mondayOf(viewDate);
+    const f = (ymd: string, year: boolean) =>
+      new Date(`${ymd}T00:00:00Z`).toLocaleDateString('th-TH', {
+        day: 'numeric',
+        month: 'short',
+        ...(year ? { year: 'numeric' as const } : {}),
+        timeZone: 'UTC',
+      });
+    return `${f(mon, false)} – ${f(addDaysYmd(mon, 6), true)}`;
+  }, [viewDate]);
 
   // FullCalendar อาจเรียก datesSet ซ้ำเมื่อ re-render: ตั้งค่าใหม่เฉพาะเมื่อช่วงเปลี่ยนจริง
   const onDatesSet = useCallback((a: DatesSetArg) => {
@@ -412,6 +554,7 @@ export default function CalendarPage() {
     const to = calDateToIso(a.end);
     setRange((prev) => (prev && prev.from === from && prev.to === to ? prev : { from, to }));
     setViewDate(calDateToYmd(a.view.calendar.getDate()));
+    setCalTitle(a.view.title);
   }, []);
 
   const onSelect = (info: DateSelectArg) => {
@@ -428,7 +571,7 @@ export default function CalendarPage() {
   };
 
   const onEventClick = (info: EventClickArg) => {
-    const task = tasks.find((x) => x.id === info.event.id);
+    const task = tasks.find((x) => x.id === info.event.id.replace(/#due$/, ''));
     if (task) setDrawer({ task });
   };
 
@@ -476,15 +619,24 @@ export default function CalendarPage() {
         plugins={PLUGINS}
         locales={LOCALES}
         locale="th"
-        buttonText={BUTTON_TEXT}
         timeZone="UTC"
         now={wallNow}
         nowIndicator
         firstDay={1}
-        initialView={isMobile ? 'timeGridDay' : 'timeGridWeek'}
-        headerToolbar={isMobile ? HEADER_MOBILE : HEADER_DESKTOP}
-        footerToolbar={isMobile ? FOOTER_MOBILE : false}
-        height={isMobile ? 'auto' : 'calc(100vh - 7rem)'}
+        key={viewMode}
+        initialView={
+          viewMode === 'month'
+            ? 'dayGridMonth'
+            : viewMode === 'list'
+              ? 'listWeek'
+              : isMobile
+                ? 'timeGridDay'
+                : 'timeGridWeek'
+        }
+        initialDate={initialDate.current}
+        headerToolbar={false}
+        footerToolbar={false}
+        height={isMobile ? 'auto' : 'calc(100vh - 13rem)'}
         scrollTime="07:00:00"
         slotEventOverlap
         editable
@@ -505,8 +657,13 @@ export default function CalendarPage() {
         datesSet={onDatesSet}
       />
     ),
-    [isMobile, events, h, onDatesSet],
+    [isMobile, events, h, onDatesSet, viewMode],
   );
+
+  const sideCols = showFilters
+    ? 'lg:grid-cols-[14rem_minmax(0,1fr)_16rem]'
+    : 'lg:grid-cols-[minmax(0,1fr)_16rem]';
+  const dragMode = viewMode === 'cards' ? 'cards' : viewMode === 'list' ? 'none' : 'fc';
 
   return (
     <div className="flex flex-col">
@@ -530,19 +687,33 @@ export default function CalendarPage() {
         </Popover>
         <button
           type="button"
+          className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700"
+          aria-expanded={showFilters}
+          onClick={() => setShowFilters((v) => !v)}
+        >
+          {showFilters ? t.nav.hideFilters : t.nav.filters}
+          {activeCount(filters) > 0 && ` (${activeCount(filters)})`}
+        </button>
+        <button
+          type="button"
           onClick={() => setDrawer({ prefill: { allDay: false } })}
           className="ml-auto rounded-full bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700"
         >
           + {t.nav.newTask}
         </button>
-        <button
-          type="button"
-          className="rounded-full px-3 py-2 text-sm hover:bg-slate-100 lg:hidden dark:hover:bg-slate-800"
-          aria-expanded={showFilters}
-          onClick={() => setShowFilters((v) => !v)}
-        >
-          {showFilters ? t.nav.hideFilters : t.nav.filters}
-        </button>
+      </div>
+
+      <div className="pt-3">
+        <CalToolbar
+          title={viewMode === 'cards' ? weekTitle : calTitle}
+          mode={viewMode}
+          onMode={setViewMode}
+          onPrev={() => step(-1)}
+          onNext={() => step(1)}
+          onToday={() => step(0)}
+          trayCount={trayCount}
+          onTray={() => setTrayOpen(true)}
+        />
       </div>
 
       {error && (
@@ -561,35 +732,91 @@ export default function CalendarPage() {
           </button>
         </p>
       )}
+      {notice && (
+        <p
+          role="status"
+          className="mt-2 rounded bg-amber-50 p-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100"
+        >
+          {notice}
+        </p>
+      )}
 
-      <div className="grid flex-1 gap-4 py-3 lg:grid-cols-[14rem_minmax(0,1fr)_16rem]">
-        <aside className={`${showFilters ? 'block' : 'hidden'} space-y-4 lg:block`}>
-          <SidebarCustomize value={sections} onChange={saveSections} />
-          {sections.includes('mini') && (
-            <MiniCalendar
-              selected={viewDate}
-              onPick={(d) => calRef.current?.getApi().gotoDate(d)}
+      <div className={`grid flex-1 gap-4 py-3 ${sideCols}`}>
+        {showFilters && (
+          <aside className="space-y-4">
+            <SidebarCustomize value={sections} onChange={saveSections} />
+            {sections.includes('mini') && <MiniCalendar selected={viewDate} onPick={gotoDate} />}
+            <Filters
+              value={filters}
+              onChange={setFilters}
+              categories={categories}
+              allTags={allTags}
+              sections={sections}
             />
+            {sections.includes('legend') && (
+              <Legend categories={categories} onChanged={reloadCategories} mode={mode} />
+            )}
+          </aside>
+        )}
+
+        <main className="min-w-0">
+          {viewMode === 'cards' ? (
+            <WeekCards
+              weekStart={mondayOf(viewDate)}
+              tasks={filtered}
+              work={work}
+              today={todayYmd()}
+              mode={mode}
+              catMap={catMap}
+              isMobile={isNarrow}
+              selectedDay={viewDate}
+              onSelectDay={setViewDate}
+              onOpen={(x) => setDrawer({ task: x })}
+              onAdd={(day) => setDrawer({ prefill: { allDay: true, date: day } })}
+              onComplete={completeTask}
+              onDropTask={dropOnDay}
+            />
+          ) : (
+            calendar
           )}
-          <Filters
-            value={filters}
-            onChange={setFilters}
-            categories={categories}
-            allTags={allTags}
-            sections={sections}
+        </main>
+
+        {!isNarrow && (
+          <TaskTray
+            reloadKey={trayKey}
+            dragMode={dragMode}
+            variant="side"
+            onOpen={(x) => setDrawer({ task: x })}
+            onSchedule={(x, ymd) => dropOnDay(x.id, ymd, 'tray')}
+            onLoaded={(list) => {
+              trayMap.current = new Map(list.map((x) => [x.id, x]));
+              setTrayCount(list.length);
+            }}
           />
-          {sections.includes('legend') && (
-            <Legend categories={categories} onChanged={reloadCategories} mode={mode} />
-          )}
-        </aside>
-
-        <main className="min-w-0 order-first lg:order-none">{calendar}</main>
-
-        <aside className="lg:block">
-          <TodayPanel data={today} onOpen={(task) => setDrawer({ task })} onChanged={refreshAll} />
-          <InboxDock reloadKey={dockKey} onOpen={(task) => setDrawer({ task })} />
-        </aside>
+        )}
       </div>
+
+      {isNarrow && (
+        <TaskTray
+          reloadKey={trayKey}
+          dragMode="none"
+          variant="sheet"
+          open={trayOpen}
+          onClose={() => setTrayOpen(false)}
+          onOpen={(x) => {
+            setTrayOpen(false);
+            setDrawer({ task: x });
+          }}
+          onSchedule={(x, ymd) => {
+            dropOnDay(x.id, ymd, 'tray');
+            setTrayOpen(false);
+          }}
+          onLoaded={(list) => {
+            trayMap.current = new Map(list.map((x) => [x.id, x]));
+            setTrayCount(list.length);
+          }}
+        />
+      )}
 
       {drawer && (
         <Suspense fallback={null}>

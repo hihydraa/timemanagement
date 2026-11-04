@@ -12,7 +12,16 @@ const COLOR: Record<DayLoad['status'], string> = {
  * แถบภาระงานของวัน: เส้นสี (เขียว ≤70% / เหลือง ≤100% / แดง >100%) + ข้อความ "ใช้ไป 3 ชม. / ว่าง 7 ชม." และป้ายสถานะ
  * (ไม่พึ่งสีอย่างเดียว) — ใช้ซ้ำในหัวคอลัมน์สัปดาห์ของ Step 3
  */
-export default function LoadBar({ load, showText = true }: { load: DayLoad; showText?: boolean }) {
+export default function LoadBar({
+  load,
+  showText = true,
+  compact = false,
+}: {
+  load: DayLoad;
+  showText?: boolean;
+  /** แบบแคบสำหรับหัวคอลัมน์สัปดาห์: ตัวเลขสั้น ๆ + ชื่อสถานะ */
+  compact?: boolean;
+}) {
   const pct = load.ratio === null ? 0 : Math.min(100, Math.round(load.ratio * 100));
   const label = `${t.cockpit.loadLabel}: ${t.cockpit.loadStatus[load.status]} — ${t.cockpit.loadOf} ${fmtDuration(load.planned)} จากเวลาว่าง ${fmtDuration(load.available)}`;
   return (
@@ -30,7 +39,21 @@ export default function LoadBar({ load, showText = true }: { load: DayLoad; show
           }}
         />
       </div>
-      {showText && (
+      {showText && compact && (
+        <p className="mt-0.5 flex flex-wrap items-center justify-between gap-x-1 text-[11px] text-slate-600 dark:text-slate-300">
+          <span className="whitespace-nowrap tabular-nums">
+            {load.status === 'off' && load.planned === 0
+              ? t.cockpit.loadStatus.off
+              : `${fmtDuration(load.planned)} / ${fmtDuration(load.available)}`}
+          </span>
+          {load.status !== 'ok' && load.status !== 'off' && (
+            <span className="whitespace-nowrap font-semibold">
+              {t.cockpit.loadStatus[load.status]}
+            </span>
+          )}
+        </p>
+      )}
+      {showText && !compact && (
         <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-slate-600 dark:text-slate-300">
           <span className="tabular-nums">
             {fmtDuration(load.planned)} / {fmtDuration(load.available)}

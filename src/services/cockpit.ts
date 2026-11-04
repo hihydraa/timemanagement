@@ -3,7 +3,7 @@ import type { Db } from '../db/client';
 import { focusSessions, tasks, userSettings } from '../db/schema';
 import { addDays, bangkokDate, fromBangkok, nowIso } from '../lib/time';
 import { parseWorkDays } from '../lib/work';
-import { CARRY_MAX, todayBuckets, withTags, type TaskDto } from './tasks';
+import { CARRY_MAX, inboxTasks, todayBuckets, withTags, type TaskDto } from './tasks';
 
 /**
  * ข้อมูลหน้า "วันนี้" ในคำขอเดียว: งานค้าง/เดดไลน์วันนี้/งานวันนี้ (ที่ยังไม่เสร็จ) + งานของวันนี้ที่เสร็จแล้ว
@@ -111,3 +111,38 @@ export async function rescheduleOverdue(
 
 export type CockpitData = Awaited<ReturnType<typeof cockpit>>;
 export type { TaskDto };
+
+/**
+ * ถาดงาน (Task Tray): งานที่ "ยังไม่ได้จัดเวลา" — inbox (ไม่มีวันเลย) และงานที่มีวัน/เดดไลน์แต่ยังไม่มีเวลาเริ่ม
+ * (เลยกำหนดแล้ว หรือภายใน 14 วัน; ไม่รวมงานในซีรีส์) เรียงตามเดดไลน์ใกล้สุดก่อน
+ */
+export const TRAY_DATED_DAYS = 14;
+export const TRAY_LIMIT = 50;
+
+export async function trayTasks(db: Db, userId: string, at: Date) {
+  const today = bangkokDate(at);
+  const horizon = addDays(today, TRAY_DATED_DAYS + 1);
+  const horizonIso = fromBangkok(horizon).toISOString();
+  const rows = await db
+    .select()
+    .from(tasks)
+    .where(
+      and(
+        eq(tasks.userId, userId),
+        inArray(tasks.status, ['todo', 'doing']),
+        isNull(tasks.startAt),
+        isNull(tasks.recurrenceRule),
+        isNull(tasks.parentTaskId),
+        or(lt(tasks.dueAt, horizonIso), lt(tasks.dueDate, horizon)),
+      ),
+    )
+    .limit(TRAY_LIMIT);
+  const key = (t: TaskDto) => t.dueAt ?? (t.dueDate ? `${t.dueDate}T23:59` : '');
+  const dated = (await withTags(db, rows)).sort(
+    (a, b) =>
+      key(a).localeCompare(key(b)) ||
+      b.urgency * 2 + b.importance * 2 - (a.urgency * 2 + a.importance * 2),
+  );
+  const inbox = await inboxTasks(db, userId);
+  return { dated, inbox: inbox.slice(0, TRAY_LIMIT) };
+}

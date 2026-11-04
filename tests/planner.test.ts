@@ -299,3 +299,164 @@ describe('ตัวช่วย', () => {
     expect(fmtDuration(210)).toBe('3.5 ชม.');
   });
 });
+
+// ================================================================ Step 3: Week Planner
+import {
+  deadlineFlagOn,
+  endOfDayIso,
+  firstFreeSlot,
+  planDrop,
+  planDropAt,
+  scheduledOn,
+  weekDays,
+} from '../apps/web/src/lib/planner';
+
+describe('สัปดาห์และการจัดงานเข้าวัน', () => {
+  it('weekDays: จันทร์–อาทิตย์ของสัปดาห์นั้น (รวมกรณีเริ่มจากวันอาทิตย์)', () => {
+    expect(weekDays('2026-11-04')).toEqual([
+      '2026-11-02',
+      '2026-11-03',
+      '2026-11-04',
+      '2026-11-05',
+      '2026-11-06',
+      '2026-11-07',
+      '2026-11-08',
+    ]);
+    expect(weekDays('2026-11-08')[0]).toBe('2026-11-02');
+    expect(weekDays('2026-11-02')[6]).toBe('2026-11-08');
+  });
+
+  it('scheduledOn: เริ่มวันนั้น หรือ (ไม่มีเริ่มและเดดไลน์/วันที่เป็นวันนั้น); ยกเลิกไม่นับ', () => {
+    expect(scheduledOn(mk({ startAt: at('09:00'), endAt: at('10:00') }), WED)).toBe(true);
+    expect(scheduledOn(mk({ dueAt: at('17:00') }), WED)).toBe(true);
+    expect(scheduledOn(mk({ allDay: true, dueDate: WED }), WED)).toBe(true);
+    // จัดเวลาทำไว้วันอื่น เดดไลน์วันนี้ → ไม่ใช่งานที่กำหนดทำวันนี้ (แต่มีธง)
+    const t = mk({ startAt: at('09:00', '2026-11-03'), dueAt: at('17:00') });
+    expect(scheduledOn(t, WED)).toBe(false);
+    expect(scheduledOn(mk({ status: 'cancelled', dueDate: WED }), WED)).toBe(false);
+  });
+
+  it('deadlineFlagOn: ธงที่วันเดดไลน์เมื่อทำคนละวัน เฉพาะงานที่ยังไม่เสร็จ', () => {
+    const t = mk({
+      startAt: at('09:00', '2026-11-03'),
+      endAt: at('10:00', '2026-11-03'),
+      dueAt: at('17:00', '2026-11-05'),
+    });
+    expect(deadlineFlagOn(t, '2026-11-05')).toBe(true);
+    expect(deadlineFlagOn(t, '2026-11-03')).toBe(false); // วันที่ทำ ไม่ต้องมีธง
+    expect(deadlineFlagOn({ ...t, status: 'done' }, '2026-11-05')).toBe(false);
+    const same = mk({ startAt: at('09:00', '2026-11-05'), dueAt: at('17:00', '2026-11-05') });
+    expect(deadlineFlagOn(same, '2026-11-05')).toBe(false);
+    expect(deadlineFlagOn(mk({ dueAt: at('17:00') }), WED)).toBe(false); // ไม่มีเวลาเริ่ม: ตัวงานเองอยู่วันเดดไลน์แล้ว
+  });
+
+  describe('firstFreeSlot', () => {
+    it('หลบงานที่มีเวลา เลือกช่วงว่างแรกที่ยาวพอ', () => {
+      const tasks = [appt('09:00', '10:00'), appt('10:30', '12:00')];
+      expect(firstFreeSlot(tasks, WED, WORK, 30)).toBe(600); // 10:00–10:30 พอดี
+      expect(firstFreeSlot(tasks, WED, WORK, 45)).toBe(720); // 12:00
+      expect(firstFreeSlot([], WED, WORK, 60)).toBe(540); // ต้นชั่วโมงทำงาน
+    });
+    it('ไม่หลบงานทั้งวัน/ยกเลิก แต่นับงานที่มีเวลาแม้ไม่มีเวลาจบ (ใช้ estimate/30 นาที)', () => {
+      const tasks = [
+        mk({ allDay: true, dueDate: WED }),
+        appt('09:00', '10:00', { status: 'cancelled' }),
+        mk({ startAt: at('09:00'), estimateMinutes: 60 }),
+      ];
+      expect(firstFreeSlot(tasks, WED, WORK, 30)).toBe(600);
+    });
+    it('วันนี้เริ่มนับจากตอนนี้ (ปัดขึ้นทวีคูณของ 5) และไม่พอ = null', () => {
+      expect(firstFreeSlot([], WED, WORK, 30, 603)).toBe(605);
+      expect(firstFreeSlot([], WED, WORK, 30, 100)).toBe(540); // ก่อนเริ่มงาน
+      expect(firstFreeSlot([], WED, WORK, 60, 1050)).toBeNull(); // 17:30 เหลือ 30 นาที
+      expect(firstFreeSlot([appt('09:00', '18:00')], WED, WORK, 15)).toBeNull();
+    });
+  });
+
+  describe('planDrop (ถาดงาน → วัน)', () => {
+    const opts = (dayTasks: PlanTask[] = [], nowMin?: number) => ({
+      source: 'tray' as const,
+      work: WORK,
+      dayTasks,
+      nowMin,
+    });
+    it('งานไม่มีวัน (Inbox): วางช่วงว่างแรก ความยาวตาม estimate (ไม่มี = 30) ไม่มีเดดไลน์', () => {
+      const inbox = mk({ estimateMinutes: 90 });
+      const r = planDrop(inbox, '2026-11-05', opts())!;
+      expect(r.fits).toBe(true);
+      expect(r.patch).toEqual({
+        allDay: false,
+        startAt: at('09:00', '2026-11-05'),
+        endAt: at('10:30', '2026-11-05'),
+        dueAt: null,
+        dueDate: null,
+      });
+      expect(planDrop(mk(), '2026-11-05', opts())!.patch.endAt).toBe(at('09:30', '2026-11-05'));
+    });
+    it('งานมีเดดไลน์: จัดเวลาแล้วเดดไลน์ยังอยู่ (dueAt คงเดิม / dueDate → สิ้นวัน)', () => {
+      const withDue = mk({ dueAt: at('17:00', '2026-11-06') });
+      expect(planDrop(withDue, '2026-11-05', opts())!.patch.dueAt).toBe(at('17:00', '2026-11-06'));
+      const dated = mk({ allDay: true, dueDate: '2026-11-06' });
+      const p = planDrop(dated, '2026-11-05', opts())!.patch;
+      expect(p.dueAt).toBe(endOfDayIso('2026-11-06'));
+      expect(p.dueDate).toBeNull();
+      expect(p.allDay).toBe(false);
+    });
+    it('หลบงานที่มีเวลา; วันเต็ม = fits:false วางต้นชั่วโมงทำงาน (ให้ผู้ใช้ปรับ)', () => {
+      const day = '2026-11-05';
+      const r1 = planDrop(mk(), day, opts([appt('09:00', '11:00', {})]))!;
+      // appt ใช้วัน WED ในตัวช่วย → สร้างงานวันพฤหัสโดยตรง
+      expect(r1.patch.startAt).toBe(at('09:00', day));
+      const busy = mk({ startAt: at('09:00', day), endAt: at('18:00', day) });
+      const r2 = planDrop(mk(), day, opts([busy]))!;
+      expect(r2.fits).toBe(false);
+      expect(r2.patch.startAt).toBe(at('09:00', day));
+      const mid = mk({ startAt: at('09:00', day), endAt: at('11:00', day) });
+      expect(planDrop(mk(), day, opts([mid]))!.patch.startAt).toBe(at('11:00', day));
+    });
+    it('วางวันนี้: ไม่วางก่อนเวลาปัจจุบัน', () => {
+      const r = planDrop(mk(), WED, opts([], 600))!; // 10:00
+      expect(r.patch.startAt).toBe(at('10:00'));
+    });
+  });
+
+  describe('planDrop (ลากการ์ดข้ามวัน)', () => {
+    const o = { source: 'card' as const, work: WORK, dayTasks: [] as PlanTask[] };
+    it('งานมีเวลา: เลื่อนเริ่ม/จบตามจำนวนวัน คงเวลาเดิมและเดดไลน์เดิม', () => {
+      const t = mk({ startAt: at('14:00'), endAt: at('15:30'), dueAt: at('17:00', '2026-11-06') });
+      const r = planDrop(t, '2026-11-06', o)!.patch;
+      expect(r.startAt).toBe(at('14:00', '2026-11-06'));
+      expect(r.endAt).toBe(at('15:30', '2026-11-06'));
+      expect(r.dueAt).toBe(at('17:00', '2026-11-06'));
+      expect(planDrop(t, WED, o)).toBeNull(); // วันเดิม = ไม่เปลี่ยน
+    });
+    it('งานทั้งวัน: เปลี่ยนวัน; งานมีแต่เดดไลน์: เลื่อนเดดไลน์', () => {
+      expect(planDrop(mk({ allDay: true, dueDate: WED }), '2026-11-06', o)!.patch).toEqual({
+        allDay: true,
+        startAt: null,
+        endAt: null,
+        dueAt: null,
+        dueDate: '2026-11-06',
+      });
+      expect(planDrop(mk({ dueAt: at('17:00') }), '2026-11-06', o)!.patch.dueAt).toBe(
+        at('17:00', '2026-11-06'),
+      );
+    });
+    it('ข้ามเดือน/ปี และไม่ผิดเพี้ยนด้วยเขตเวลา (เวลา 00:30 ไทยยังเป็นวันเดียวกัน)', () => {
+      const t = mk({ startAt: at('00:30', '2026-12-31'), endAt: at('01:30', '2026-12-31') });
+      const r = planDrop(t, '2027-01-02', o)!.patch;
+      expect(r.startAt).toBe(at('00:30', '2027-01-02'));
+    });
+  });
+
+  it('planDropAt: ลงช่องเวลาบน time grid ความยาวตาม estimate และคงเดดไลน์', () => {
+    const p = planDropAt(
+      mk({ estimateMinutes: 45, allDay: true, dueDate: '2026-11-06' }),
+      at('13:00'),
+    );
+    expect(p.endAt).toBe(at('13:45'));
+    expect(p.dueAt).toBe(endOfDayIso('2026-11-06'));
+    expect(p.dueDate).toBeNull();
+    expect(planDropAt(mk(), at('13:00')).endAt).toBe(at('13:30'));
+  });
+});

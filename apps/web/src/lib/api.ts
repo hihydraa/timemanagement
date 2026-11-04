@@ -10,6 +10,7 @@ import type {
   PushStatus,
   ResyncResult,
   CockpitData,
+  TrayData,
   SettingsView,
   SidebarSection,
   StorageInfo,
@@ -99,6 +100,8 @@ export const api = {
     req<{ ok: true }>('DELETE', `/api/tasks/${id}${scope === 'series' ? '?scope=series' : ''}`),
   materialize: (id: string) =>
     req<{ task: Task }>('POST', `/api/tasks/${id}/materialize`).then((r) => r.task),
+  /** ถาดงาน: งานที่ยังไม่ได้จัดเวลา (มีวัน/เดดไลน์แต่ไม่มีเวลาเริ่ม + inbox) */
+  tray: () => req<TrayData>('GET', '/api/tray'),
   inbox: () => req<{ tasks: Task[] }>('GET', '/api/inbox').then((r) => r.tasks),
   matrix: () => req<{ tasks: Task[] }>('GET', '/api/matrix').then((r) => r.tasks),
   listSubtasks: (taskId: string) =>
