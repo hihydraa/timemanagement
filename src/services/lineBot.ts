@@ -44,6 +44,7 @@ import {
   openTasks,
   snoozeTask,
   taskInput,
+  taskLimit,
   todayBuckets,
   updateTask,
   deleteTask,
@@ -605,7 +606,7 @@ async function cmdCreate(ctx: Ctx, user: User, t: string) {
     ]);
   }
 
-  const task = await createTask(db, user.id, toTaskInput(p));
+  const task = await createTask(db, user.id, toTaskInput(p), taskLimit(ctx.env));
   const msgs: LineMessage[] = [await card(ctx, task, '✅ บันทึกงานแล้ว')];
   if (!task.startAt && !task.dueAt && !task.dueDate) {
     msgs.push(

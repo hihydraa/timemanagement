@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, ApiClientError } from '../lib/api';
 import { t } from '../lib/i18n';
+import DeleteAccount from './DeleteAccount';
 import type { NotificationSettings, PushStatus } from '../lib/types';
 
 interface Props {
@@ -253,6 +254,7 @@ export default function SettingsDialog({ onClose, onOpenLine, onSaved }: Props) 
           )}
         </div>
       </form>
+      <DeleteAccount />
     </div>
   );
 }

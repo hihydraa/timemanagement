@@ -2,7 +2,15 @@ import Mascot from '../components/Mascot';
 import { t } from '../lib/i18n';
 
 export default function LoginPage() {
-  const denied = new URLSearchParams(window.location.search).get('login') === 'denied';
+  const reason = new URLSearchParams(window.location.search).get('login');
+  const message =
+    reason === 'denied'
+      ? t.login.denied
+      : reason === 'not_allowed'
+        ? t.login.notAllowed
+        : reason === 'full'
+          ? t.login.full
+          : '';
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-gradient-to-b from-slate-50 to-brand-50 p-6 text-center dark:from-slate-900 dark:to-brand-950">
       <Mascot pose="hero" height={260} alt={t.mascot.loginHello} bob eager />
@@ -14,12 +22,20 @@ export default function LoginPage() {
       >
         {t.login.google}
       </a>
-      {denied && (
-        <p role="alert" className="text-sm text-amber-700 dark:text-amber-400">
-          {t.login.denied}
+      {message && (
+        <p role="alert" className="max-w-sm text-sm text-amber-800 dark:text-amber-300">
+          {message}
         </p>
       )}
       <p className="text-xs text-slate-600 dark:text-slate-400">{t.login.hint}</p>
+      <nav aria-label="เอกสารทางกฎหมาย" className="flex gap-3 text-xs">
+        <a href="/privacy" className="text-brand-700 underline dark:text-brand-300">
+          {t.login.privacy}
+        </a>
+        <a href="/terms" className="text-brand-700 underline dark:text-brand-300">
+          {t.login.terms}
+        </a>
+      </nav>
     </main>
   );
 }

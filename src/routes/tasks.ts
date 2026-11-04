@@ -16,6 +16,7 @@ import {
   openTasks,
   snoozeTask,
   taskInput,
+  taskLimit,
   taskPatch,
   todayBuckets,
   updateTask,
@@ -32,7 +33,7 @@ r.get('/tasks', async (c) => {
 
 r.post('/tasks', async (c) => {
   const body = await parseJson(c, taskInput);
-  const task = await createTask(getDb(c.env.DB), c.get('userId'), body);
+  const task = await createTask(getDb(c.env.DB), c.get('userId'), body, taskLimit(c.env));
   await background(c, syncTaskSafe(c.env, c.get('userId'), task.id));
   return c.json({ task }, 201);
 });

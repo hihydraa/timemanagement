@@ -19,7 +19,7 @@ import {
   SCOPE_CALENDAR,
   saveTokens,
 } from '../services/googleCalendar';
-import { isEmailAllowed, upsertUser } from '../services/users';
+import { canSignUp, isEmailAllowed, upsertUser } from '../services/users';
 import type { AppEnv } from '../types';
 
 const STATE_COOKIE = 'dobby_oauth_state';
@@ -147,8 +147,12 @@ auth.get('/google/callback', authLimit, async (c) => {
   if (!info.email || !info.email_verified) {
     throw new ApiError(403, 'email_unverified', 'อีเมล Google ยังไม่ได้รับการยืนยัน');
   }
+  // ผู้ใช้จริงเห็นหน้า login พร้อมเหตุผล (ไม่เห็น JSON ดิบ)
   if (!isEmailAllowed(c.env.ALLOWED_EMAILS ?? '', info.email)) {
-    throw new ApiError(403, 'not_allowed', 'อีเมลนี้ไม่ได้รับอนุญาตให้ใช้งาน');
+    return c.redirect(`${base}/?login=not_allowed`);
+  }
+  if (!(await canSignUp(getDb(c.env.DB), c.env, info.email))) {
+    return c.redirect(`${base}/?login=full`);
   }
 
   const userId = await upsertUser(getDb(c.env.DB), {
@@ -166,6 +170,9 @@ auth.get('/dev-login', authLimit, async (c) => {
   const email = c.req.query('email') ?? '';
   if (!isEmailAllowed(c.env.ALLOWED_EMAILS ?? '', email)) {
     throw new ApiError(403, 'not_allowed', 'อีเมลนี้ไม่ได้รับอนุญาตให้ใช้งาน');
+  }
+  if (!(await canSignUp(getDb(c.env.DB), c.env, email))) {
+    throw new ApiError(403, 'signup_full', 'ขณะนี้ผู้ใช้เต็มแล้ว');
   }
   const userId = await upsertUser(getDb(c.env.DB), {
     email,

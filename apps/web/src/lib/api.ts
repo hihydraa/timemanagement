@@ -71,6 +71,11 @@ export const api = {
   me: () => req<{ user: User }>('GET', '/api/me').then((r) => r.user),
   /** ตอบ 200 เสมอ: user = null เมื่อยังไม่ล็อกอิน (ไม่มี 401 ใน console) */
   session: () => req<{ user: User | null }>('GET', '/api/session').then((r) => r.user),
+  /** ลบบัญชีและข้อมูลทั้งหมด (ต้องส่งอีเมลของบัญชีเพื่อยืนยัน) */
+  deleteAccount: (confirm: string) =>
+    req<{ ok: true; deletedFiles: number }>('DELETE', '/api/account', { confirm }).finally(() =>
+      clearApiCache(),
+    ),
   logout: () => req<{ ok: true }>('POST', '/auth/logout').finally(() => clearApiCache()),
   listTasks: (fromIso: string, toIso: string) =>
     req<{ tasks: Task[] }>(

@@ -14,9 +14,11 @@ import exportRoutes from './routes/export';
 import focusRoutes from './routes/focus';
 import gcalRoutes from './routes/gcal';
 import { lineApi, lineWebhook } from './routes/line';
+import { legal } from './routes/legal';
 import settingsRoutes from './routes/settings';
 import statsRoutes from './routes/stats';
 import subtasksRoutes from './routes/subtasks';
+import accountRoutes from './routes/account';
 import tasksRoutes from './routes/tasks';
 import type { AppEnv } from './types';
 import { nowIso } from './lib/time';
@@ -76,6 +78,7 @@ app.get('/api/session', async (c) => {
   return c.json({ user: u ?? null });
 });
 
+app.route('/', legal);
 app.route('/auth', auth);
 app.route('/webhook/line', lineWebhook);
 
@@ -98,6 +101,7 @@ api.get('/me', async (c) => {
   if (!u) throw new ApiError(401, 'unauthorized', 'กรุณาเข้าสู่ระบบ');
   return c.json({ user: u });
 });
+api.route('/', accountRoutes);
 api.route('/', tasksRoutes);
 api.route('/', categoriesRoutes);
 api.route('/', attachmentsRoutes);

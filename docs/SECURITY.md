@@ -17,3 +17,13 @@
 | Logout ล้าง cache ออฟไลน์ของ service worker                               | ✅    | `apps/web/src/lib/api.ts`, `apps/web/public/sw.js`                                                   |
 
 ข้อจำกัดที่ควรรู้: rate limit นับด้วย D1 (ไม่ใช่ตัวป้องกัน DDoS — ใช้ Cloudflare WAF/Rate Limiting rules ของโดเมนเพิ่มได้); ต้องตรวจ Lighthouse บนโดเมนจริงหลัง deploy
+
+## เพิ่มเติมสำหรับโหมดสาธารณะ
+
+| ข้อ                                                 | สถานะ                        | หลักฐาน                                             |
+| --------------------------------------------------- | ---------------------------- | --------------------------------------------------- |
+| เพดานผู้ใช้/งาน/ไฟล์ต่อบัญชี                        | ✅                           | `tests/publicMode.test.ts`, `src/services/users.ts` |
+| แบ่งโควตา push ต่อผู้ใช้                            | ✅                           | `perUserCap` ใน `src/services/notifications.ts`     |
+| ลบบัญชีครบ (D1 + R2 + Google) และไม่กระทบผู้ใช้อื่น | ✅                           | `tests/account.test.ts`                             |
+| บัญชีที่ลบแล้วใช้ session เดิมไม่ได้                | ✅                           | `src/middleware.ts`, `tests/account.test.ts`        |
+| นโยบายความเป็นส่วนตัว/ข้อกำหนด                      | ✅ (ต้องให้ผู้เชี่ยวชาญตรวจ) | `src/routes/legal.ts`, `tests/legal.test.ts`        |

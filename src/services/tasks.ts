@@ -151,7 +151,30 @@ export async function getOwned(db: Db, userId: string, id: string): Promise<Task
   return row;
 }
 
-export async function createTask(db: Db, userId: string, input: TaskInput): Promise<TaskDto> {
+export const DEFAULT_MAX_TASKS_PER_USER = 3000;
+export const taskLimit = (env: { MAX_TASKS_PER_USER?: string }): number => {
+  const n = Number(env.MAX_TASKS_PER_USER);
+  return Number.isInteger(n) && n > 0 ? n : DEFAULT_MAX_TASKS_PER_USER;
+};
+
+/** maxTasks = เพดานจำนวนงานต่อผู้ใช้ (กันบัญชีเดียวกินโควตา D1 ฟรีของทั้งระบบ) */
+export async function createTask(
+  db: Db,
+  userId: string,
+  input: TaskInput,
+  maxTasks: number = DEFAULT_MAX_TASKS_PER_USER,
+): Promise<TaskDto> {
+  const count = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(tasks)
+    .where(eq(tasks.userId, userId))
+    .get();
+  if (Number(count?.n ?? 0) >= maxTasks)
+    throw new ApiError(
+      409,
+      'task_limit',
+      `จำนวนงานเต็มเพดาน (${maxTasks} งาน) ลองลบงานเก่าที่ไม่ใช้แล้วก่อน`,
+    );
   const t = normalizeTime(input);
   await assertCategoryOwned(db, userId, t.categoryId);
   const ts = nowIso();

@@ -115,8 +115,11 @@ interface RunCtx {
   pushes: number;
   sent: number;
   failed: number;
+  /** จำนวน push ที่ผู้ใช้แต่ละคนใช้ไปแล้วในเดือนนี้ + เพดานต่อคน (แบ่งโควตา OA อย่างยุติธรรม) */
+  userUsed: Map<string, number>;
+  perUserCap: number;
 }
-type SendResult = 'sent' | 'failed' | 'quota' | 'cap';
+type SendResult = 'sent' | 'failed' | 'quota' | 'cap' | 'user';
 
 async function log(db: Db, userId: string, kind: string, ok: boolean, detail: string) {
   await db.insert(notificationLog).values({
@@ -140,6 +143,7 @@ async function send(
 ): Promise<SendResult> {
   if (quotaExhausted(rc.quota)) return 'quota';
   if (rc.pushes >= MAX_PUSHES_PER_RUN) return 'cap';
+  if ((rc.userUsed.get(t.userId) ?? 0) >= rc.perUserCap) return 'user'; // ผู้ใช้นี้ใช้ส่วนแบ่งเดือนนี้หมดแล้ว
   rc.pushes++;
   const retryKey = crypto.randomUUID();
   let status = 0;
@@ -149,6 +153,7 @@ async function send(
     if (r.ok) {
       await log(rc.db, t.userId, kind, true, `${detail};attempts=${attempt + 1}`);
       rc.quota.used++;
+      rc.userUsed.set(t.userId, (rc.userUsed.get(t.userId) ?? 0) + 1);
       rc.sent++;
       return 'sent';
     }
@@ -163,6 +168,42 @@ async function send(
   await log(rc.db, t.userId, kind, false, `http_${status}`); // ไม่ log เนื้อหาข้อความ/ชื่องาน
   rc.failed++;
   return 'failed';
+}
+
+/** ส่วนแบ่ง push ต่อผู้ใช้ต่อเดือน: ตั้งเอง (PUSH_PER_USER_MONTHLY) หรือแบ่งเท่ากันจากโควตา OA ÷ จำนวนผู้ใช้ที่ผูก LINE (อย่างน้อย 1) */
+export function perUserCap(
+  env: { PUSH_PER_USER_MONTHLY?: string },
+  limit: number,
+  linkedUsers: number,
+): number {
+  const n = Number(env.PUSH_PER_USER_MONTHLY);
+  if (Number.isInteger(n) && n > 0) return n;
+  return Math.max(1, Math.floor(limit / Math.max(1, linkedUsers)));
+}
+
+async function loadUserMonthUsage(
+  db: Db,
+  userIds: string[],
+  monthStartIso: string,
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  for (let i = 0; i < userIds.length; i += 40) {
+    const rows = await db
+      .select({ userId: notificationLog.userId, n: sql<number>`count(*)` })
+      .from(notificationLog)
+      .where(
+        and(
+          inArray(notificationLog.userId, userIds.slice(i, i + 40)),
+          eq(notificationLog.channel, 'line_push'),
+          eq(notificationLog.ok, 1),
+          gte(notificationLog.sentAt, monthStartIso),
+          sql`${notificationLog.kind} != ${QUOTA_HIT}`,
+        ),
+      )
+      .groupBy(notificationLog.userId);
+    for (const r of rows) out.set(r.userId, Number(r.n));
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------- state of the day
@@ -481,7 +522,22 @@ export async function runNotifications(env: Env): Promise<RunSummary> {
     summary.quotaStop = true;
     return summary;
   }
-  const rc: RunCtx = { env, db, at, today, quota, pushes: 0, sent: 0, failed: 0 };
+  const rc: RunCtx = {
+    env,
+    db,
+    at,
+    today,
+    quota,
+    pushes: 0,
+    sent: 0,
+    failed: 0,
+    userUsed: await loadUserMonthUsage(
+      db,
+      active.map((t) => t.userId),
+      fromBangkok(`${quota.month}-01`).toISOString(),
+    ),
+    perUserCap: perUserCap(env, quota.limit, targets.length),
+  };
   const state = await loadDayState(
     db,
     active.map((t) => t.userId),

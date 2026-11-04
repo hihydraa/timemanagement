@@ -157,7 +157,11 @@ describe('เชื่อม Google Calendar (OAuth)', () => {
     expect(ok.status).toBe(302);
     expect(ok.headers.get('set-cookie')).toContain('dobby_session=');
     g.email = 'stranger@x.com';
-    expect((await login(env)).status).toBe(403);
+    const denied = await login(env);
+    // ผู้ใช้เห็นหน้า login พร้อมเหตุผล (ไม่ใช่ JSON ดิบ) และไม่ได้ session
+    expect(denied.status).toBe(302);
+    expect(denied.headers.get('location')).toContain('login=not_allowed');
+    expect(denied.headers.get('set-cookie') ?? '').not.toContain('dobby_session=');
   });
 });
 

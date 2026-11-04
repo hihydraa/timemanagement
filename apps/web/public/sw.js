@@ -102,6 +102,8 @@ self.addEventListener('fetch', (e) => {
   if (
     p.startsWith('/auth/') ||
     p.startsWith('/webhook/') ||
+    p === '/privacy' || // หน้ากฎหมายมาจาก Worker ไม่ใช่ SPA: ห้ามแคชทับ shell ของแอป
+    p === '/terms' ||
     p.startsWith('/api/attachments/') ||
     p.startsWith('/api/export')
   )

@@ -7,7 +7,7 @@ compatibility_flags = ["nodejs_compat"]
 directory = "./apps/web/dist"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*", "/auth/*", "/webhook/*"]
+run_worker_first = ["/api/*", "/auth/*", "/webhook/*", "/privacy", "/terms"]
 
 [[d1_databases]]
 binding = "DB"
@@ -29,3 +29,9 @@ APP_BASE_URL = "http://localhost:5173"
 PUSH_MONTHLY_LIMIT = "200"
 MAX_UPLOAD_MB = "10"
 USER_STORAGE_QUOTA_MB = "500"
+# อีเมลติดต่อผู้ดูแลระบบ (แสดงในหน้านโยบายความเป็นส่วนตัว) — ควรตั้งก่อนเปิดสาธารณะ
+CONTACT_EMAIL = ""
+# เปิดสาธารณะ: ตั้ง ALLOWED_EMAILS เป็น * (secret) และกำหนดเพดานเหล่านี้ให้เหมาะกับโควตาฟรีของคุณ (ดู docs/SETUP.md หัวข้อ "เปิดให้สาธารณะ")
+# MAX_USERS = "50"
+# MAX_TASKS_PER_USER = "3000"
+# PUSH_PER_USER_MONTHLY = "20"

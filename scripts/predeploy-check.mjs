@@ -14,6 +14,13 @@ if (!base.startsWith('https://'))
 if (!/^PUSH_MONTHLY_LIMIT\s*=\s*"\d+"/m.test(toml))
   errors.push('wrangler.toml: ต้องตั้ง PUSH_MONTHLY_LIMIT ตามโควตา LINE OA ของคุณ');
 
+// คำเตือน (ไม่ล้ม deploy): ถ้าจะเปิดสาธารณะ ควรมีอีเมลติดต่อในหน้านโยบายความเป็นส่วนตัว
+const contact = /^CONTACT_EMAIL\s*=\s*"([^"]*)"/m.exec(toml)?.[1] ?? '';
+if (!contact.trim())
+  console.warn(
+    '! CONTACT_EMAIL ว่าง: หน้า /privacy จะบอกให้ติดต่อผ่าน LINE OA (ถ้าเปิดสาธารณะ ควรตั้งอีเมลติดต่อ)',
+  );
+
 if (errors.length) {
   console.error('\n✖ ยังไม่พร้อม deploy:\n' + errors.map((e) => '  - ' + e).join('\n'));
   process.exit(1);
