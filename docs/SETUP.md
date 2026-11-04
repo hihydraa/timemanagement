@@ -114,6 +114,24 @@ curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=*/5+*+*+*+*"
 
 (wrangler รุ่นปัจจุบันใช้ `/cdn-cgi/handler/scheduled` — ไม่ใช่ `/__scheduled`) ผลดูได้ใน log ของ `wrangler dev` (`notifications run {...}`) และตาราง `notification_log` — ถ้าต้องการลองโดยไม่ยิง LINE จริง ตั้ง `LINE_API_BASE=http://localhost:9999` ใน `.dev.vars` ชี้ไป mock server (ตัวแปรนี้ใช้เฉพาะ dev ห้ามตั้งใน production)
 
+## 4c. ฟีเจอร์ช่วยบริหารเวลา (Phase 6)
+
+ไม่ต้องตั้งค่าเพิ่ม แต่ต้องรัน migration ใหม่ (เพิ่มคอลัมน์ `tasks.recurrence_id`, ตาราง `subtasks` และดัชนีของซีรีส์ — ปลอดภัยกับข้อมูลเดิม):
+
+```bash
+npm run db:migrate:remote
+```
+
+```bash
+npm run deploy
+```
+
+หน้าที่เพิ่ม (แท็บด้านบนของเว็บ): **Inbox** · **Matrix** (Eisenhower) · **โฟกัส** (Pomodoro) · **รีวิว** (รายสัปดาห์) · **สถิติ** · เมนู **ส่งออกข้อมูล** (JSON/CSV/ICS)
+
+- **งานทำซ้ำ:** ตั้งในฟอร์มงาน (ทุกวัน/สัปดาห์/เดือน, ทุก N, เลือกวัน, ถึงวันที่) หรือพิมพ์ใน LINE เช่น `ประชุมทีม ทุกวันจันทร์ 9:00` — แก้ที่ครั้งหนึ่ง = แก้เฉพาะครั้งนั้น, แก้ที่ "งานแม่" (ปุ่ม _แก้ทั้งซีรีส์_) = แก้ทั้งซีรีส์
+- **Google Calendar:** งานทำซ้ำส่งเป็น event ที่มี RRULE ครั้งที่แก้/ยกเลิกเฉพาะครั้งจะส่งเป็น event แยก + EXDATE (กดเชื่อมใหม่หรือ "Sync ทั้งหมดใหม่" หลังอัปเดตเพื่อให้ event เดิมมี EXDATE)
+- **นำเข้า ICS:** ไฟล์ `.ics` ที่ส่งออกนำเข้า Google Calendar / Apple / Outlook ได้ (เป็นสแนปช็อตครั้งเดียว ไม่ซิงก์ต่อเนื่อง)
+
 ## 5. Google OAuth (login) และ Google Calendar (Phase 1/4)
 
 ### 5.1 Login ด้วย Google
