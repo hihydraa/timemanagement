@@ -66,6 +66,7 @@ export default function TodayPage() {
       })
       .catch((e) => setError(e instanceof ApiClientError ? e.message : t.cockpit.loadFailed));
   }, []);
+  useEffect(() => void api.trackEvent('morning_plan_opened'), []);
   useEffect(() => {
     load();
     const id = window.setInterval(load, REFRESH_MS);
@@ -111,19 +112,25 @@ export default function TodayPage() {
     document.getElementById('unscheduled')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   // ปุ่ม + (FAB) / ลิงก์เก่า /inbox: เปิดฟอร์มเพิ่มงาน หรือเลื่อนไปส่วน "ยังไม่จัดเวลา" หลังข้อมูลโหลด
-  const openNew = useCallback(() => {
+  const wantFocus = useRef(false);
+  const focusQuick = useCallback(() => {
     const el = quickRef.current;
-    if (el) {
-      el.scrollIntoView({ block: 'center' });
-      el.focus();
-    } else setDrawer({ prefill: { allDay: false } });
+    if (!el) return false;
+    el.scrollIntoView({ block: 'center' });
+    el.focus();
+    return true;
   }, []);
+  const openNew = useCallback(() => {
+    try {
+      sessionStorage.removeItem('dobby.openNew'); // ใช้แล้วทิ้ง ไม่ให้รีโหลดแล้วเด้งซ้ำ
+    } catch {
+      /* ไม่มี storage */
+    }
+    if (!focusQuick()) wantFocus.current = true; // ช่องพิมพ์ยังไม่ขึ้น (กำลังโหลด) → โฟกัสทันทีที่พร้อม
+  }, [focusQuick]);
   useEffect(() => {
     try {
-      if (sessionStorage.getItem('dobby.openNew') === '1') {
-        sessionStorage.removeItem('dobby.openNew');
-        openNew();
-      }
+      if (sessionStorage.getItem('dobby.openNew') === '1') openNew();
     } catch {
       /* ไม่มี storage */
     }
@@ -148,6 +155,9 @@ export default function TodayPage() {
   }, [openNew, load]);
   const anchor = route.anchor;
   const loaded = !!data;
+  useEffect(() => {
+    if (loaded && wantFocus.current && focusQuick()) wantFocus.current = false;
+  }, [loaded, focusQuick]);
   useEffect(() => {
     if (anchor === 'unscheduled' && loaded) {
       const id = window.setTimeout(scrollToUnscheduled, 150);

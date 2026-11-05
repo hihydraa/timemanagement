@@ -147,6 +147,9 @@ export interface SettingsView {
   settings: NotificationSettings;
   work: WorkSettings;
   sidebarSections: SidebarSection[];
+  uiMode: 'simple' | 'full';
+  analyticsOptOut: boolean;
+  onboardingDone: boolean;
   lineLinked: boolean;
 }
 

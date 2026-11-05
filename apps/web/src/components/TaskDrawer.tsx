@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { canUndoDelete, notifyTasksChanged, restorePayload } from '../lib/undo';
 import { useToast } from './UndoToast';
+import { useApp } from '../lib/appContext';
 import { api, ApiClientError } from '../lib/api';
 import Attachments from './Attachments';
 import Subtasks from './Subtasks';
@@ -85,6 +86,18 @@ function buildRule(f: RecForm, anchorWeekday: number | null): string | null {
   return parts.join(';');
 }
 
+/** สรุปกฎทำซ้ำสั้น ๆ (โหมดง่ายแสดงอ่านอย่างเดียวเมื่อกฎซับซ้อน) */
+function recSummary(rule: string | null | undefined): string {
+  const f = parseRec(rule);
+  const unit =
+    f.freq === 'DAILY'
+      ? t.series.unitDay
+      : f.freq === 'WEEKLY'
+        ? t.series.unitWeek
+        : t.series.unitMonth;
+  return `${t.series.every} ${f.interval} ${unit}${f.freq === 'WEEKLY' && f.days.length ? ' (' + f.days.map((d) => t.series.weekdays[d]).join(' ') + ')' : ''}${f.until ? ' · ' + t.series.until + ' ' + f.until : ''}`;
+}
+
 const STATUSES: Status[] = ['todo', 'doing', 'done', 'cancelled'];
 const inputCls =
   'w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500';
@@ -101,6 +114,7 @@ export default function TaskDrawer({
 }: Props) {
   const { task, prefill } = init;
   const toast = useToast();
+  const simple = useApp().uiMode === 'simple';
   const [title, setTitle] = useState(task?.title ?? '');
   const [description, setDescription] = useState(task?.description ?? '');
   const [categoryId, setCategoryId] = useState(task?.categoryId ?? '');
@@ -116,6 +130,7 @@ export default function TaskDrawer({
   const [pendingSubs, setPendingSubs] = useState<string[]>([]);
   const [taskId, setTaskId] = useState<string | null>(task?.id ?? null);
   const [rec, setRec] = useState<RecForm>(() => parseRec(task?.recurrenceRule));
+  const complexRule = !!task?.recurrenceRule && /INTERVAL=|BYDAY=|UNTIL=/.test(task.recurrenceRule);
   const isOccurrence = !!(task?.parentTaskId && task.recurrenceId);
   const inSeries = !!task?.recurrenceRule || isOccurrence;
   const hasExtras =
@@ -187,7 +202,9 @@ export default function TaskDrawer({
       allDay: w.allDay,
       ...(gcalAvailable ? { gcalSync } : {}),
       // การทำซ้ำตั้งได้เฉพาะงานแม่ (ครั้งที่แก้เฉพาะครั้งไม่ส่ง)
-      ...(isOccurrence ? {} : { recurrenceRule: buildRule(rec, anchorWeekday) }),
+      ...(isOccurrence || (simple && complexRule)
+        ? {}
+        : { recurrenceRule: buildRule(rec, anchorWeekday) }), // โหมดง่าย: ไม่แตะกฎซับซ้อนที่ตั้งจากโหมดเต็ม
       estimateMinutes: w.estimateMinutes,
       tags: tags
         .split(',')
@@ -475,18 +492,32 @@ export default function TaskDrawer({
               </div>
             )}
           </div>
-          <div>
-            <label htmlFor="f-tags" className={labelCls}>
-              {t.form.tags}
-            </label>
-            <input
-              id="f-tags"
-              className={inputCls}
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-            />
-          </div>
-          {!isOccurrence && (
+          {!simple ? (
+            <div>
+              <label htmlFor="f-tags" className={labelCls}>
+                {t.form.tags}
+              </label>
+              <input
+                id="f-tags"
+                className={inputCls}
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+              />
+            </div>
+          ) : (
+            task &&
+            task.tags.length > 0 && (
+              <p className="text-xs text-slate-600 dark:text-slate-300" data-testid="ro-tags">
+                {t.form.tags}: {task.tags.map((x) => `#${x}`).join(' ')} · {t.mode.readOnlyHint}
+              </p>
+            )
+          )}
+          {!isOccurrence && simple && complexRule && (
+            <p className="text-xs text-slate-600 dark:text-slate-300" data-testid="ro-rec">
+              {t.series.repeat}: {recSummary(task?.recurrenceRule)} · {t.mode.readOnlyHint}
+            </p>
+          )}
+          {!isOccurrence && !(simple && complexRule) && (
             <fieldset className="space-y-2 rounded border border-slate-200 p-2 dark:border-slate-700">
               <legend className="px-1 text-xs font-medium text-slate-600 dark:text-slate-300">
                 {t.series.repeat}
@@ -505,7 +536,7 @@ export default function TaskDrawer({
                 <option value="WEEKLY">{t.series.weekly}</option>
                 <option value="MONTHLY">{t.series.monthly}</option>
               </select>
-              {rec.freq !== 'NONE' && (
+              {rec.freq !== 'NONE' && !simple && (
                 <>
                   <div className="flex items-center gap-2 text-sm">
                     <label htmlFor="f-rec-int">{t.series.every}</label>
@@ -570,13 +601,22 @@ export default function TaskDrawer({
             </fieldset>
           )}
 
-          <Subtasks
-            taskId={taskId}
-            pending={pendingSubs}
-            onPendingChange={setPendingSubs}
-            resolveId={resolveId}
-            onChanged={onAttachmentsChanged}
-          />
+          {simple ? (
+            !!task &&
+            task.subtaskTotal > 0 && (
+              <p className="text-xs text-slate-600 dark:text-slate-300" data-testid="ro-subs">
+                {t.subtasks.title}: {task.subtaskDone}/{task.subtaskTotal} · {t.mode.readOnlyHint}
+              </p>
+            )
+          ) : (
+            <Subtasks
+              taskId={taskId}
+              pending={pendingSubs}
+              onPendingChange={setPendingSubs}
+              resolveId={resolveId}
+              onChanged={onAttachmentsChanged}
+            />
+          )}
 
           {gcalAvailable && (
             <div>

@@ -28,7 +28,7 @@ import type { DrawerInit } from '../components/TaskDrawer';
 import { api, ApiClientError } from '../lib/api';
 import { useApp } from '../lib/appContext';
 import { eventColors } from '../lib/colors';
-import CalToolbar, { type CalMode } from '../components/calendar/CalToolbar';
+import CalToolbar, { CAL_MODES, type CalMode } from '../components/calendar/CalToolbar';
 import TaskTray from '../components/calendar/TaskTray';
 import MatrixPage from './MatrixPage';
 import WeekCards, { type DropSource } from '../components/calendar/WeekCards';
@@ -81,6 +81,7 @@ const loadViewMode = (): CalMode => {
   return 'cards';
 };
 
+const SIMPLE_SECTIONS: SidebarSection[] = ['search', 'category'];
 const MODE_KEY = 'dobby.colorMode';
 const loadMode = (): ColorMode => {
   try {
@@ -311,14 +312,17 @@ function useIsMobile() {
 }
 
 export default function CalendarPage() {
-  const { user, categories, reloadCategories, gcalAvailable, route } = useApp();
+  const { user, categories, reloadCategories, gcalAvailable, route, uiMode } = useApp();
   const calRef = useRef<FullCalendar>(null);
   const isMobile = useIsMobile();
   const [viewDate, setViewDate] = useState(todayYmd);
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [work, setWork] = useState<WorkHours>(DEFAULT_WORK);
-  const [viewMode, setViewModeState] = useState<CalMode>(loadViewMode);
+  const [rawViewMode, setViewModeState] = useState<CalMode>(loadViewMode);
+  const simple = uiMode === 'simple';
+  // โหมดง่าย: ไม่มี Matrix (ถ้าค้างอยู่ใน Matrix ให้แสดงการ์ดสัปดาห์) และย้อมสีตามประเภทเท่านั้น
+  const viewMode: CalMode = simple && rawViewMode === 'matrix' ? 'cards' : rawViewMode;
   const [calTitle, setCalTitle] = useState('');
   const [trayKey, setTrayKey] = useState(0);
   const [trayCount, setTrayCount] = useState(0);
@@ -328,7 +332,8 @@ export default function CalendarPage() {
   const initialDate = useRef(viewDate);
   const isNarrow = useMedia('(max-width: 1023px)');
   const [filters, setFilters] = useState<FilterState>(emptyFilters);
-  const [mode, setModeState] = useState<ColorMode>(loadMode);
+  const [rawMode, setModeState] = useState<ColorMode>(loadMode);
+  const mode: ColorMode = simple ? 'category' : rawMode;
   const [drawer, setDrawer] = useState<DrawerInit | null>(null);
   const [error, setError] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -669,23 +674,25 @@ export default function CalendarPage() {
   return (
     <div className="flex flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 py-2 dark:border-slate-700">
-        <Popover label={t.view.title} icon="🎨">
-          <fieldset className="space-y-1">
-            <legend className="mb-1 text-xs font-semibold">{t.colorBy.label}</legend>
-            {(['category', 'urgency', 'importance'] as ColorMode[]).map((m) => (
-              <label key={m} className="flex cursor-pointer items-center gap-2 py-0.5">
-                <input
-                  type="radio"
-                  name="color-mode"
-                  checked={mode === m}
-                  onChange={() => setMode(m)}
-                  className="h-4 w-4 accent-brand-600"
-                />
-                {t.colorBy[m]}
-              </label>
-            ))}
-          </fieldset>
-        </Popover>
+        {!simple && (
+          <Popover label={t.view.title} icon="🎨">
+            <fieldset className="space-y-1">
+              <legend className="mb-1 text-xs font-semibold">{t.colorBy.label}</legend>
+              {(['category', 'urgency', 'importance'] as ColorMode[]).map((m) => (
+                <label key={m} className="flex cursor-pointer items-center gap-2 py-0.5">
+                  <input
+                    type="radio"
+                    name="color-mode"
+                    checked={mode === m}
+                    onChange={() => setMode(m)}
+                    className="h-4 w-4 accent-brand-600"
+                  />
+                  {t.colorBy[m]}
+                </label>
+              ))}
+            </fieldset>
+          </Popover>
+        )}
         <button
           type="button"
           className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700"
@@ -710,6 +717,7 @@ export default function CalendarPage() {
             viewMode === 'matrix' ? t.cal.matrixTitle : viewMode === 'cards' ? weekTitle : calTitle
           }
           mode={viewMode}
+          modes={simple ? CAL_MODES.filter((m) => m !== 'matrix') : CAL_MODES}
           onMode={setViewMode}
           onPrev={() => step(-1)}
           onNext={() => step(1)}
@@ -747,16 +755,18 @@ export default function CalendarPage() {
       <div className={`grid flex-1 gap-4 py-3 ${sideCols}`}>
         {showFilters && (
           <aside className="space-y-4">
-            <SidebarCustomize value={sections} onChange={saveSections} />
-            {sections.includes('mini') && <MiniCalendar selected={viewDate} onPick={gotoDate} />}
+            {!simple && <SidebarCustomize value={sections} onChange={saveSections} />}
+            {!simple && sections.includes('mini') && (
+              <MiniCalendar selected={viewDate} onPick={gotoDate} />
+            )}
             <Filters
               value={filters}
               onChange={setFilters}
               categories={categories}
               allTags={allTags}
-              sections={sections}
+              sections={simple ? SIMPLE_SECTIONS : sections}
             />
-            {sections.includes('legend') && (
+            {!simple && sections.includes('legend') && (
               <Legend categories={categories} onChanged={reloadCategories} mode={mode} />
             )}
           </aside>

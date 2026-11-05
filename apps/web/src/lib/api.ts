@@ -150,8 +150,13 @@ export const api = {
       workStart?: string;
       workEnd?: string;
       workDays?: number[];
+      uiMode?: 'simple' | 'full';
+      analyticsOptOut?: boolean;
+      onboardingDone?: boolean;
     },
   ) => req<SettingsView>('PATCH', '/api/settings', p),
+  trackEvent: (name: 'morning_plan_opened') =>
+    req<{ ok: boolean }>('POST', '/api/events', { name }).catch(() => undefined),
   pushStatus: () => req<PushStatus>('GET', '/api/notifications/status'),
   listAttachments: (taskId: string) =>
     req<{ attachments: Attachment[] }>('GET', `/api/tasks/${taskId}/attachments`).then(

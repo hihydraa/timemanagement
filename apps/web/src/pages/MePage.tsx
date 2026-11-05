@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import Mascot from '../components/Mascot';
+import ModeSwitch from '../components/ModeSwitch';
 import { useApp } from '../lib/appContext';
 import { t } from '../lib/i18n';
 import type { MeTab } from '../lib/route';
@@ -11,7 +12,17 @@ const TABS: MeTab[] = ['overview', 'review', 'stats'];
 
 /** แท็บ "ฉัน": Dobby + ตั้งค่า (เวลาทำงาน, LINE, Google, ส่งออก) + สรุปสัปดาห์ + สถิติ */
 export default function MePage({ tab }: { tab: MeTab }) {
-  const { user, gcalStatus, goTo, openSettings, openLine, openGcal, openExport, logout } = useApp();
+  const {
+    user,
+    gcalStatus,
+    goTo,
+    openSettings,
+    openLine,
+    openGcal,
+    openExport,
+    openOnboarding,
+    logout,
+  } = useApp();
   const row =
     'flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm hover:shadow-md dark:border-slate-700 dark:bg-slate-800';
   const gcalText = gcalStatus?.needsReconnect
@@ -48,6 +59,10 @@ export default function MePage({ tab }: { tab: MeTab }) {
               </h2>
               <p className="truncate text-sm text-slate-600 dark:text-slate-300">{user.email}</p>
             </div>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <ModeSwitch />
           </section>
 
           <ul className="grid gap-3 sm:grid-cols-2">
@@ -109,6 +124,19 @@ export default function MePage({ tab }: { tab: MeTab }) {
                   <strong className="block">{t.me.export}</strong>
                   <span className="text-sm text-slate-600 dark:text-slate-300">
                     {t.me.exportHint}
+                  </span>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button type="button" onClick={openOnboarding} className={row}>
+                <span aria-hidden className="text-2xl">
+                  🧭
+                </span>
+                <span>
+                  <strong className="block">{t.onboarding.redo}</strong>
+                  <span className="text-sm text-slate-600 dark:text-slate-300">
+                    {t.onboarding.redoHint}
                   </span>
                 </span>
               </button>

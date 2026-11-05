@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api';
-import { AppContext, type AppCtx } from '../lib/appContext';
+import { AppContext, type AppCtx, type UiMode } from '../lib/appContext';
 import {
   resolveRoute,
   routeToHash,
@@ -11,6 +11,7 @@ import {
 } from '../lib/route';
 import { useMedia } from '../lib/useMedia';
 import { t } from '../lib/i18n';
+import Onboarding from './Onboarding';
 import CelebrateToast from './CelebrateToast';
 import { ToastProvider } from './UndoToast';
 import PageContainer from './PageContainer';
@@ -41,6 +42,43 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
   const [dialog, setDialog] = useState<'line' | 'settings' | 'gcal' | 'export' | null>(null);
   const [gcalNotice, setGcalNotice] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const online = useOnline();
+  // โหมดหน้าจอ: แคชต่อบัญชีใน localStorage กันหน้ากระพริบ แล้วใช้ค่าจริงจากเซิร์ฟเวอร์
+  const modeKey = `dobby.uimode.${user.id}`;
+  const [uiMode, setUiModeState] = useState<UiMode>(() => {
+    try {
+      return localStorage.getItem(modeKey) === 'full' ? 'full' : 'simple';
+    } catch {
+      return 'simple';
+    }
+  });
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const applyMode = useCallback(
+    (m: UiMode) => {
+      setUiModeState(m);
+      try {
+        localStorage.setItem(modeKey, m);
+      } catch {
+        /* ไม่มี storage ก็ข้าม */
+      }
+    },
+    [modeKey],
+  );
+  const setUiMode = useCallback(
+    (m: UiMode) => {
+      applyMode(m); // เปลี่ยนทันที ไม่รอเซิร์ฟเวอร์
+      void api.patchSettings({ uiMode: m }).catch(() => undefined);
+    },
+    [applyMode],
+  );
+  useEffect(() => {
+    api
+      .getSettings()
+      .then((s) => {
+        applyMode(s.uiMode);
+        setShowOnboarding(!s.onboardingDone);
+      })
+      .catch(() => undefined); // โหลดไม่ได้ = ไม่รบกวนด้วย onboarding
+  }, [applyMode]);
 
   // เส้นทางเก็บใน URL (hash) → ปุ่มย้อนกลับใช้ได้ แชร์ลิงก์ได้; เส้นทางเก่าถูก redirect เป็นแบบมาตรฐานทันที
   useEffect(() => {
@@ -138,6 +176,8 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
 
   const ctx: AppCtx = useMemo(
     () => ({
+      uiMode,
+      setUiMode,
       user,
       categories,
       reloadCategories,
@@ -148,11 +188,12 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
       openSettings: () => setDialog('settings'),
       openGcal: () => setDialog('gcal'),
       openExport: () => setDialog('export'),
+      openOnboarding: () => setShowOnboarding(true),
       logout: () => void api.logout().finally(onLogout),
       goTo,
       newTask,
     }),
-    [user, categories, reloadCategories, gcal, route, goTo, newTask, onLogout],
+    [uiMode, setUiMode, user, categories, reloadCategories, gcal, route, goTo, newTask, onLogout],
   );
 
   return (
@@ -245,6 +286,15 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
           )}
           {route.view !== 'focus' && <MiniTimer onOpen={() => goTo('focus')} />}
 
+          {showOnboarding && (
+            <Onboarding
+              onOpenLine={() => setDialog('line')}
+              onFinish={(first) => {
+                setShowOnboarding(false);
+                if (first) newTask(); // ไปหน้า "วันนี้" แล้วโฟกัสช่อง Quick Add ทันที
+              }}
+            />
+          )}
           {dialog === 'line' && <LineDialog onClose={() => setDialog(null)} />}
           {dialog === 'export' && <ExportDialog onClose={() => setDialog(null)} />}
           {dialog === 'settings' && (

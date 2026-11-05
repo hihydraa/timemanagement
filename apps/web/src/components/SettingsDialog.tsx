@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { api, ApiClientError } from '../lib/api';
 import { t } from '../lib/i18n';
 import DeleteAccount from './DeleteAccount';
+import TimeField24 from './form/TimeField24';
+import ModeSwitch from './ModeSwitch';
 import type { NotificationSettings, PushStatus, WorkSettings } from '../lib/types';
 
 interface Props {
@@ -18,6 +20,7 @@ export default function SettingsDialog({ onClose, onOpenLine, onSaved }: Props) 
   const [linked, setLinked] = useState(true);
   const [work, setWork] = useState<WorkSettings | null>(null);
   const [push, setPush] = useState<PushStatus | null>(null);
+  const [optOut, setOptOut] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
@@ -32,6 +35,7 @@ export default function SettingsDialog({ onClose, onOpenLine, onSaved }: Props) 
         setS(v.settings);
         setWork(v.work);
         setLinked(v.lineLinked);
+        setOptOut(v.analyticsOptOut);
       })
       .catch((e) => setError(e instanceof ApiClientError ? e.message : t.error.generic));
     api
@@ -77,23 +81,14 @@ export default function SettingsDialog({ onClose, onOpenLine, onSaved }: Props) 
     key: keyof NotificationSettings,
     disabled = false,
   ) => (
-    <div>
-      <label
-        htmlFor={id}
-        className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
-      >
-        {label}
-      </label>
-      <input
-        id={id}
-        type="time"
-        required
-        disabled={disabled}
+    <fieldset disabled={disabled} className={disabled ? 'opacity-60' : ''} data-id={id}>
+      <TimeField24
+        label={label}
         value={String(s?.[key] ?? '')}
-        onChange={(e) => set(key, e.target.value as never)}
-        className={`${field} w-full`}
+        clearable={false}
+        onChange={(v) => set(key, v as never)}
       />
-    </div>
+    </fieldset>
   );
 
   return (
@@ -247,25 +242,16 @@ export default function SettingsDialog({ onClose, onOpenLine, onSaved }: Props) 
                   ['work-end', t.work.end, 'end'],
                 ] as const
               ).map(([id, label, key]) => (
-                <div key={id}>
-                  <label
-                    htmlFor={id}
-                    className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300"
-                  >
-                    {label}
-                  </label>
-                  <input
-                    id={id}
-                    type="time"
-                    required
-                    value={work[key]}
-                    onChange={(e) => {
-                      setSaved(false);
-                      setWork({ ...work, [key]: e.target.value });
-                    }}
-                    className={`${field} w-full`}
-                  />
-                </div>
+                <TimeField24
+                  key={id}
+                  label={label}
+                  value={work[key]}
+                  clearable={false}
+                  onChange={(v) => {
+                    setSaved(false);
+                    setWork({ ...work, [key]: v });
+                  }}
+                />
               ))}
             </div>
             <div role="group" aria-label={t.work.days}>
@@ -324,6 +310,25 @@ export default function SettingsDialog({ onClose, onOpenLine, onSaved }: Props) 
           )}
         </div>
       </form>
+      <section className="space-y-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+        <ModeSwitch />
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4 accent-brand-600"
+            checked={optOut}
+            onChange={(e) => {
+              const v = e.target.checked;
+              setOptOut(v);
+              void api.patchSettings({ analyticsOptOut: v }).catch(() => setOptOut(!v));
+            }}
+          />
+          <span>
+            <strong className="block">{t.privacy.optOut}</strong>
+            <span className="text-xs text-slate-600 dark:text-slate-300">{t.privacy.hint}</span>
+          </span>
+        </label>
+      </section>
       <DeleteAccount />
     </div>
   );
