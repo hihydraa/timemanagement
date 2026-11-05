@@ -37,7 +37,26 @@ export const userSettings = sqliteTable('user_settings', {
   workEnd: text('work_end').notNull().default('18:00'),
   /** วันทำงาน: เลขวัน ISO 1=จันทร์ … 7=อาทิตย์ คั่นด้วย comma */
   workDays: text('work_days').notNull().default('1,2,3,4,5'),
+  /** โหมดหน้าจอ: 'simple' (ค่าเริ่มต้นของผู้ใช้ใหม่) | 'full' */
+  uiMode: text('ui_mode').notNull().default('simple'),
+  /** 1 = ไม่ให้เก็บสถิติการใช้งานเลย */
+  analyticsOptOut: integer('analytics_opt_out').notNull().default(0),
+  /** ทำ/ข้าม onboarding แล้วเมื่อไร (null = ยังไม่เคย) */
+  onboardingDoneAt: text('onboarding_done_at'),
 });
+
+/** เหตุการณ์ใช้งานแบบไม่ระบุเนื้อหา: เก็บเฉพาะชื่อเหตุการณ์ + ค่าตัวเลข/หมวดสั้น ๆ (ห้ามมีชื่องาน/ข้อความ) */
+export const usageEvents = sqliteTable(
+  'usage_events',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    name: text('name').notNull(),
+    propsJson: text('props_json').notNull().default('{}'),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [index('usage_events_user_name_idx').on(t.userId, t.name, t.createdAt)],
+);
 
 export const googleTokens = sqliteTable('google_tokens', {
   userId: text('user_id').primaryKey(),

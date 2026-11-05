@@ -57,6 +57,13 @@
       "when": 1793791742313,
       "tag": "0007_secret_next_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1793874557039,
+      "tag": "0008_sharp_red_shift",
+      "breakpoints": true
     }
   ]
 }

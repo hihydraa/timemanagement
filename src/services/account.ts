@@ -11,6 +11,7 @@ import {
   subtasks,
   taskTags,
   tasks,
+  usageEvents,
   userSettings,
   users,
 } from '../db/schema';
@@ -69,6 +70,7 @@ export async function deleteAccount(
       : []),
     db.delete(tasks).where(eq(tasks.userId, userId)),
     db.delete(categories).where(eq(categories.userId, userId)),
+    db.delete(usageEvents).where(eq(usageEvents.userId, userId)),
     db.delete(userSettings).where(eq(userSettings.userId, userId)),
     db.delete(users).where(eq(users.id, userId)),
   ] as unknown as [ReturnType<Db['delete']>, ...ReturnType<Db['delete']>[]]);

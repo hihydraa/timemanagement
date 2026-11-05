@@ -1,6 +1,7 @@
 import { eq, sql } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { categories, userSettings, users } from '../db/schema';
+import { track } from './analytics';
 import { nowIso } from '../lib/time';
 
 export const DEFAULT_CATEGORIES = [
@@ -76,6 +77,7 @@ export async function upsertUser(
     .insert(users)
     .values({ id, email, name: p.name, googleSub: p.googleSub, createdAt: nowIso() });
   await db.insert(userSettings).values({ userId: id });
+  await track(db, id, 'signup');
   await db.insert(categories).values(
     DEFAULT_CATEGORIES.map((c, i) => ({
       id: crypto.randomUUID(),

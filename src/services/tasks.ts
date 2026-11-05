@@ -17,6 +17,7 @@ import type { Db } from '../db/client';
 import { categories, taskTags, tasks } from '../db/schema';
 import { ApiError } from '../lib/http';
 import { computeUrgency } from '../lib/urgency';
+import { track } from './analytics';
 import { countsByTask, deleteTaskFiles } from './attachments';
 import { deleteSubtasksOf, subtaskCounts } from './subtasks';
 import {
@@ -258,6 +259,7 @@ export async function updateTask(
     })
     .where(and(eq(tasks.id, id), eq(tasks.userId, userId)));
   if (patch.tags) await replaceTags(db, id, patch.tags);
+  if (status === 'done' && cur.status !== 'done') await track(db, userId, 'task_completed');
   return (await withTags(db, [await getOwned(db, userId, id)]))[0]!;
 }
 

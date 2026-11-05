@@ -19,6 +19,7 @@ import {
   SCOPE_CALENDAR,
   saveTokens,
 } from '../services/googleCalendar';
+import { track } from '../services/analytics';
 import { canSignUp, isEmailAllowed, upsertUser } from '../services/users';
 import type { AppEnv } from '../types';
 
@@ -101,6 +102,7 @@ async function connectCallback(c: Context<AppEnv>, code: string) {
     scope: tokens.scope ?? SCOPE_CALENDAR,
     email: await fetchUserEmail(tokens.access_token),
   });
+  await track(getDb(c.env.DB), userId, 'gcal_connected');
   return c.redirect(`${base}/?gcal=connected`);
 }
 

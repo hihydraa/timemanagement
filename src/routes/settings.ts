@@ -5,6 +5,8 @@ import { getDb } from '../db/client';
 import { userSettings, users } from '../db/schema';
 import { ApiError, parseJson } from '../lib/http';
 import { parseWorkDays } from '../lib/work';
+import { clearUsage, CLIENT_EVENTS, track, type EventName } from '../services/analytics';
+import { nowIso } from '../lib/time';
 import { notificationStatus } from '../services/notifications';
 import type { AppEnv } from '../types';
 
@@ -51,6 +53,10 @@ const patchInput = z
     sidebarSections: z.array(z.enum(SIDEBAR_SECTIONS)).max(SIDEBAR_SECTIONS.length),
     workStart: hm,
     workEnd: hm,
+    uiMode: z.enum(['simple', 'full']),
+    analyticsOptOut: z.boolean(),
+    /** true = ทำ/ข้าม onboarding แล้ว, false = เปิดให้ทำใหม่ */
+    onboardingDone: z.boolean(),
     workDays: z.array(z.number().int().min(1).max(7)).min(1, 'เลือกวันทำงานอย่างน้อย 1 วัน').max(7),
   })
   .partial()
@@ -80,6 +86,9 @@ async function view(db: ReturnType<typeof getDb>, userId: string) {
       end: d.workEnd ?? '18:00',
       days: parseWorkDays(d.workDays),
     },
+    uiMode: d.uiMode === 'full' ? 'full' : 'simple',
+    analyticsOptOut: (d.analyticsOptOut ?? 0) === 1,
+    onboardingDone: !!d.onboardingDoneAt,
     lineLinked: !!u?.lineUserId,
   };
 }
@@ -112,13 +121,34 @@ r.patch('/settings', async (c) => {
   if (body.workDays !== undefined) set.workDays = [...new Set(body.workDays)].sort().join(',');
   if (body.sidebarSections !== undefined)
     set.sidebarSections = JSON.stringify([...new Set(body.sidebarSections)]);
+  if (body.uiMode !== undefined) set.uiMode = body.uiMode;
+  if (body.analyticsOptOut !== undefined) set.analyticsOptOut = body.analyticsOptOut ? 1 : 0;
+  if (body.onboardingDone !== undefined)
+    set.onboardingDoneAt = body.onboardingDone ? nowIso() : null;
+  const prevMode =
+    body.uiMode !== undefined
+      ? (await db.select().from(userSettings).where(eq(userSettings.userId, userId)).get())?.uiMode
+      : undefined;
   if (Object.keys(set).length) {
     await db
       .insert(userSettings)
       .values({ userId, ...set })
       .onConflictDoUpdate({ target: userSettings.userId, set });
   }
+  if (body.analyticsOptOut === true) await clearUsage(db, userId); // opt-out = ลบที่เคยเก็บไว้ด้วย
+  if (body.uiMode !== undefined && body.uiMode !== (prevMode ?? 'simple'))
+    await track(db, userId, 'ui_mode_changed', { to: body.uiMode });
   return c.json(await view(db, userId));
+});
+
+/** เหตุการณ์ที่เกิดฝั่งหน้าเว็บ (ชื่อเหตุการณ์ที่อนุญาตเท่านั้น, ไม่รับ props จากผู้ใช้) */
+r.post('/events', async (c) => {
+  const body = await parseJson(
+    c,
+    z.object({ name: z.enum(CLIENT_EVENTS as [string, ...string[]]) }).strict(),
+  );
+  await track(getDb(c.env.DB), c.get('userId'), body.name as EventName);
+  return c.json({ ok: true });
 });
 
 /** โควตา push ของเดือนนี้ (ใช้เตือนในเว็บเมื่อใกล้เต็ม) */

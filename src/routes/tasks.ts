@@ -22,6 +22,7 @@ import {
   updateTask,
   withTags,
 } from '../services/tasks';
+import { trackTaskCreated } from '../services/analytics';
 import { cockpit, rescheduleOverdue, trayTasks } from '../services/cockpit';
 import type { AppEnv } from '../types';
 
@@ -34,7 +35,13 @@ r.get('/tasks', async (c) => {
 
 r.post('/tasks', async (c) => {
   const body = await parseJson(c, taskInput);
-  const task = await createTask(getDb(c.env.DB), c.get('userId'), body, taskLimit(c.env));
+  const db = getDb(c.env.DB);
+  const task = await createTask(db, c.get('userId'), body, taskLimit(c.env));
+  await trackTaskCreated(
+    db,
+    c.get('userId'),
+    c.req.query('src') === 'quick' ? 'web_quick' : 'web_form',
+  );
   await background(c, syncTaskSafe(c.env, c.get('userId'), task.id));
   return c.json({ task }, 201);
 });

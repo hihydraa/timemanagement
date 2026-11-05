@@ -15,6 +15,7 @@ import { addDays, bangkokDate, bangkokParts, fromBangkok, now, nowIso } from '..
 import type { Env } from '../types';
 import { limitsFrom, saveUploads } from './attachments';
 import { matchesMagic, sanitizeFilename } from './files';
+import { trackTaskCreated } from './analytics';
 import { removeEventSafe, syncTaskSafe } from './googleCalendar';
 import {
   clip,
@@ -610,6 +611,7 @@ async function cmdCreate(ctx: Ctx, user: User, t: string) {
   }
 
   const task = await createTask(db, user.id, toTaskInput(p), taskLimit(ctx.env));
+  await trackTaskCreated(db, user.id, 'line');
   const msgs: LineMessage[] = [await card(ctx, task, '✅ บันทึกงานแล้ว')];
   if (!task.startAt && !task.dueAt && !task.dueDate) {
     msgs.push(
