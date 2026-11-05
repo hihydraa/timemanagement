@@ -5,6 +5,7 @@ import { categories, googleTokens, tasks, userSettings } from '../db/schema';
 import { decryptSecret, encryptSecret } from '../lib/crypto';
 import { addDays, now, nowIso, toBangkokIso } from '../lib/time';
 import { IMPORTANCE_LABEL, URGENCY_LABEL } from '../lib/labels';
+import { computeUrgency } from '../lib/urgency';
 import type { Env } from '../types';
 import { clip } from './flex';
 
@@ -341,7 +342,7 @@ async function buildEventBase(ctx: SyncCtx, t: TaskRow): Promise<Record<string, 
     t.description.slice(0, 6000),
     '— Dobby —',
     `เปิดงานนี้: ${base}/?task=${t.id}`,
-    `ความเร่งด่วน: ${URGENCY_LABEL[t.urgency] ?? t.urgency} · ความสำคัญ: ${IMPORTANCE_LABEL[t.importance] ?? t.importance}${cat ? ` · #${cat}` : ''}`,
+    `ความเร่งด่วน: ${URGENCY_LABEL[computeUrgency(t, now())] ?? ''} · ความสำคัญ: ${IMPORTANCE_LABEL[t.importance] ?? t.importance}${cat ? ` · #${cat}` : ''}`,
     ...(t.startAt && t.dueAt
       ? [`เดดไลน์: ${toBangkokIso(new Date(t.dueAt)).slice(0, 16).replace('T', ' ')} น.`]
       : []),

@@ -16,6 +16,7 @@ import { z } from 'zod';
 import type { Db } from '../db/client';
 import { categories, taskTags, tasks } from '../db/schema';
 import { ApiError } from '../lib/http';
+import { computeUrgency } from '../lib/urgency';
 import { countsByTask, deleteTaskFiles } from './attachments';
 import { deleteSubtasksOf, subtaskCounts } from './subtasks';
 import {
@@ -25,7 +26,7 @@ import {
   parseVirtualId,
   resolveVirtual,
 } from './series';
-import { addDays, bangkokDate, fromBangkok, nowIso } from '../lib/time';
+import { addDays, bangkokDate, fromBangkok, now, nowIso } from '../lib/time';
 
 type TaskRow = typeof tasks.$inferSelect;
 export interface TaskDto extends Omit<TaskRow, 'allDay' | 'gcalSync'> {
@@ -112,8 +113,11 @@ export async function withTags(db: Db, rows: TaskRow[]): Promise<TaskDto[]> {
   const real = rows.filter((r) => !isVirtualId(r.id)).map((r) => r.id);
   const counts = await countsByTask(db, real);
   const subs = await subtaskCounts(db, keys);
+  const at = now();
   return rows.map((r) => ({
     ...r,
+    // คำนวณจากวันที่ทุกครั้ง (ไม่ใช้ค่าที่เก็บไว้): ดู lib/urgency.ts
+    urgency: computeUrgency(r, at),
     allDay: r.allDay === 1,
     gcalSync: r.gcalSync === 1,
     tags: (byTask.get(key(r)) ?? []).sort(),

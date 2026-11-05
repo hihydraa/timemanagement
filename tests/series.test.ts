@@ -89,7 +89,7 @@ describe('การขยาย instance ตอน query', () => {
       recurrenceRule: null,
       startAt: iso('09:00', '2026-11-09'),
       endAt: iso('10:00', '2026-11-09'),
-      urgency: 3,
+      urgency: 1, // คำนวณจากวันที่ (อีก 7 วัน) ไม่ใช่ค่าที่ตั้ง
       tags: ['ทีม'],
     });
   });

@@ -3,7 +3,17 @@ import { api, ApiClientError } from '../lib/api';
 import Attachments from './Attachments';
 import Subtasks from './Subtasks';
 import { t } from '../lib/i18n';
-import { inputToIso, isoToInput } from '../lib/time';
+import { dayLabel, todayYmd } from '../lib/dates';
+import {
+  summarizeWhen,
+  validateWhen,
+  whenFromTask,
+  whenToPayload,
+  type WhenForm,
+} from '../lib/taskForm';
+import DayPicker from './form/DayPicker';
+import DurationPicker from './form/DurationPicker';
+import TimeField24 from './form/TimeField24';
 import type { Category, Status, Task, TaskPayload } from '../lib/types';
 
 export interface DrawerInit {
@@ -73,7 +83,6 @@ function buildRule(f: RecForm, anchorWeekday: number | null): string | null {
   return parts.join(';');
 }
 
-const LEVELS = [1, 2, 3, 4];
 const STATUSES: Status[] = ['todo', 'doing', 'done', 'cancelled'];
 const inputCls =
   'w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500';
@@ -92,17 +101,12 @@ export default function TaskDrawer({
   const [title, setTitle] = useState(task?.title ?? '');
   const [description, setDescription] = useState(task?.description ?? '');
   const [categoryId, setCategoryId] = useState(task?.categoryId ?? '');
-  const [urgency, setUrgency] = useState(task?.urgency ?? 2);
   const [importance, setImportance] = useState(task?.importance ?? 2);
+  const [impTouched, setImpTouched] = useState(false);
   const [status, setStatus] = useState<Status>(task?.status ?? 'todo');
-  const [allDay, setAllDay] = useState(task?.allDay ?? prefill?.allDay ?? false);
-  const [date, setDate] = useState(task?.dueDate ?? prefill?.date ?? '');
-  const [start, setStart] = useState(
-    isoToInput(task?.startAt ?? null) || prefill?.startInput || '',
-  );
-  const [end, setEnd] = useState(isoToInput(task?.endAt ?? null) || prefill?.endInput || '');
-  const [due, setDue] = useState(isoToInput(task?.dueAt ?? null));
-  const [estimate, setEstimate] = useState(task?.estimateMinutes?.toString() ?? '');
+  // "เมื่อไหร่": วัน (ค่าเริ่มต้น = วันนี้) + เวลา 24 ชม. + ระยะเวลา + เดดไลน์ (เลือกเพิ่ม) — ดู lib/taskForm.ts
+  const [when, setWhen] = useState<WhenForm>(() => whenFromTask(task, prefill, todayYmd()));
+  const patchWhen = (p: Partial<WhenForm>) => setWhen((w) => ({ ...w, ...p }));
   const [tags, setTags] = useState(task?.tags.join(', ') ?? '');
   const [gcalSync, setGcalSync] = useState(task?.gcalSync ?? true);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -111,6 +115,19 @@ export default function TaskDrawer({
   const [rec, setRec] = useState<RecForm>(() => parseRec(task?.recurrenceRule));
   const isOccurrence = !!(task?.parentTaskId && task.recurrenceId);
   const inSeries = !!task?.recurrenceRule || isOccurrence;
+  const hasExtras =
+    !!task &&
+    !!(
+      task.description ||
+      task.categoryId ||
+      task.tags.length ||
+      task.recurrenceRule ||
+      task.parentTaskId ||
+      task.subtaskTotal > 0 ||
+      task.attachmentCount > 0 ||
+      task.status !== 'todo'
+    );
+  const [showMore, setShowMore] = useState(hasExtras);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const titleRef = useRef<HTMLInputElement>(null);
@@ -132,7 +149,7 @@ export default function TaskDrawer({
     return taskId;
   }
 
-  const anchorDate = allDay ? date : (start || due).slice(0, 10);
+  const anchorDate = when.day;
   const anchorWeekday = anchorDate ? new Date(`${anchorDate}T00:00:00Z`).getUTCDay() : null;
 
   async function openSeries() {
@@ -151,30 +168,32 @@ export default function TaskDrawer({
       setError(t.series.needsStart);
       return;
     }
+    const whenErr = validateWhen(when);
+    if (whenErr) {
+      setError(whenErr);
+      return;
+    }
+    const w = whenToPayload(when);
     const payload: TaskPayload = {
       title,
       description,
       categoryId: categoryId || null,
-      urgency,
-      importance,
+      // ความเร่งด่วนคำนวณจากวันที่ที่ฝั่งเซิร์ฟเวอร์ (ไม่ส่งค่า); สำคัญ = ปุ่มเดียว (ไม่แตะ ถ้าผู้ใช้ไม่ได้กด จะคงค่าเดิมของงานเก่า)
+      importance: impTouched || !task ? importance : task.importance,
       status,
-      allDay,
+      allDay: w.allDay,
       ...(gcalAvailable ? { gcalSync } : {}),
       // การทำซ้ำตั้งได้เฉพาะงานแม่ (ครั้งที่แก้เฉพาะครั้งไม่ส่ง)
       ...(isOccurrence ? {} : { recurrenceRule: buildRule(rec, anchorWeekday) }),
-      estimateMinutes: estimate ? Number(estimate) : null,
+      estimateMinutes: w.estimateMinutes,
       tags: tags
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean),
-      ...(allDay
-        ? { dueDate: date || null, startAt: null, endAt: null, dueAt: null }
-        : {
-            dueDate: null,
-            startAt: inputToIso(start),
-            endAt: inputToIso(end),
-            dueAt: inputToIso(due),
-          }),
+      startAt: w.startAt,
+      endAt: w.endAt,
+      dueAt: w.dueAt,
+      dueDate: w.dueDate,
     };
     setBusy(true);
     try {
@@ -287,295 +306,309 @@ export default function TaskDrawer({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label htmlFor="f-cat" className={labelCls}>
-              {t.form.category}
-            </label>
-            <select
-              id="f-cat"
-              className={inputCls}
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-            >
-              <option value="">{t.form.none}</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="f-status" className={labelCls}>
-              {t.form.status}
-            </label>
-            <select
-              id="f-status"
-              className={inputCls}
-              value={status}
-              onChange={(e) => setStatus(e.target.value as Status)}
-            >
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {t.status[s]}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="f-urg" className={labelCls}>
-              {t.form.urgency}
-            </label>
-            <select
-              id="f-urg"
-              className={inputCls}
-              value={urgency}
-              onChange={(e) => setUrgency(Number(e.target.value))}
-            >
-              {LEVELS.map((l) => (
-                <option key={l} value={l}>
-                  {l} · {t.urgency[l]}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="f-imp" className={labelCls}>
-              {t.form.importance}
-            </label>
-            <select
-              id="f-imp"
-              className={inputCls}
-              value={importance}
-              onChange={(e) => setImportance(Number(e.target.value))}
-            >
-              {LEVELS.map((l) => (
-                <option key={l} value={l}>
-                  {l} · {t.importance[l]}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+        <button
+          type="button"
+          aria-pressed={importance >= 3}
+          onClick={() => {
+            setImpTouched(true);
+            setImportance(importance >= 3 ? 2 : 4);
+          }}
+          title={t.form2.importantHint}
+          className={`flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium ${importance >= 3 ? 'border-amber-500 bg-amber-100 text-amber-950' : 'border-slate-300 bg-white hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700'}`}
+        >
+          <span aria-hidden>{importance >= 3 ? '⭐' : '☆'}</span>
+          {t.form2.important}
+        </button>
 
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
-          {t.form.allDay}
-        </label>
+        <section
+          aria-label={t.form2.when}
+          className="space-y-3 rounded-2xl border border-slate-200 p-3 dark:border-slate-700"
+        >
+          <DayPicker
+            label={t.form2.day}
+            value={when.deadlineOn && !when.startTime ? '' : when.day}
+            onChange={(v) => patchWhen({ day: v, ...(v ? {} : { startTime: '' }) })}
+            allowNone
+          />
+          {when.deadlineOn && !when.startTime ? null : (
+            <div className="flex flex-wrap items-end gap-4">
+              <div>
+                <TimeField24
+                  label={t.form2.startTime}
+                  value={when.startTime}
+                  onChange={(v) =>
+                    patchWhen({ startTime: v, ...(v && !when.day ? { day: todayYmd() } : {}) })
+                  }
+                />
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                  {t.form2.startTimeHint}
+                </p>
+              </div>
+            </div>
+          )}
+          {when.deadlineOn && !when.startTime && (
+            <div>
+              <TimeField24
+                label={`${t.form2.startTime}`}
+                value={when.startTime}
+                onChange={(v) => patchWhen({ startTime: v, day: when.day || todayYmd() })}
+              />
+              <p className="mt-1 text-xs text-amber-800 dark:text-amber-200">
+                {t.form2.deadlineNoStart}
+              </p>
+            </div>
+          )}
+          <DurationPicker value={when.duration} onChange={(m) => patchWhen({ duration: m })} />
 
-        {allDay ? (
-          <div>
-            <label htmlFor="f-date" className={labelCls}>
-              {t.form.date}
-            </label>
-            <input
-              id="f-date"
-              type="date"
-              required
-              className={inputCls}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </div>
-        ) : (
+          {!when.deadlineOn ? (
+            <button
+              type="button"
+              onClick={() => patchWhen({ deadlineOn: true, deadlineDate: when.day || todayYmd() })}
+              className="rounded-full border border-dashed border-slate-400 px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-500 dark:hover:bg-slate-800"
+            >
+              {t.form2.addDeadline}
+            </button>
+          ) : (
+            <div className="space-y-2 rounded-xl bg-slate-100 p-2 dark:bg-slate-800">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">⚑ {t.form2.deadline}</span>
+                <button
+                  type="button"
+                  onClick={() => patchWhen({ deadlineOn: false })}
+                  className="rounded-full px-2 py-1 text-xs text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950"
+                >
+                  {t.form2.removeDeadline}
+                </button>
+              </div>
+              <DayPicker
+                label={t.form2.deadline}
+                value={when.deadlineDate}
+                onChange={(v) => patchWhen({ deadlineDate: v })}
+              />
+              <div>
+                <TimeField24
+                  label={t.form2.deadlineTime}
+                  value={when.deadlineTime}
+                  onChange={(v) => patchWhen({ deadlineTime: v })}
+                  emptyLabel="สิ้นวัน"
+                />
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                  {t.form2.deadlineTimeHint}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <p
+            className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-900 dark:bg-brand-950 dark:text-brand-100"
+            aria-live="polite"
+          >
+            <span className="text-xs text-slate-600 dark:text-slate-300">{t.form2.summary}: </span>
+            <strong>{summarizeWhen(when, dayLabel)}</strong>
+          </p>
+        </section>
+
+        <button
+          type="button"
+          aria-expanded={showMore}
+          aria-controls="more-options"
+          onClick={() => setShowMore((v) => !v)}
+          className="flex w-full items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-left text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+        >
+          <span>
+            <strong>{showMore ? t.form2.less : t.form2.more}</strong>
+            {!showMore && (
+              <span className="ml-2 text-xs text-slate-600 dark:text-slate-300">
+                {t.form2.moreHint}
+              </span>
+            )}
+          </span>
+          <span aria-hidden>{showMore ? '▴' : '▾'}</span>
+        </button>
+
+        <div id="more-options" hidden={!showMore} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="f-start" className={labelCls}>
-                {t.form.start}
+              <label htmlFor="f-cat" className={labelCls}>
+                {t.form.category}
               </label>
-              <input
-                id="f-start"
-                type="datetime-local"
+              <select
+                id="f-cat"
                 className={inputCls}
-                value={start}
-                onChange={(e) => setStart(e.target.value)}
-              />
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+              >
+                <option value="">{t.form.none}</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
-            <div>
-              <label htmlFor="f-end" className={labelCls}>
-                {t.form.end}
-              </label>
-              <input
-                id="f-end"
-                type="datetime-local"
-                className={inputCls}
-                value={end}
-                min={start || undefined}
-                onChange={(e) => setEnd(e.target.value)}
-              />
-            </div>
-            <div className="col-span-2">
-              <label htmlFor="f-due" className={labelCls}>
-                {t.form.due}
-              </label>
-              <input
-                id="f-due"
-                type="datetime-local"
-                className={inputCls}
-                value={due}
-                onChange={(e) => setDue(e.target.value)}
-              />
-            </div>
-          </div>
-        )}
-
-        <div>
-          <label htmlFor="f-est" className={labelCls}>
-            {t.form.estimate}
-          </label>
-          <input
-            id="f-est"
-            type="number"
-            min={1}
-            max={1440}
-            className={inputCls}
-            value={estimate}
-            onChange={(e) => setEstimate(e.target.value)}
-          />
-        </div>
-        <div>
-          <label htmlFor="f-tags" className={labelCls}>
-            {t.form.tags}
-          </label>
-          <input
-            id="f-tags"
-            className={inputCls}
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-          />
-        </div>
-        {!isOccurrence && (
-          <fieldset className="space-y-2 rounded border border-slate-200 p-2 dark:border-slate-700">
-            <legend className="px-1 text-xs font-medium text-slate-600 dark:text-slate-300">
-              {t.series.repeat}
-            </legend>
-            <label htmlFor="f-rec" className="sr-only">
-              {t.series.repeat}
-            </label>
-            <select
-              id="f-rec"
-              className={inputCls}
-              value={rec.freq}
-              onChange={(e) => setRec({ ...rec, freq: e.target.value as Freq })}
-            >
-              <option value="NONE">{t.series.none}</option>
-              <option value="DAILY">{t.series.daily}</option>
-              <option value="WEEKLY">{t.series.weekly}</option>
-              <option value="MONTHLY">{t.series.monthly}</option>
-            </select>
-            {rec.freq !== 'NONE' && (
-              <>
-                <div className="flex items-center gap-2 text-sm">
-                  <label htmlFor="f-rec-int">{t.series.every}</label>
-                  <input
-                    id="f-rec-int"
-                    type="number"
-                    min={1}
-                    max={99}
-                    className="w-16 rounded border border-slate-300 bg-white px-2 py-1 dark:border-slate-600 dark:bg-slate-800"
-                    value={rec.interval}
-                    onChange={(e) => setRec({ ...rec, interval: e.target.value })}
-                  />
-                  <span>
-                    {rec.freq === 'DAILY'
-                      ? t.series.unitDay
-                      : rec.freq === 'WEEKLY'
-                        ? t.series.unitWeek
-                        : t.series.unitMonth}
-                  </span>
-                </div>
-                {rec.freq === 'WEEKLY' && (
-                  <div role="group" aria-label={t.series.onDays} className="flex flex-wrap gap-1">
-                    {DAY_ORDER.map((d) => {
-                      const on = rec.days.includes(d) || d === anchorWeekday; // วันของวันเริ่มต้นรวมอยู่เสมอ
-                      return (
-                        <button
-                          key={d}
-                          type="button"
-                          aria-pressed={on}
-                          disabled={d === anchorWeekday}
-                          onClick={() =>
-                            setRec({
-                              ...rec,
-                              days: rec.days.includes(d)
-                                ? rec.days.filter((x) => x !== d)
-                                : [...rec.days, d],
-                            })
-                          }
-                          className={`h-8 w-9 rounded-full border text-xs ${on ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800'}`}
-                        >
-                          {t.series.weekdays[d]}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-                <div>
-                  <label htmlFor="f-rec-until" className={labelCls}>
-                    {t.series.until}
-                  </label>
-                  <input
-                    id="f-rec-until"
-                    type="date"
-                    className={inputCls}
-                    value={rec.until}
-                    min={anchorDate || undefined}
-                    onChange={(e) => setRec({ ...rec, until: e.target.value })}
-                  />
-                </div>
-              </>
+            {task && (
+              <div>
+                <label htmlFor="f-status" className={labelCls}>
+                  {t.form.status}
+                </label>
+                <select
+                  id="f-status"
+                  className={inputCls}
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as Status)}
+                >
+                  {STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {t.status[s]}
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
-          </fieldset>
-        )}
-
-        <Subtasks
-          taskId={taskId}
-          pending={pendingSubs}
-          onPendingChange={setPendingSubs}
-          resolveId={resolveId}
-          onChanged={onAttachmentsChanged}
-        />
-
-        {gcalAvailable && (
-          <div>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={gcalSync}
-                onChange={(e) => setGcalSync(e.target.checked)}
-              />
-              {t.gcal.taskSwitch}
-            </label>
-            <p className="ml-6 text-xs text-slate-500 dark:text-slate-400">
-              {t.gcal.taskSwitchHint}
-              {task?.gcalSyncedAt
-                ? ` · ${t.gcal.lastSynced} ${new Date(task.gcalSyncedAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`
-                : ''}
-            </p>
           </div>
-        )}
+          <div>
+            <label htmlFor="f-tags" className={labelCls}>
+              {t.form.tags}
+            </label>
+            <input
+              id="f-tags"
+              className={inputCls}
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+            />
+          </div>
+          {!isOccurrence && (
+            <fieldset className="space-y-2 rounded border border-slate-200 p-2 dark:border-slate-700">
+              <legend className="px-1 text-xs font-medium text-slate-600 dark:text-slate-300">
+                {t.series.repeat}
+              </legend>
+              <label htmlFor="f-rec" className="sr-only">
+                {t.series.repeat}
+              </label>
+              <select
+                id="f-rec"
+                className={inputCls}
+                value={rec.freq}
+                onChange={(e) => setRec({ ...rec, freq: e.target.value as Freq })}
+              >
+                <option value="NONE">{t.series.none}</option>
+                <option value="DAILY">{t.series.daily}</option>
+                <option value="WEEKLY">{t.series.weekly}</option>
+                <option value="MONTHLY">{t.series.monthly}</option>
+              </select>
+              {rec.freq !== 'NONE' && (
+                <>
+                  <div className="flex items-center gap-2 text-sm">
+                    <label htmlFor="f-rec-int">{t.series.every}</label>
+                    <input
+                      id="f-rec-int"
+                      type="number"
+                      min={1}
+                      max={99}
+                      className="w-16 rounded border border-slate-300 bg-white px-2 py-1 dark:border-slate-600 dark:bg-slate-800"
+                      value={rec.interval}
+                      onChange={(e) => setRec({ ...rec, interval: e.target.value })}
+                    />
+                    <span>
+                      {rec.freq === 'DAILY'
+                        ? t.series.unitDay
+                        : rec.freq === 'WEEKLY'
+                          ? t.series.unitWeek
+                          : t.series.unitMonth}
+                    </span>
+                  </div>
+                  {rec.freq === 'WEEKLY' && (
+                    <div role="group" aria-label={t.series.onDays} className="flex flex-wrap gap-1">
+                      {DAY_ORDER.map((d) => {
+                        const on = rec.days.includes(d) || d === anchorWeekday; // วันของวันเริ่มต้นรวมอยู่เสมอ
+                        return (
+                          <button
+                            key={d}
+                            type="button"
+                            aria-pressed={on}
+                            disabled={d === anchorWeekday}
+                            onClick={() =>
+                              setRec({
+                                ...rec,
+                                days: rec.days.includes(d)
+                                  ? rec.days.filter((x) => x !== d)
+                                  : [...rec.days, d],
+                              })
+                            }
+                            className={`h-8 w-9 rounded-full border text-xs ${on ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800'}`}
+                          >
+                            {t.series.weekdays[d]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div>
+                    <label htmlFor="f-rec-until" className={labelCls}>
+                      {t.series.until}
+                    </label>
+                    <input
+                      id="f-rec-until"
+                      type="date"
+                      className={inputCls}
+                      value={rec.until}
+                      min={anchorDate || undefined}
+                      onChange={(e) => setRec({ ...rec, until: e.target.value })}
+                    />
+                  </div>
+                </>
+              )}
+            </fieldset>
+          )}
 
-        <Attachments
-          taskId={taskId}
-          onResolved={setTaskId}
-          pending={pendingFiles}
-          onPendingChange={setPendingFiles}
-          onChanged={onAttachmentsChanged}
-        />
-
-        <div>
-          <label htmlFor="f-desc" className={labelCls}>
-            {t.form.description}
-          </label>
-          <textarea
-            id="f-desc"
-            rows={4}
-            maxLength={5000}
-            className={inputCls}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+          <Subtasks
+            taskId={taskId}
+            pending={pendingSubs}
+            onPendingChange={setPendingSubs}
+            resolveId={resolveId}
+            onChanged={onAttachmentsChanged}
           />
+
+          {gcalAvailable && (
+            <div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={gcalSync}
+                  onChange={(e) => setGcalSync(e.target.checked)}
+                />
+                {t.gcal.taskSwitch}
+              </label>
+              <p className="ml-6 text-xs text-slate-500 dark:text-slate-400">
+                {t.gcal.taskSwitchHint}
+                {task?.gcalSyncedAt
+                  ? ` · ${t.gcal.lastSynced} ${new Date(task.gcalSyncedAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`
+                  : ''}
+              </p>
+            </div>
+          )}
+
+          <Attachments
+            taskId={taskId}
+            onResolved={setTaskId}
+            pending={pendingFiles}
+            onPendingChange={setPendingFiles}
+            onChanged={onAttachmentsChanged}
+          />
+
+          <div>
+            <label htmlFor="f-desc" className={labelCls}>
+              {t.form.description}
+            </label>
+            <textarea
+              id="f-desc"
+              rows={4}
+              maxLength={5000}
+              className={inputCls}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
         </div>
 
         {error && (
