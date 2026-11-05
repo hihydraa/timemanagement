@@ -307,3 +307,47 @@ describe('parser: รวมหลายส่วน', () => {
     expect(p('จ่ายค่าไฟ 1.50 บาท').time).toBeUndefined();
   });
 });
+
+describe('Quick Add: คำที่พิมพ์ได้โดยไม่ต้องมี !', () => {
+  const NOWQ = new Date('2026-11-04T03:00:00Z'); // พุธ 4 พ.ย. 10:00 ไทย
+  it('"สำคัญ" เป็นคำเดี่ยวท้ายข้อความ = ติ๊กสำคัญ และถูกตัดออกจากชื่อ', () => {
+    const p = parseTask('ส่งรายงาน พรุ่งนี้ 14:00 สำคัญ', NOWQ);
+    expect(p.title).toBe('ส่งรายงาน');
+    expect(p.date).toBe('2026-11-05');
+    expect(p.time).toBe('14:00');
+    expect(p.importance).toBe(3);
+  });
+  it('"สำคัญมาก" / ⭐ นำหน้าหรือท้ายก็ได้; "!สำคัญ" แบบเดิมยังใช้ได้', () => {
+    expect(parseTask('จ่ายค่าไฟ สำคัญมาก', NOWQ)).toMatchObject({
+      title: 'จ่ายค่าไฟ',
+      importance: 4,
+    });
+    expect(parseTask('⭐ โทรหาลูกค้า', NOWQ)).toMatchObject({
+      title: 'โทรหาลูกค้า',
+      importance: 3,
+    });
+    expect(parseTask('โทรหาลูกค้า ⭐', NOWQ)).toMatchObject({
+      title: 'โทรหาลูกค้า',
+      importance: 3,
+    });
+    expect(parseTask('โทรหาลูกค้า !สำคัญ', NOWQ)).toMatchObject({
+      title: 'โทรหาลูกค้า',
+      importance: 3,
+    });
+  });
+  it('คำว่า "สำคัญ" ที่เป็นส่วนของชื่อ หรือเป็นชื่อทั้งหมด ไม่ถูกตัดทิ้ง', () => {
+    expect(parseTask('ประชุมสำคัญ', NOWQ)).toMatchObject({ title: 'ประชุมสำคัญ' });
+    expect(parseTask('ประชุมสำคัญ', NOWQ).importance).toBeUndefined();
+    expect(parseTask('สำคัญ', NOWQ)).toMatchObject({ title: 'สำคัญ' });
+    expect(parseTask('เรื่องสำคัญ ที่ต้องทำ', NOWQ).title).toBe('เรื่องสำคัญ ที่ต้องทำ');
+  });
+  it('"วันหลัง" / "สักวัน" / "ไว้ทีหลัง" = ไม่เร่ง (someday) และถูกตัดออกจากชื่อ', () => {
+    for (const w of ['วันหลัง', 'สักวัน', 'ไว้ทีหลัง']) {
+      const p = parseTask(`จัดโต๊ะทำงาน ${w}`, NOWQ);
+      expect(p.title).toBe('จัดโต๊ะทำงาน');
+      expect(p.someday).toBe(true);
+      expect(p.date).toBeUndefined();
+    }
+    expect(parseTask('จัดโต๊ะ', NOWQ).someday).toBeUndefined();
+  });
+});

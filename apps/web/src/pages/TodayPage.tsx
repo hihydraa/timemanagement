@@ -6,9 +6,12 @@ import ProgressRing from '../components/today/ProgressRing';
 import { CountdownChip, ImportanceChip, UrgencyText } from '../components/TaskChips';
 import Mascot from '../components/Mascot';
 import ReviewCard from '../components/today/ReviewCard';
+import QuickAdd from '../components/QuickAdd';
 import UnscheduledList from '../components/UnscheduledList';
 import { api, ApiClientError } from '../lib/api';
 import { useApp } from '../lib/appContext';
+import { useToast } from '../components/UndoToast';
+import { snoozeRevertPayload, TASKS_CHANGED } from '../lib/undo';
 import { URGENCY_COLORS } from '../lib/colors';
 import { dayLabel } from '../lib/dates';
 import { t } from '../lib/i18n';
@@ -50,6 +53,9 @@ export default function TodayPage() {
   const [drawer, setDrawer] = useState<DrawerInit | null>(null);
   const nowMs = useNowMs();
   const timelineRef = useRef<HTMLElement>(null);
+  const toast = useToast();
+  const quickRef = useRef<HTMLInputElement>(null);
+  const [pending, setPending] = useState<Task[]>([]);
 
   const load = useCallback(() => {
     api
@@ -75,7 +81,8 @@ export default function TodayPage() {
 
   const view = useMemo(() => {
     if (!data) return null;
-    const scheduled = [...data.today, ...data.dueToday, ...data.doneToday];
+    const mine = pending.filter((x) => (x.dueDate ?? x.startAt?.slice(0, 10)) === data.date);
+    const scheduled = [...data.today, ...mine, ...data.dueToday, ...data.doneToday];
     const open = [...data.overdue, ...data.dueToday, ...data.today];
     const load = dayLoad(data.date, data.work, scheduled);
     const ins = buildInsight({
@@ -98,13 +105,19 @@ export default function TodayPage() {
       untimed,
       total: data.today.length + data.dueToday.length + data.doneToday.length,
     };
-  }, [data, now]);
+  }, [data, now, pending]);
 
   const scrollToUnscheduled = () =>
     document.getElementById('unscheduled')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   // ปุ่ม + (FAB) / ลิงก์เก่า /inbox: เปิดฟอร์มเพิ่มงาน หรือเลื่อนไปส่วน "ยังไม่จัดเวลา" หลังข้อมูลโหลด
-  const openNew = useCallback(() => setDrawer({ prefill: { allDay: false } }), []);
+  const openNew = useCallback(() => {
+    const el = quickRef.current;
+    if (el) {
+      el.scrollIntoView({ block: 'center' });
+      el.focus();
+    } else setDrawer({ prefill: { allDay: false } });
+  }, []);
   useEffect(() => {
     try {
       if (sessionStorage.getItem('dobby.openNew') === '1') {
@@ -115,8 +128,24 @@ export default function TodayPage() {
       /* ไม่มี storage */
     }
     window.addEventListener('dobby:new-task', openNew);
-    return () => window.removeEventListener('dobby:new-task', openNew);
-  }, [openNew]);
+    // คีย์ลัด: n = เพิ่มงาน, / = ไปที่ช่องพิมพ์ (ไม่ทำงานตอนกำลังพิมพ์)
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable)) return;
+      if (e.key === 'n' || e.key === '/') {
+        e.preventDefault();
+        openNew();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener(TASKS_CHANGED, load);
+    return () => {
+      window.removeEventListener(TASKS_CHANGED, load);
+      window.removeEventListener('dobby:new-task', openNew);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [openNew, load]);
   const anchor = route.anchor;
   const loaded = !!data;
   useEffect(() => {
@@ -126,16 +155,29 @@ export default function TodayPage() {
     }
   }, [anchor, loaded]);
 
+  const fail = (e: unknown) => setError(e instanceof ApiClientError ? e.message : t.error.generic);
   const complete = (task: Task) =>
     void api
       .completeTask(task.id)
-      .then(load)
-      .catch((e) => setError(e instanceof ApiClientError ? e.message : t.error.generic));
+      .then(() => {
+        load();
+        toast.undo(`${t.toast.done}: ${task.title}`, async () => {
+          await api.updateTask(task.id, { status: task.status === 'done' ? 'todo' : task.status });
+          load();
+        });
+      })
+      .catch(fail);
   const snoozeTomorrow = (task: Task) =>
     void api
       .snoozeTask(task.id, { days: 1 })
-      .then(load)
-      .catch((e) => setError(e instanceof ApiClientError ? e.message : t.error.generic));
+      .then(() => {
+        load();
+        toast.undo(`${t.toast.snoozed}: ${task.title}`, async () => {
+          await api.updateTask(task.id, snoozeRevertPayload(task));
+          load();
+        });
+      })
+      .catch(fail);
   const startFocus = (task: Task) => {
     try {
       sessionStorage.setItem(FOCUS_TASK_KEY, task.id);
@@ -218,11 +260,19 @@ export default function TodayPage() {
         <button
           type="button"
           onClick={() => setDrawer({ prefill: { allDay: false } })}
-          className="rounded-full bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700"
+          className="rounded-full border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
         >
-          + {t.cockpit.addTask}
+          {t.quick.fullForm}
         </button>
       </header>
+
+      <QuickAdd
+        categories={categories}
+        inputRef={quickRef}
+        onPending={(x) => setPending((p) => [...p, x])}
+        onSettled={(id) => setPending((p) => p.filter((x) => x.id !== id))}
+        onCreated={load}
+      />
 
       {error && (
         <p

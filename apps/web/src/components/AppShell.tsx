@@ -12,6 +12,7 @@ import {
 import { useMedia } from '../lib/useMedia';
 import { t } from '../lib/i18n';
 import CelebrateToast from './CelebrateToast';
+import { ToastProvider } from './UndoToast';
 import PageContainer from './PageContainer';
 import Mascot from './Mascot';
 import MiniTimer from './MiniTimer';
@@ -156,113 +157,119 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
 
   return (
     <AppContext.Provider value={ctx}>
-      <div className="flex min-h-screen flex-col">
-        <a
-          href="#main"
-          className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:text-brand-700 focus:shadow dark:focus:bg-slate-900"
-        >
-          {t.skip}
-        </a>
-        <header className="border-b border-slate-200 dark:border-slate-700">
-          <PageContainer className="flex items-center gap-2 pt-2">
-            <h1 className="flex items-center gap-1.5 pb-1 text-lg font-bold text-brand-700 dark:text-brand-300">
-              <img
-                src="/icons/favicon-64.png"
-                alt=""
-                width={32}
-                height={32}
-                className="rounded-lg"
-                decoding="async"
-              />
-              {t.appName}
-            </h1>
-            {/* เมนูหลักเรนเดอร์ชุดเดียวตามขนาดจอ: เดสก์ท็อป = แถบบน, มือถือ = แถบล่าง */}
-            {!narrow ? (
-              <TopTabs view={route.view} warn={!!gcal?.needsReconnect} onGo={(v) => goTo(v)} />
-            ) : (
-              <span className="flex-1" />
+      <ToastProvider>
+        <div className="flex min-h-screen flex-col">
+          <a
+            href="#main"
+            className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:text-brand-700 focus:shadow dark:focus:bg-slate-900"
+          >
+            {t.skip}
+          </a>
+          <header className="border-b border-slate-200 dark:border-slate-700">
+            <PageContainer className="flex items-center gap-2 pt-2">
+              <h1 className="flex items-center gap-1.5 pb-1 text-lg font-bold text-brand-700 dark:text-brand-300">
+                <img
+                  src="/icons/favicon-64.png"
+                  alt=""
+                  width={32}
+                  height={32}
+                  className="rounded-lg"
+                  decoding="async"
+                />
+                {t.appName}
+              </h1>
+              {/* เมนูหลักเรนเดอร์ชุดเดียวตามขนาดจอ: เดสก์ท็อป = แถบบน, มือถือ = แถบล่าง */}
+              {!narrow ? (
+                <TopTabs view={route.view} warn={!!gcal?.needsReconnect} onGo={(v) => goTo(v)} />
+              ) : (
+                <span className="flex-1" />
+              )}
+            </PageContainer>
+          </header>
+
+          <PageContainer className="flex-1">
+            {!online && (
+              <p
+                role="status"
+                className="mt-2 flex items-center gap-3 rounded-lg bg-slate-100 p-2 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              >
+                <Mascot pose="rest" height={44} />
+                <span>
+                  <strong>{t.mascot.offline}</strong> — {t.offlineBanner}
+                </span>
+              </p>
             )}
+
+            {push && push.limitConfigured && (push.nearLimit || push.exhausted) && (
+              <p
+                role="status"
+                className={`mt-2 rounded p-2 text-sm ${push.exhausted ? 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300'}`}
+              >
+                {push.exhausted
+                  ? t.settings.quotaFull
+                  : `${t.settings.quotaBanner} (${push.used}/${push.limit})`}
+              </p>
+            )}
+
+            <main
+              id="main"
+              tabIndex={-1}
+              className={`flex-1 outline-none ${narrow ? 'pb-28' : ''}`}
+            >
+              <Suspense
+                fallback={
+                  <div
+                    role="status"
+                    className="flex flex-col items-center gap-2 p-8 text-slate-600 dark:text-slate-300"
+                  >
+                    <Mascot pose="morning" height={110} bob />
+                    <p>{t.mascot.loading}</p>
+                  </div>
+                }
+              >
+                {route.view === 'today' && <TodayPage />}
+                {route.view === 'plan' && <PlanPage />}
+                {route.view === 'me' && <MePage tab={route.me ?? 'overview'} />}
+                {route.view === 'focus' && <FocusPage />}
+              </Suspense>
+            </main>
           </PageContainer>
-        </header>
 
-        <PageContainer className="flex-1">
-          {!online && (
-            <p
-              role="status"
-              className="mt-2 flex items-center gap-3 rounded-lg bg-slate-100 p-2 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200"
-            >
-              <Mascot pose="rest" height={44} />
-              <span>
-                <strong>{t.mascot.offline}</strong> — {t.offlineBanner}
-              </span>
-            </p>
+          {narrow && (
+            <BottomTabBar
+              view={route.view}
+              warn={!!gcal?.needsReconnect}
+              onGo={(v) => goTo(v)}
+              onNew={newTask}
+            />
           )}
+          {route.view !== 'focus' && <MiniTimer onOpen={() => goTo('focus')} />}
 
-          {push && push.limitConfigured && (push.nearLimit || push.exhausted) && (
-            <p
-              role="status"
-              className={`mt-2 rounded p-2 text-sm ${push.exhausted ? 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300'}`}
-            >
-              {push.exhausted
-                ? t.settings.quotaFull
-                : `${t.settings.quotaBanner} (${push.used}/${push.limit})`}
-            </p>
+          {dialog === 'line' && <LineDialog onClose={() => setDialog(null)} />}
+          {dialog === 'export' && <ExportDialog onClose={() => setDialog(null)} />}
+          {dialog === 'settings' && (
+            <SettingsDialog
+              onClose={() => {
+                setDialog(null);
+                refreshPush();
+              }}
+              onOpenLine={() => setDialog('line')}
+              onSaved={refreshPush}
+            />
           )}
-
-          <main id="main" tabIndex={-1} className={`flex-1 outline-none ${narrow ? 'pb-28' : ''}`}>
-            <Suspense
-              fallback={
-                <div
-                  role="status"
-                  className="flex flex-col items-center gap-2 p-8 text-slate-600 dark:text-slate-300"
-                >
-                  <Mascot pose="morning" height={110} bob />
-                  <p>{t.mascot.loading}</p>
-                </div>
-              }
-            >
-              {route.view === 'today' && <TodayPage />}
-              {route.view === 'plan' && <PlanPage />}
-              {route.view === 'me' && <MePage tab={route.me ?? 'overview'} />}
-              {route.view === 'focus' && <FocusPage />}
-            </Suspense>
-          </main>
-        </PageContainer>
-
-        {narrow && (
-          <BottomTabBar
-            view={route.view}
-            warn={!!gcal?.needsReconnect}
-            onGo={(v) => goTo(v)}
-            onNew={newTask}
-          />
-        )}
-        {route.view !== 'focus' && <MiniTimer onOpen={() => goTo('focus')} />}
-
-        {dialog === 'line' && <LineDialog onClose={() => setDialog(null)} />}
-        {dialog === 'export' && <ExportDialog onClose={() => setDialog(null)} />}
-        {dialog === 'settings' && (
-          <SettingsDialog
-            onClose={() => {
-              setDialog(null);
-              refreshPush();
-            }}
-            onOpenLine={() => setDialog('line')}
-            onSaved={refreshPush}
-          />
-        )}
-        {dialog === 'gcal' && (
-          <GcalDialog
-            notice={gcalNotice}
-            onClose={() => {
-              setDialog(null);
-              setGcalNotice(null);
-            }}
-            onStatusChange={setGcal}
-          />
-        )}
-      </div>
-      <CelebrateToast />
+          {dialog === 'gcal' && (
+            <GcalDialog
+              notice={gcalNotice}
+              onClose={() => {
+                setDialog(null);
+                setGcalNotice(null);
+              }}
+              onStatusChange={setGcal}
+            />
+          )}
+        </div>
+        <CelebrateToast />
+      </ToastProvider>
     </AppContext.Provider>
   );
 }

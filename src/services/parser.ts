@@ -31,6 +31,8 @@ export interface ParsedTask {
   confidence: number;
   /** ผู้ใช้ใส่ !ok เพื่อข้ามการถามยืนยัน */
   confirmed: boolean;
+  /** พิมพ์คำว่า "วันหลัง/สักวัน/ไว้ทีหลัง" = ไม่เร่ง ไม่ต้องกำหนดวัน (Quick Add ส่งไป "ยังไม่จัดเวลา") */
+  someday?: boolean;
   /** มีค่าเมื่อ parse ได้วัน/เวลาที่ผ่านมาแล้ว — ให้ถามยืนยันแทนการเดา */
   needsConfirm?: {
     reason: 'past_date' | 'past_time';
@@ -336,6 +338,10 @@ export function parseTask(input: string, now: Date, categories: ParseCategory[] 
     if (!tags.includes(m[1]!)) tags.push(m[1]!);
   });
 
+  // ไม่เร่ง: วันหลัง / สักวัน / ไว้ทีหลัง
+  let someday = false;
+  take(/วันหลัง|สักวัน|ไว้ทีหลัง/g, () => (someday = true));
+
   // ทำซ้ำ (weekday ก่อน "ทุกวัน")
   let recurrence: string | undefined;
   let recurDay: number | undefined;
@@ -437,6 +443,12 @@ export function parseTask(input: string, now: Date, categories: ParseCategory[] 
     title = title.replace(TRAIL_RE, '').replace(LEAD_RE, '').trim();
   }
   title = title.replace(/^[\s,:;\-–—]+|[\s,:;\-–—]+$/g, '').trim();
+  // "สำคัญ"/⭐ ที่อยู่เป็นคำเดี่ยว ๆ ท้ายหรือหน้าข้อความ = ติ๊กสำคัญ (ไม่ต้องใส่ !) ; คำว่า "สำคัญ" ที่เป็นส่วนของชื่อ เช่น "ประชุมสำคัญ" ไม่ถูกตัด
+  const imp = /(?:^|\s)(สำคัญมาก|สำคัญ|⭐)$|^(⭐)\s+/u.exec(title);
+  if (imp && title.replace(imp[0], '').trim()) {
+    if (importance === undefined) importance = imp[1] === 'สำคัญมาก' ? 4 : 3;
+    title = title.replace(imp[0], ' ').replace(/\s+/g, ' ').trim();
+  }
 
   const hasWhen = !!(date || due || recurrence);
   const confidence = Math.min(
@@ -460,6 +472,7 @@ export function parseTask(input: string, now: Date, categories: ParseCategory[] 
     confidence,
     confirmed,
     needsConfirm,
+    ...(someday ? { someday } : {}),
   };
 }
 

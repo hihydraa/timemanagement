@@ -15,7 +15,6 @@ export default function UnscheduledList({ onChanged }: { onChanged?: () => void 
   const { categories, gcalAvailable } = useApp();
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [drawer, setDrawer] = useState<Task | null>(null);
-  const [title, setTitle] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -44,14 +43,6 @@ export default function UnscheduledList({ onChanged }: { onChanged?: () => void 
   const schedule = (task: Task, dueDate: string) =>
     run(() => api.updateTask(task.id, { allDay: true, dueDate }));
 
-  async function quickAdd(e: React.FormEvent) {
-    e.preventDefault();
-    const v = title.trim();
-    if (!v) return;
-    await run(() => api.createTask({ title: v }));
-    setTitle('');
-  }
-
   const btn =
     'rounded border border-slate-300 px-2.5 py-1.5 text-xs hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800';
 
@@ -61,27 +52,6 @@ export default function UnscheduledList({ onChanged }: { onChanged?: () => void 
         <h2 className="text-lg font-semibold">{t.today2.unscheduled}</h2>
         <p className="text-sm text-slate-600 dark:text-slate-300">{t.today2.unscheduledHint}</p>
       </div>
-
-      <form onSubmit={quickAdd} className="flex gap-2">
-        <label htmlFor="inbox-add" className="sr-only">
-          {t.inbox.quickAdd}
-        </label>
-        <input
-          id="inbox-add"
-          value={title}
-          maxLength={200}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder={t.inbox.quickAdd}
-          className="min-w-0 flex-1 rounded border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800"
-        />
-        <button
-          type="submit"
-          disabled={busy || !title.trim()}
-          className="rounded bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
-        >
-          +<span className="sr-only">{t.nav.newTask}</span>
-        </button>
-      </form>
 
       {error && (
         <p

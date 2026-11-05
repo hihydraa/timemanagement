@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { canUndoDelete, notifyTasksChanged, restorePayload } from '../lib/undo';
+import { useToast } from './UndoToast';
 import { api, ApiClientError } from '../lib/api';
 import Attachments from './Attachments';
 import Subtasks from './Subtasks';
@@ -98,6 +100,7 @@ export default function TaskDrawer({
   onOpenTask,
 }: Props) {
   const { task, prefill } = init;
+  const toast = useToast();
   const [title, setTitle] = useState(task?.title ?? '');
   const [description, setDescription] = useState(task?.description ?? '');
   const [categoryId, setCategoryId] = useState(task?.categoryId ?? '');
@@ -234,10 +237,16 @@ export default function TaskDrawer({
         ? t.series.confirmDeleteSeries
         : t.series.confirmDeleteOne
       : t.form.confirmDelete;
-    if (!window.confirm(msg)) return;
+    const undoable = scope === 'one' && !inSeries && canUndoDelete(task);
+    if (!undoable && !window.confirm(msg)) return;
     setBusy(true);
     try {
       await api.deleteTask(taskId ?? task.id, scope);
+      if (undoable)
+        toast.undo(`${t.toast.deleted}: ${task.title}`, async () => {
+          await api.createTask(restorePayload(task));
+          notifyTasksChanged();
+        });
       onSaved();
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : t.error.generic);

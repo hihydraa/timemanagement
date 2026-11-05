@@ -3,7 +3,8 @@ import TaskDrawer from '../components/TaskDrawer';
 import TaskMeta from '../components/TaskMeta';
 import { api, ApiClientError } from '../lib/api';
 import { useApp } from '../lib/appContext';
-import { dayLabel } from '../lib/dates';
+import { dayLabel, todayYmd } from '../lib/dates';
+import { movedPatch } from '../lib/matrix';
 import { URGENCY_COLORS } from '../lib/colors';
 import { t } from '../lib/i18n';
 import type { Task } from '../lib/types';
@@ -57,15 +58,6 @@ const QUADS: Quad[] = [
 const quadOf = (x: Task) =>
   QUADS.find((q) => q.urgent === isUrgent(x) && q.important === isImportant(x))!;
 
-/** ค่าใหม่เมื่อย้ายช่อง: เปลี่ยนเฉพาะเมื่อข้ามเส้นแบ่ง (ค่าเดิมที่อยู่ฝั่งเดียวกันคงไว้) */
-export function movedLevels(
-  x: Pick<Task, 'urgency' | 'importance'>,
-  to: { urgent: boolean; important: boolean },
-) {
-  const lvl = (cur: number, high: boolean) => (high ? (cur >= 3 ? cur : 3) : cur <= 2 ? cur : 2);
-  return { urgency: lvl(x.urgency, to.urgent), importance: lvl(x.importance, to.important) };
-}
-
 export default function MatrixPage() {
   const { categories, gcalAvailable } = useApp();
   const [tasks, setTasks] = useState<Task[] | null>(null);
@@ -84,12 +76,12 @@ export default function MatrixPage() {
 
   async function move(task: Task, quad: Quad) {
     if (quadOf(task).id === quad.id) return;
-    const next = movedLevels(task, quad);
+    const next = movedPatch(task, quad, todayYmd());
     const prev = tasks;
     setError('');
-    setTasks((cur) => cur?.map((x) => (x.id === task.id ? { ...x, ...next } : x)) ?? cur); // เปลี่ยนในหน้าทันที
     try {
       await api.updateTask(task.id, next);
+      load(); // ความเร่งด่วนคำนวณที่เซิร์ฟเวอร์ → โหลดใหม่เพื่อให้การ์ดอยู่ช่องที่ถูกต้อง
       setNotice(`${t.matrix.moved}: ${task.title} → ${quad.title}`);
     } catch (e) {
       setTasks(prev);

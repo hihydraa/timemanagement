@@ -540,11 +540,12 @@ async function card(ctx: Ctx, t: TaskDto, heading: string): Promise<LineMessage>
 }
 
 /** แปลงผล parse เป็น input ของงาน */
-export function toTaskInput(p: ParsedTask) {
+export function toTaskInput(p: ParsedTask, today: string = bangkokDate(now())) {
   const base = {
     title: p.title,
-    urgency: p.urgency ?? 2,
-    importance: p.importance ?? 2,
+    // ความเร่งด่วนคำนวณจากวันที่เสมอ (ไม่เก็บค่าที่พิมพ์); !สำคัญ = ติ๊กสำคัญ (importance 4)
+    urgency: 2,
+    importance: (p.importance ?? 2) >= 3 ? 4 : 2,
     categoryId: p.categoryId ?? null,
     tags: p.tags,
     estimateMinutes: p.estimateMinutes ?? null,
@@ -573,6 +574,8 @@ export function toTaskInput(p: ParsedTask) {
     return taskInput.parse({ ...base, allDay: false, dueAt: iso(p.due.date, p.due.time) });
   if (p.due) return taskInput.parse({ ...base, allDay: true, dueDate: p.due.date });
   if (p.date) return taskInput.parse({ ...base, allDay: true, dueDate: p.date });
+  // เข้ากันได้กับ !ด่วน / !u3 / !u4: ตีความเป็น "เดดไลน์วันนี้" (เมื่อยังไม่ระบุวัน) แทนการตั้งค่าเร่งด่วนตรง ๆ
+  if ((p.urgency ?? 0) >= 3) return taskInput.parse({ ...base, allDay: true, dueDate: today });
   return taskInput.parse(base); // ไม่มีวัน/เวลา → Inbox
 }
 
