@@ -588,3 +588,9 @@ export function planDropAt(task: PlanTask, startIso: string): SchedulePatch {
     dueDate: null,
   };
 }
+
+/** ช่วงที่แสดงการ์ดสรุปสัปดาห์บนหน้า "วันนี้": ตั้งแต่วันศุกร์ 15:00 ถึงวันอาทิตย์ (เวลาไทย) */
+export function isReviewWindow(now: Date): boolean {
+  const day = isoWeekday(bkYmd(now.toISOString()));
+  return day >= 6 || (day === 5 && bkMinute(now.toISOString()) >= 15 * 60);
+}

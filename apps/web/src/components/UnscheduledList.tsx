@@ -1,15 +1,17 @@
-import { useCallback, useEffect, useState } from 'react';
-import TaskDrawer from '../components/TaskDrawer';
-import TaskMeta from '../components/TaskMeta';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import TaskMeta from './TaskMeta';
 import { api, ApiClientError } from '../lib/api';
 import { useApp } from '../lib/appContext';
 import { nextMonday, todayYmd, tomorrow } from '../lib/dates';
-import EmptyState from '../components/EmptyState';
+import EmptyState from './EmptyState';
 import { URGENCY_COLORS } from '../lib/colors';
 import { t } from '../lib/i18n';
 import type { Task } from '../lib/types';
 
-export default function InboxPage() {
+// ฟอร์มงานโหลดเมื่อเปิดใช้ครั้งแรกเท่านั้น (ไม่อยู่ใน chunk ของหน้า "วันนี้")
+const TaskDrawer = lazy(() => import('./TaskDrawer'));
+
+export default function UnscheduledList({ onChanged }: { onChanged?: () => void }) {
   const { categories, gcalAvailable } = useApp();
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [drawer, setDrawer] = useState<Task | null>(null);
@@ -22,7 +24,8 @@ export default function InboxPage() {
       .inbox()
       .then(setTasks)
       .catch(() => setError(t.error.loadFailed));
-  }, []);
+    onChanged?.();
+  }, [onChanged]);
   useEffect(load, [load]);
 
   async function run(fn: () => Promise<unknown>) {
@@ -53,8 +56,11 @@ export default function InboxPage() {
     'rounded border border-slate-300 px-2.5 py-1.5 text-xs hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800';
 
   return (
-    <main className="space-y-4 py-3">
-      <h2 className="text-lg font-semibold">{t.inbox.title}</h2>
+    <section id="unscheduled" aria-label={t.today2.unscheduled} className="scroll-mt-4 space-y-3">
+      <div>
+        <h2 className="text-lg font-semibold">{t.today2.unscheduled}</h2>
+        <p className="text-sm text-slate-600 dark:text-slate-300">{t.today2.unscheduledHint}</p>
+      </div>
 
       <form onSubmit={quickAdd} className="flex gap-2">
         <label htmlFor="inbox-add" className="sr-only">
@@ -152,20 +158,22 @@ export default function InboxPage() {
       </ul>
 
       {drawer && (
-        <TaskDrawer
-          key={drawer.id}
-          init={{ task: drawer }}
-          categories={categories}
-          gcalAvailable={gcalAvailable}
-          onOpenTask={setDrawer}
-          onClose={() => setDrawer(null)}
-          onSaved={() => {
-            setDrawer(null);
-            load();
-          }}
-          onAttachmentsChanged={load}
-        />
+        <Suspense fallback={null}>
+          <TaskDrawer
+            key={drawer.id}
+            init={{ task: drawer }}
+            categories={categories}
+            gcalAvailable={gcalAvailable}
+            onOpenTask={setDrawer}
+            onClose={() => setDrawer(null)}
+            onSaved={() => {
+              setDrawer(null);
+              load();
+            }}
+            onAttachmentsChanged={load}
+          />
+        </Suspense>
       )}
-    </main>
+    </section>
   );
 }

@@ -460,3 +460,24 @@ describe('สัปดาห์และการจัดงานเข้า�
     expect(planDropAt(mk(), at('13:00')).endAt).toBe(at('13:30'));
   });
 });
+
+import { isReviewWindow } from '../apps/web/src/lib/planner';
+
+describe('การ์ดสรุปสัปดาห์: ช่วงเวลาที่แสดง (ศุกร์ 15:00 → อาทิตย์ เวลาไทย)', () => {
+  const t = (d: string, hm: string) => new Date(`${d}T${hm}:00+07:00`);
+  it('พฤหัสไม่แสดง, ศุกร์ก่อน 15:00 ไม่แสดง, ศุกร์ 15:00 เป็นต้นไปแสดง', () => {
+    expect(isReviewWindow(t('2026-11-05', '23:59'))).toBe(false); // พฤหัส
+    expect(isReviewWindow(t('2026-11-06', '14:59'))).toBe(false); // ศุกร์
+    expect(isReviewWindow(t('2026-11-06', '15:00'))).toBe(true);
+    expect(isReviewWindow(t('2026-11-06', '23:59'))).toBe(true);
+  });
+  it('เสาร์–อาทิตย์แสดงทั้งวัน; จันทร์ 00:00 ไม่แสดง', () => {
+    expect(isReviewWindow(t('2026-11-07', '00:00'))).toBe(true);
+    expect(isReviewWindow(t('2026-11-08', '23:59'))).toBe(true);
+    expect(isReviewWindow(t('2026-11-09', '00:00'))).toBe(false);
+  });
+  it('ใช้เวลาไทยไม่ใช่ UTC: ศุกร์ 22:00 UTC = เสาร์ 05:00 ไทย (ยังแสดง); พฤหัส 17:30 UTC = ศุกร์ 00:30 ไทย (ยังไม่แสดง)', () => {
+    expect(isReviewWindow(new Date('2026-11-06T22:00:00Z'))).toBe(true);
+    expect(isReviewWindow(new Date('2026-11-05T17:30:00Z'))).toBe(false);
+  });
+});

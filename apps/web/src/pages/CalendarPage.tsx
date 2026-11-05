@@ -30,6 +30,7 @@ import { useApp } from '../lib/appContext';
 import { eventColors } from '../lib/colors';
 import CalToolbar, { type CalMode } from '../components/calendar/CalToolbar';
 import TaskTray from '../components/calendar/TaskTray';
+import MatrixPage from './MatrixPage';
 import WeekCards, { type DropSource } from '../components/calendar/WeekCards';
 import MiniCalendar from '../components/MiniCalendar';
 import Popover from '../components/Popover';
@@ -46,6 +47,8 @@ import {
   type WorkHours,
 } from '../lib/planner';
 import { SIDEBAR_DEFAULT, sortSections } from '../lib/sidebar';
+import { resolveRoute } from '../lib/route';
+import { useMedia } from '../lib/useMedia';
 import {
   addMinutesWall,
   calDateToIso,
@@ -67,25 +70,16 @@ const LOCALES = [thLocale];
 const BUTTON_TEXT = { list: t.nav.listView };
 const VIEW_KEY = 'dobby.calView';
 const loadViewMode = (): CalMode => {
+  // ลิงก์เก่า /matrix → #/plan/matrix เปิดมุมมอง Matrix
+  if (resolveRoute(window.location).route.plan === 'matrix') return 'matrix';
   try {
     const v = localStorage.getItem(VIEW_KEY);
-    if (v === 'cards' || v === 'grid' || v === 'month' || v === 'list') return v;
+    if (v === 'cards' || v === 'grid' || v === 'month' || v === 'list' || v === 'matrix') return v;
   } catch {
     /* ไม่มี storage ก็ใช้ค่าเริ่มต้น */
   }
   return 'cards';
 };
-
-function useMedia(query: string) {
-  const [m, setM] = useState(() => window.matchMedia(query).matches);
-  useEffect(() => {
-    const mq = window.matchMedia(query);
-    const fn = () => setM(mq.matches);
-    mq.addEventListener('change', fn);
-    return () => mq.removeEventListener('change', fn);
-  }, [query]);
-  return m;
-}
 
 const MODE_KEY = 'dobby.colorMode';
 const loadMode = (): ColorMode => {
@@ -317,7 +311,7 @@ function useIsMobile() {
 }
 
 export default function CalendarPage() {
-  const { user, categories, reloadCategories, gcalAvailable } = useApp();
+  const { user, categories, reloadCategories, gcalAvailable, route } = useApp();
   const calRef = useRef<FullCalendar>(null);
   const isMobile = useIsMobile();
   const [viewDate, setViewDate] = useState(todayYmd);
@@ -504,7 +498,14 @@ export default function CalendarPage() {
       });
   };
 
+  // ลิงก์ #/plan/matrix (หรือเส้นทางเก่า /matrix) ขณะอยู่หน้าแผนอยู่แล้ว: สลับเป็นมุมมอง Matrix
+  useEffect(() => {
+    if (route.plan === 'matrix') setViewModeState('matrix');
+  }, [route]);
+
   const setViewMode = (m: CalMode) => {
+    if (window.location.hash.startsWith('#/plan/matrix'))
+      window.history.replaceState(null, '', '/#/plan');
     initialDate.current = viewDate;
     setViewModeState(m);
     try {
@@ -705,14 +706,16 @@ export default function CalendarPage() {
 
       <div className="pt-3">
         <CalToolbar
-          title={viewMode === 'cards' ? weekTitle : calTitle}
+          title={
+            viewMode === 'matrix' ? t.cal.matrixTitle : viewMode === 'cards' ? weekTitle : calTitle
+          }
           mode={viewMode}
           onMode={setViewMode}
           onPrev={() => step(-1)}
           onNext={() => step(1)}
           onToday={() => step(0)}
           trayCount={trayCount}
-          onTray={() => setTrayOpen(true)}
+          onTray={viewMode === 'matrix' ? undefined : () => setTrayOpen(true)}
         />
       </div>
 
@@ -759,8 +762,10 @@ export default function CalendarPage() {
           </aside>
         )}
 
-        <main className="min-w-0">
-          {viewMode === 'cards' ? (
+        <div className="min-w-0">
+          {viewMode === 'matrix' ? (
+            <MatrixPage />
+          ) : viewMode === 'cards' ? (
             <WeekCards
               weekStart={mondayOf(viewDate)}
               tasks={filtered}
@@ -779,9 +784,9 @@ export default function CalendarPage() {
           ) : (
             calendar
           )}
-        </main>
+        </div>
 
-        {!isNarrow && (
+        {!isNarrow && viewMode !== 'matrix' && (
           <TaskTray
             reloadKey={trayKey}
             dragMode={dragMode}
@@ -796,7 +801,7 @@ export default function CalendarPage() {
         )}
       </div>
 
-      {isNarrow && (
+      {isNarrow && viewMode !== 'matrix' && (
         <TaskTray
           reloadKey={trayKey}
           dragMode="none"

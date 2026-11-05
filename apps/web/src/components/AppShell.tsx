@@ -1,10 +1,21 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api';
-import { AppContext, type AppCtx, type View } from '../lib/appContext';
+import { AppContext, type AppCtx } from '../lib/appContext';
+import {
+  resolveRoute,
+  routeToHash,
+  type MeTab,
+  type Resolved,
+  type Route,
+  type View,
+} from '../lib/route';
+import { useMedia } from '../lib/useMedia';
 import { t } from '../lib/i18n';
 import CelebrateToast from './CelebrateToast';
 import PageContainer from './PageContainer';
 import Mascot from './Mascot';
+import MiniTimer from './MiniTimer';
+import { BottomTabBar, TopTabs } from './nav/MainNav';
 import type { Category, GcalStatus, PushStatus, User } from '../lib/types';
 import { useOnline } from '../lib/pwa';
 import ExportDialog from './ExportDialog';
@@ -13,43 +24,57 @@ import LineDialog from './LineDialog';
 import SettingsDialog from './SettingsDialog';
 
 const TodayPage = lazy(() => import('../pages/TodayPage'));
-const CalendarPage = lazy(() => import('../pages/CalendarPage'));
+const PlanPage = lazy(() => import('../pages/CalendarPage'));
 const FocusPage = lazy(() => import('../pages/FocusPage'));
-const InboxPage = lazy(() => import('../pages/InboxPage'));
-const MatrixPage = lazy(() => import('../pages/MatrixPage'));
-const ReviewPage = lazy(() => import('../pages/ReviewPage'));
-const StatsPage = lazy(() => import('../pages/StatsPage'));
+const MePage = lazy(() => import('../pages/MePage'));
 
-const VIEWS: View[] = ['today', 'calendar', 'inbox', 'matrix', 'focus', 'review', 'stats'];
-const viewFromHash = (): View => {
-  const h = window.location.hash.replace(/^#\/?/, '');
-  if ((VIEWS as string[]).includes(h)) return h as View;
-  // ลิงก์ "แก้ไข" จาก LINE (/?task=<id>) เปิดฟอร์มงานในหน้าปฏิทิน
-  if (!h && new URLSearchParams(window.location.search).has('task')) return 'calendar';
-  return 'today';
-};
+/** อ่านเส้นทางปัจจุบัน และแปลงเส้นทางเก่า (/inbox /calendar /matrix /review /stats) เป็นแบบมาตรฐานโดยไม่ทำให้ลิงก์เดิมพัง */
+const readRoute = (): Resolved => resolveRoute(window.location);
 
 export default function AppShell({ user, onLogout }: { user: User; onLogout: () => void }) {
-  const [view, setView] = useState<View>(viewFromHash);
+  const [route, setRoute] = useState<Route>(() => readRoute().route);
+  const narrow = useMedia('(max-width: 767px)');
   const [categories, setCategories] = useState<Category[]>([]);
   const [gcal, setGcal] = useState<GcalStatus | null>(null);
   const [push, setPush] = useState<PushStatus | null>(null);
   const [dialog, setDialog] = useState<'line' | 'settings' | 'gcal' | 'export' | null>(null);
   const [gcalNotice, setGcalNotice] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
   const online = useOnline();
 
-  // แท็บเก็บใน URL hash → ปุ่มย้อนกลับของเบราว์เซอร์ใช้ได้ และแชร์ลิงก์ได้
+  // เส้นทางเก็บใน URL (hash) → ปุ่มย้อนกลับใช้ได้ แชร์ลิงก์ได้; เส้นทางเก่าถูก redirect เป็นแบบมาตรฐานทันที
   useEffect(() => {
-    const fn = () => setView(viewFromHash());
-    window.addEventListener('hashchange', fn);
-    return () => window.removeEventListener('hashchange', fn);
+    const sync = () => {
+      const r = readRoute();
+      if (r.redirected)
+        window.history.replaceState(null, '', `/${window.location.search}${r.hash}`);
+      setRoute(r.route);
+    };
+    sync();
+    window.addEventListener('hashchange', sync);
+    return () => window.removeEventListener('hashchange', sync);
   }, []);
-  const goTo = useCallback((v: View) => {
-    window.location.hash = v === 'today' ? '' : `/${v}`;
-    setView(v);
+  const goTo = useCallback((v: View, sub?: string) => {
+    const next: Route =
+      v === 'today'
+        ? { view: v, anchor: sub }
+        : v === 'plan'
+          ? { view: v, plan: sub === 'matrix' ? 'matrix' : undefined }
+          : v === 'me'
+            ? { view: v, me: (sub as MeTab | undefined) ?? 'overview' }
+            : { view: v };
+    const h = routeToHash(next);
+    if (window.location.hash === h || (h === '' && !window.location.hash)) setRoute(next);
+    else window.location.hash = h === '' ? '/today' : h; // hashchange จะอัปเดต route ให้
   }, []);
+  const newTask = useCallback(() => {
+    try {
+      sessionStorage.setItem('dobby.openNew', '1');
+    } catch {
+      /* ไม่มี storage ก็ข้าม */
+    }
+    goTo('today');
+    window.dispatchEvent(new Event('dobby:new-task'));
+  }, [goTo]);
 
   const reloadCategories = useCallback(() => {
     api
@@ -110,45 +135,23 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
     setDialog('gcal');
   }, []);
 
-  // ปิดเมนูเมื่อคลิกข้างนอก / กด Esc
-  useEffect(() => {
-    if (!menuOpen) return;
-    const onDoc = (e: MouseEvent) =>
-      !menuRef.current?.contains(e.target as Node) && setMenuOpen(false);
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenuOpen(false);
-    document.addEventListener('mousedown', onDoc);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDoc);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [menuOpen]);
-
   const ctx: AppCtx = useMemo(
     () => ({
       user,
       categories,
       reloadCategories,
       gcalAvailable: !!gcal?.connected && gcal.syncEnabled,
+      gcalStatus: gcal,
+      route,
       openLine: () => setDialog('line'),
       openSettings: () => setDialog('settings'),
+      openGcal: () => setDialog('gcal'),
+      openExport: () => setDialog('export'),
+      logout: () => void api.logout().finally(onLogout),
       goTo,
+      newTask,
     }),
-    [user, categories, reloadCategories, gcal, goTo],
-  );
-
-  const menuItem = (label: React.ReactNode, onClick: () => void) => (
-    <button
-      type="button"
-      role="menuitem"
-      onClick={() => {
-        setMenuOpen(false);
-        onClick();
-      }}
-      className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
-    >
-      {label}
-    </button>
+    [user, categories, reloadCategories, gcal, route, goTo, newTask, onLogout],
   );
 
   return (
@@ -173,61 +176,12 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
               />
               {t.appName}
             </h1>
-            <nav aria-label="หน้าหลัก" className="-mb-px flex flex-1 gap-1 overflow-x-auto">
-              {VIEWS.map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  aria-current={view === v ? 'page' : undefined}
-                  onClick={() => goTo(v)}
-                  className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm ${view === v ? 'border-brand-600 font-semibold text-brand-700 dark:text-brand-300' : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'}`}
-                >
-                  {t.views[v]}
-                </button>
-              ))}
-            </nav>
-            <div ref={menuRef} className="relative pb-1">
-              <button
-                type="button"
-                aria-haspopup="menu"
-                aria-expanded={menuOpen}
-                onClick={() => setMenuOpen((o) => !o)}
-                className="rounded px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                {t.menu.label} ▾
-                {gcal?.needsReconnect && (
-                  <span aria-label="ต้องเชื่อมใหม่" className="ml-1 text-amber-600">
-                    ⚠
-                  </span>
-                )}
-              </button>
-              {menuOpen && (
-                <div
-                  role="menu"
-                  className="absolute right-0 z-40 mt-1 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
-                >
-                  {menuItem(t.settings.button, () => setDialog('settings'))}
-                  {menuItem(
-                    <>
-                      {t.gcal.button}
-                      {gcal?.connected && gcal.syncEnabled && (
-                        <span aria-label="เชื่อมอยู่" className="ml-1 text-green-600">
-                          ●
-                        </span>
-                      )}
-                    </>,
-                    () => setDialog('gcal'),
-                  )}
-                  {menuItem(t.line.button, () => setDialog('line'))}
-                  {menuItem(t.menu.export, () => setDialog('export'))}
-                  <div className="my-1 border-t border-slate-200 dark:border-slate-700" />
-                  {menuItem(
-                    `${t.nav.logout} (${user.email})`,
-                    () => void api.logout().finally(onLogout),
-                  )}
-                </div>
-              )}
-            </div>
+            {/* เมนูหลักเรนเดอร์ชุดเดียวตามขนาดจอ: เดสก์ท็อป = แถบบน, มือถือ = แถบล่าง */}
+            {!narrow ? (
+              <TopTabs view={route.view} warn={!!gcal?.needsReconnect} onGo={(v) => goTo(v)} />
+            ) : (
+              <span className="flex-1" />
+            )}
           </PageContainer>
         </header>
 
@@ -255,7 +209,7 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
             </p>
           )}
 
-          <div id="main" tabIndex={-1} className="flex-1 outline-none">
+          <main id="main" tabIndex={-1} className={`flex-1 outline-none ${narrow ? 'pb-28' : ''}`}>
             <Suspense
               fallback={
                 <div
@@ -267,16 +221,23 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
                 </div>
               }
             >
-              {view === 'today' && <TodayPage />}
-              {view === 'calendar' && <CalendarPage />}
-              {view === 'inbox' && <InboxPage />}
-              {view === 'matrix' && <MatrixPage />}
-              {view === 'focus' && <FocusPage />}
-              {view === 'review' && <ReviewPage />}
-              {view === 'stats' && <StatsPage />}
+              {route.view === 'today' && <TodayPage />}
+              {route.view === 'plan' && <PlanPage />}
+              {route.view === 'me' && <MePage tab={route.me ?? 'overview'} />}
+              {route.view === 'focus' && <FocusPage />}
             </Suspense>
-          </div>
+          </main>
         </PageContainer>
+
+        {narrow && (
+          <BottomTabBar
+            view={route.view}
+            warn={!!gcal?.needsReconnect}
+            onGo={(v) => goTo(v)}
+            onNew={newTask}
+          />
+        )}
+        {route.view !== 'focus' && <MiniTimer onOpen={() => goTo('focus')} />}
 
         {dialog === 'line' && <LineDialog onClose={() => setDialog(null)} />}
         {dialog === 'export' && <ExportDialog onClose={() => setDialog(null)} />}

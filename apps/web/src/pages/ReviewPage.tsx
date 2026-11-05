@@ -97,7 +97,7 @@ export default function ReviewPage() {
   );
 
   return (
-    <main className="space-y-4 py-3">
+    <div className="space-y-4 py-3">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="mr-auto text-lg font-semibold">{t.review.title}</h2>
         <div
@@ -239,6 +239,6 @@ export default function ReviewPage() {
           </section>
         </>
       )}
-    </main>
+    </div>
   );
 }

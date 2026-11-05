@@ -20,7 +20,7 @@
     }
   ],
   "shortcuts": [
-    { "name": "Inbox", "url": "/#/inbox" },
-    { "name": "โฟกัส", "url": "/#/focus" }
+    { "name": "ยังไม่จัดเวลา", "url": "/#/today/unscheduled" },
+    { "name": "แผน", "url": "/#/plan" }
   ]
 }

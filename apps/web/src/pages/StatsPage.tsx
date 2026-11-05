@@ -140,7 +140,7 @@ export default function StatsPage() {
   const useFocus = (d?.focusMinutes ?? 0) > 0; // มีเวลาโฟกัสก็แบ่งตามเวลา ไม่งั้นแบ่งตามจำนวนงาน
 
   return (
-    <main className="space-y-4 py-3">
+    <div className="space-y-4 py-3">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="mr-auto text-lg font-semibold">{t.stats.title}</h2>
         <div
@@ -279,6 +279,6 @@ export default function StatsPage() {
           </section>
         </>
       )}
-    </main>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 import { t } from '../../lib/i18n';
 
-export type CalMode = 'cards' | 'grid' | 'month' | 'list';
-export const CAL_MODES: CalMode[] = ['cards', 'grid', 'month', 'list'];
+export type CalMode = 'cards' | 'grid' | 'month' | 'list' | 'matrix';
+export const CAL_MODES: CalMode[] = ['cards', 'grid', 'month', 'list', 'matrix'];
 
 /** แถบเครื่องมือเดียวของปฏิทินทุกมุมมอง: เลื่อนช่วง / วันนี้ / ชื่อช่วง / สลับมุมมอง (การ์ด · ตารางเวลา · เดือน · รายการ) */
 export default function CalToolbar({
@@ -13,6 +13,7 @@ export default function CalToolbar({
   onToday,
   trayCount,
   onTray,
+  modes = CAL_MODES,
 }: {
   title: string;
   mode: CalMode;
@@ -23,11 +24,13 @@ export default function CalToolbar({
   /** มือถือ: ปุ่มเปิดถาดงาน (bottom sheet) */
   trayCount?: number;
   onTray?: () => void;
+  /** มุมมองที่แสดงให้เลือก (โหมดง่ายซ่อน Matrix — Step ถัดไป) */
+  modes?: CalMode[];
 }) {
   const round = 'h-9 w-9 rounded-full bg-brand-600 text-white hover:bg-brand-700';
   return (
     <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="ปฏิทิน">
-      <div className="flex gap-1">
+      <div className={`flex gap-1 ${mode === 'matrix' ? 'hidden' : ''}`}>
         <button type="button" aria-label={t.cal.prev} onClick={onPrev} className={round}>
           ‹
         </button>
@@ -38,6 +41,7 @@ export default function CalToolbar({
       <button
         type="button"
         onClick={onToday}
+        hidden={mode === 'matrix'}
         className="h-9 rounded-full border border-slate-300 px-4 text-sm font-medium hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
       >
         {t.cal.today}
@@ -62,7 +66,7 @@ export default function CalToolbar({
         aria-label={t.cal.viewMode}
         className="flex overflow-hidden rounded-full border border-slate-300 text-sm dark:border-slate-600"
       >
-        {CAL_MODES.map((m) => (
+        {modes.map((m) => (
           <button
             key={m}
             type="button"

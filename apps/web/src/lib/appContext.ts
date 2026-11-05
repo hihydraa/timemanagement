@@ -1,7 +1,8 @@
 import { createContext, useContext } from 'react';
-import type { Category, User } from './types';
+import type { Route, View } from './route';
+import type { Category, GcalStatus, User } from './types';
 
-export type View = 'today' | 'calendar' | 'inbox' | 'matrix' | 'focus' | 'review' | 'stats';
+export type { View } from './route';
 
 export interface AppCtx {
   user: User;
@@ -9,9 +10,17 @@ export interface AppCtx {
   reloadCategories: () => void;
   /** เชื่อม Google Calendar และเปิดซิงก์อยู่ → ฟอร์มงานแสดงสวิตช์ซิงก์ */
   gcalAvailable: boolean;
+  gcalStatus: GcalStatus | null;
+  route: Route;
   openLine: () => void;
   openSettings: () => void;
-  goTo: (v: View) => void;
+  openGcal: () => void;
+  openExport: () => void;
+  logout: () => void;
+  /** ไปแท็บ/จุดที่ต้องการ: today(+anchor) / plan(+'matrix') / me(+แท็บย่อย) / focus */
+  goTo: (v: View, sub?: string) => void;
+  /** ปุ่ม + (FAB): ไปหน้า "วันนี้" แล้วเปิดการเพิ่มงาน */
+  newTask: () => void;
 }
 
 export const AppContext = createContext<AppCtx | null>(null);

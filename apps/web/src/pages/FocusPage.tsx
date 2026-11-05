@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useApp } from '../lib/appContext';
 import { api, ApiClientError } from '../lib/api';
 import { formatMinutes } from '../lib/dates';
 import Mascot from '../components/Mascot';
@@ -78,6 +79,7 @@ function notify(body: string) {
 }
 
 export default function FocusPage() {
+  const { goTo } = useApp();
   const saved = store.get<{ focusMin: number; breakMin: number }>(SET_KEY);
   const [focusMin, setFocusMin] = useState(saved?.focusMin ?? 25);
   const [breakMin, setBreakMin] = useState(saved?.breakMin ?? 5);
@@ -263,11 +265,18 @@ export default function FocusPage() {
     : t.focus.phaseIdle;
 
   return (
-    <main className="grid gap-4 py-3 md:grid-cols-[1fr_16rem]">
+    <div className="grid gap-4 py-3 md:grid-cols-[1fr_16rem]">
       <section aria-label={t.focus.title} className="space-y-4">
         <div className="flex items-end gap-3">
           <Mascot pose={run?.phase === 'break' ? 'rest' : run ? 'plan' : 'morning'} height={96} />
           <h2 className="pb-2 text-lg font-semibold">{t.focus.title}</h2>
+          <button
+            type="button"
+            onClick={() => goTo('today')}
+            className="mb-2 ml-auto rounded-full border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
+          >
+            ← {t.nav.backToday}
+          </button>
         </div>
 
         <div className="flex flex-col items-center gap-3">
@@ -452,6 +461,6 @@ export default function FocusPage() {
           ))}
         </ul>
       </aside>
-    </main>
+    </div>
   );
 }

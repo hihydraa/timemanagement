@@ -5,6 +5,8 @@ import NextUpCard from '../components/today/NextUpCard';
 import ProgressRing from '../components/today/ProgressRing';
 import { CountdownChip, ImportanceChip, UrgencyText } from '../components/TaskChips';
 import Mascot from '../components/Mascot';
+import ReviewCard from '../components/today/ReviewCard';
+import UnscheduledList from '../components/UnscheduledList';
 import { api, ApiClientError } from '../lib/api';
 import { useApp } from '../lib/appContext';
 import { URGENCY_COLORS } from '../lib/colors';
@@ -41,7 +43,7 @@ const greeting = (hour: number) =>
 
 /** หน้า "วันนี้" (Today Cockpit): ตอบว่า "ตอนนี้ควรทำอะไร" และ "วันนี้ทำไหวไหม" */
 export default function TodayPage() {
-  const { categories, gcalAvailable, goTo } = useApp();
+  const { categories, gcalAvailable, goTo, route } = useApp();
   const [data, setData] = useState<CockpitData | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -98,6 +100,32 @@ export default function TodayPage() {
     };
   }, [data, now]);
 
+  const scrollToUnscheduled = () =>
+    document.getElementById('unscheduled')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // ปุ่ม + (FAB) / ลิงก์เก่า /inbox: เปิดฟอร์มเพิ่มงาน หรือเลื่อนไปส่วน "ยังไม่จัดเวลา" หลังข้อมูลโหลด
+  const openNew = useCallback(() => setDrawer({ prefill: { allDay: false } }), []);
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem('dobby.openNew') === '1') {
+        sessionStorage.removeItem('dobby.openNew');
+        openNew();
+      }
+    } catch {
+      /* ไม่มี storage */
+    }
+    window.addEventListener('dobby:new-task', openNew);
+    return () => window.removeEventListener('dobby:new-task', openNew);
+  }, [openNew]);
+  const anchor = route.anchor;
+  const loaded = !!data;
+  useEffect(() => {
+    if (anchor === 'unscheduled' && loaded) {
+      const id = window.setTimeout(scrollToUnscheduled, 150);
+      return () => window.clearTimeout(id);
+    }
+  }, [anchor, loaded]);
+
   const complete = (task: Task) =>
     void api
       .completeTask(task.id)
@@ -152,7 +180,7 @@ export default function TodayPage() {
 
   if (error && !data)
     return (
-      <main className="flex flex-col items-center gap-3 py-10 text-center">
+      <div className="flex flex-col items-center gap-3 py-10 text-center">
         <Mascot pose="idea" height={120} />
         <p role="alert">{error}</p>
         <button
@@ -162,11 +190,11 @@ export default function TodayPage() {
         >
           {t.cockpit.retry}
         </button>
-      </main>
+      </div>
     );
   if (!data || !view)
     return (
-      <main className="space-y-3 py-3" aria-busy="true" role="status" aria-label={t.loading}>
+      <div className="space-y-3 py-3" aria-busy="true" role="status" aria-label={t.loading}>
         {[88, 150, 110, 220].map((h) => (
           <div
             key={h}
@@ -174,12 +202,12 @@ export default function TodayPage() {
             style={{ height: h }}
           />
         ))}
-      </main>
+      </div>
     );
 
   const openDeadlines = data.dueToday;
   return (
-    <main className="space-y-3 py-3">
+    <div className="space-y-3 py-3">
       <header className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <p className="text-sm text-slate-600 dark:text-slate-300">{greeting(hour)}</p>
@@ -213,13 +241,15 @@ export default function TodayPage() {
         </p>
       )}
 
+      <ReviewCard now={now} onOpen={() => goTo('me', 'review')} />
+
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="space-y-3">
           <InsightBar
             insight={view.ins}
             load={view.load}
             onAdd={() => setDrawer({ prefill: { allDay: false } })}
-            onInbox={() => goTo('inbox')}
+            onInbox={scrollToUnscheduled}
             onTimeline={() =>
               timelineRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
             }
@@ -232,7 +262,7 @@ export default function TodayPage() {
             onSnooze={snoozeTomorrow}
             onOpen={(x) => setDrawer({ task: x })}
             onAdd={() => setDrawer({ prefill: { allDay: false } })}
-            onInbox={() => goTo('inbox')}
+            onInbox={scrollToUnscheduled}
           />
           <ProgressRing
             done={data.doneToday.length}
@@ -374,6 +404,8 @@ export default function TodayPage() {
         </section>
       </div>
 
+      <UnscheduledList onChanged={load} />
+
       {drawer && (
         <Suspense fallback={null}>
           <TaskDrawer
@@ -392,6 +424,6 @@ export default function TodayPage() {
           />
         </Suspense>
       )}
-    </main>
+    </div>
   );
 }
