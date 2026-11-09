@@ -6,6 +6,12 @@ import ProgressRing from '../components/today/ProgressRing';
 import { CountdownChip, ImportanceChip, UrgencyText } from '../components/TaskChips';
 import Mascot from '../components/Mascot';
 import ReviewCard from '../components/today/ReviewCard';
+import AttentionPanel from '../components/dashboard/AttentionPanel';
+import ImportantList from '../components/dashboard/ImportantList';
+import KpiStrip from '../components/dashboard/KpiStrip';
+import MonthDeadlines from '../components/dashboard/MonthDeadlines';
+import PerformancePanel from '../components/dashboard/PerformancePanel';
+import WorkloadStrip from '../components/dashboard/WorkloadStrip';
 import QuickAdd from '../components/QuickAdd';
 import UnscheduledList from '../components/UnscheduledList';
 import { api, ApiClientError } from '../lib/api';
@@ -25,6 +31,7 @@ import {
   minToHm,
 } from '../lib/planner';
 import type { DrawerInit } from '../components/TaskDrawer';
+import type { DashboardData } from '../lib/dashboard';
 import type { CockpitData, Task } from '../lib/types';
 
 const TaskDrawer = lazy(() => import('../components/TaskDrawer'));
@@ -56,8 +63,13 @@ export default function TodayPage() {
   const toast = useToast();
   const quickRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<Task[]>([]);
+  const [month, setMonth] = useState<string | undefined>(undefined);
+  const [dash, setDash] = useState<DashboardData | null>(null);
+  const [dashKey, setDashKey] = useState(0);
+  const [dashError, setDashError] = useState(false);
 
   const load = useCallback(() => {
+    setDashKey((k) => k + 1); // ภาพรวมเดือนโหลดใหม่พร้อมกับข้อมูลวันนี้
     api
       .cockpit()
       .then((d) => {
@@ -77,6 +89,21 @@ export default function TodayPage() {
       document.removeEventListener('visibilitychange', onVis);
     };
   }, [load]);
+
+  useEffect(() => {
+    let alive = true;
+    api
+      .dashboard(month)
+      .then((d) => {
+        if (!alive) return;
+        setDash(d);
+        setDashError(false);
+      })
+      .catch(() => alive && setDashError(true));
+    return () => {
+      alive = false;
+    };
+  }, [month, dashKey]);
 
   const now = useMemo(() => new Date(nowMs), [nowMs]);
 
@@ -108,6 +135,12 @@ export default function TodayPage() {
     };
   }, [data, now, pending]);
 
+  const scrollToOverdue = () =>
+    document
+      .getElementById('overdue-section')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const schedule = (task: Task, ymd: string) =>
+    void api.updateTask(task.id, { allDay: true, dueDate: ymd }).then(load).catch(fail);
   const scrollToUnscheduled = () =>
     document.getElementById('unscheduled')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -264,7 +297,7 @@ export default function TodayPage() {
         <div>
           <p className="text-sm text-slate-600 dark:text-slate-300">{greeting(hour)}</p>
           <h2 className="text-2xl font-bold text-brand-800 dark:text-brand-200">
-            {t.cockpit.title} · {dayLabel(data.date)}
+            {t.dash.title} · {dayLabel(data.date)}
           </h2>
         </div>
         <button
@@ -302,6 +335,16 @@ export default function TodayPage() {
       )}
 
       <ReviewCard now={now} onOpen={() => goTo('me', 'review')} />
+
+      {dash ? (
+        <KpiStrip d={dash} onOverdue={scrollToOverdue} />
+      ) : (
+        // จองที่ไว้ก่อน กันเนื้อหาเลื่อนลงเมื่อข้อมูลมาถึง (CLS)
+        <div
+          aria-hidden
+          className="h-[104px] rounded-2xl bg-slate-200/60 dark:bg-slate-700/40 lg:h-[96px]"
+        />
+      )}
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="space-y-3">
@@ -367,8 +410,9 @@ export default function TodayPage() {
 
           {data.overdue.length > 0 && (
             <section
+              id="overdue-section"
               aria-label={t.cockpit.overdue}
-              className={`${card} border-red-200 dark:border-red-900`}
+              className={`${card} scroll-mt-4 border-red-200 dark:border-red-900`}
             >
               <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-red-700 dark:text-red-300">
                 <Mascot pose="deadline" height={32} />
@@ -463,6 +507,51 @@ export default function TodayPage() {
           )}
         </section>
       </div>
+
+      <h2 className="pt-2 text-lg font-bold text-brand-800 dark:text-brand-200">
+        {t.dash.overview}
+      </h2>
+      {dashError && !dash && (
+        <p
+          role="alert"
+          className="rounded bg-red-50 p-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300"
+        >
+          {t.dash.loadFailed}
+        </p>
+      )}
+      {!dash && !dashError && (
+        <div aria-hidden className="h-[640px] rounded-2xl bg-slate-200/60 dark:bg-slate-700/40" />
+      )}
+      {dash && (
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <div className="space-y-3">
+            <MonthDeadlines
+              d={dash}
+              month={dash.month}
+              onMonth={setMonth}
+              onOpen={(x) => setDrawer({ task: x })}
+              onComplete={complete}
+            />
+          </div>
+          <div className="space-y-3">
+            <ImportantList
+              tasks={dash.important}
+              today={dash.today}
+              onOpen={(x) => setDrawer({ task: x })}
+              onComplete={complete}
+              onSchedule={schedule}
+            />
+            <WorkloadStrip d={dash} onGo={() => goTo('plan')} />
+            <AttentionPanel
+              d={dash}
+              onOpen={(x) => setDrawer({ task: x })}
+              onOverdue={scrollToOverdue}
+              onUnscheduled={scrollToUnscheduled}
+            />
+            <PerformancePanel d={dash} />
+          </div>
+        </div>
+      )}
 
       <UnscheduledList onChanged={load} />
 

@@ -1,5 +1,6 @@
 import { clearApiCache } from './pwa';
 import { t } from './i18n';
+import type { DashboardData } from './dashboard';
 import type {
   Alarm,
   Attachment,
@@ -86,6 +87,8 @@ export const api = {
       `/api/tasks?from=${encodeURIComponent(fromIso)}&to=${encodeURIComponent(toIso)}`,
     ).then((r) => r.tasks),
   today: () => req<TodayData>('GET', '/api/today'),
+  dashboard: (month?: string) =>
+    req<DashboardData>('GET', `/api/dashboard${month ? `?month=${month}` : ''}`),
   cockpit: () => req<CockpitData>('GET', '/api/cockpit'),
   rescheduleOverdue: (to: 'today' | 'tomorrow') =>
     req<{ movedIds: string[]; hasMore: boolean }>('POST', '/api/today/reschedule-overdue', { to }),

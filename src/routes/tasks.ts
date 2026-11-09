@@ -23,6 +23,7 @@ import {
   withTags,
 } from '../services/tasks';
 import { trackTaskCreated } from '../services/analytics';
+import { dashboard } from '../services/dashboard';
 import { cockpit, rescheduleOverdue, trayTasks } from '../services/cockpit';
 import type { AppEnv } from '../types';
 
@@ -122,6 +123,9 @@ r.get('/inbox', async (c) => c.json({ tasks: await inboxTasks(getDb(c.env.DB), c
 r.get('/today', async (c) => c.json(await todayBuckets(getDb(c.env.DB), c.get('userId'), now())));
 
 /** ข้อมูลทั้งหมดของหน้า "วันนี้" ในคำขอเดียว */
+r.get('/dashboard', async (c) =>
+  c.json(await dashboard(getDb(c.env.DB), c.get('userId'), now(), c.req.query('month'))),
+);
 r.get('/cockpit', async (c) => c.json(await cockpit(getDb(c.env.DB), c.get('userId'), now())));
 
 /** ถาดงาน: งานที่ยังไม่ได้จัดเวลา (inbox + งานมีวัน/เดดไลน์แต่ไม่มีเวลาเริ่ม) */
