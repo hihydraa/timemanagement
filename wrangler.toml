@@ -19,9 +19,9 @@ migrations_dir = "migrations"
 binding = "FILES"
 bucket_name = "dobby-files"
 
-# Cron ทำงานเป็น UTC — ใช้ */5 ตัวเดียว แล้วเช็คเวลาของผู้ใช้ในโค้ด (ดู docs/DECISIONS.md)
+# Cron ทำงานเป็น UTC — ทุกนาที: นาฬิกาปลุก; โค้ดข้ามเหลือทุก 5 นาทีสำหรับแจ้งเตือนอื่น (ดู docs/DECISIONS.md)
 [triggers]
-crons = ["*/5 * * * *"]
+crons = ["* * * * *"]
 
 [vars]
 APP_BASE_URL = "http://localhost:5173"

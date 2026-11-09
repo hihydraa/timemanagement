@@ -229,3 +229,13 @@ export interface OverviewStats {
   streak: { current: number; best: number };
   totals: { open: number; doneThisWeek: number };
 }
+
+export interface Alarm {
+  id: string;
+  label: string;
+  time: string;
+  days: number[];
+  onceDate: string | null;
+  enabled: boolean;
+  ringing: boolean;
+}

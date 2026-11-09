@@ -21,6 +21,7 @@ export default function MePage({ tab }: { tab: MeTab }) {
     openGcal,
     openExport,
     openImport,
+    openAlarms,
     openOnboarding,
     logout,
   } = useApp();
@@ -125,6 +126,19 @@ export default function MePage({ tab }: { tab: MeTab }) {
                   <strong className="block">{t.me.export}</strong>
                   <span className="text-sm text-slate-600 dark:text-slate-300">
                     {t.me.exportHint}
+                  </span>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button type="button" onClick={openAlarms} className={row}>
+                <span aria-hidden className="text-2xl">
+                  ⏰
+                </span>
+                <span>
+                  <strong className="block">{t.alarms.menu}</strong>
+                  <span className="text-sm text-slate-600 dark:text-slate-300">
+                    {t.alarms.menuHint}
                   </span>
                 </span>
               </button>

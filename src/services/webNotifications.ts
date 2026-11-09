@@ -40,6 +40,8 @@ export interface WebMessage {
   url: string;
   /** แจ้งเตือนชนิดเดียวกันแทนที่กัน ไม่ซ้อนกัน */
   tag: string;
+  /** นาฬิกาปลุก: ให้ service worker แสดงแบบเร่งด่วน + ปุ่มหยุด/เลื่อน */
+  alarmId?: string;
 }
 
 type Sub = typeof pushSubscriptions.$inferSelect;
@@ -51,13 +53,14 @@ export async function sendToUser(
   subs: Sub[],
   msg: WebMessage,
   fetchFn?: typeof fetch,
+  opts: { urgency?: 'normal' | 'high'; ttl?: number } = {},
 ): Promise<{ ok: number; tried: number }> {
   const vapid = vapidFrom(env);
   if (!vapid) return { ok: 0, tried: 0 };
   let ok = 0;
   const gone: string[] = [];
   for (const s of subs) {
-    const r = await sendWebPush(s, msg, vapid, vapidSubject(env), { fetchFn });
+    const r = await sendWebPush(s, msg, vapid, vapidSubject(env), { fetchFn, ...opts });
     if (r.ok) ok++;
     else if (r.gone) gone.push(s.id);
   }

@@ -234,3 +234,25 @@ export const pushSubscriptions = sqliteTable(
     index('push_subscriptions_user_idx').on(t.userId),
   ],
 );
+
+/** นาฬิกาปลุก: ส่ง Web Push เร่งด่วนตรงเวลา (เช็คทุกนาที) ซ้ำจนกดหยุด/เลื่อน */
+export const alarms = sqliteTable(
+  'alarms',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    label: text('label').notNull().default(''),
+    /** HH:mm เวลาไทย */
+    time: text('time').notNull(),
+    /** วันที่ปลุก: เลข ISO 1=จันทร์…7=อาทิตย์ คั่นด้วย comma ('' + once_date = ครั้งเดียว) */
+    days: text('days').notNull().default(''),
+    onceDate: text('once_date'),
+    enabled: integer('enabled').notNull().default(1),
+    lastFiredDate: text('last_fired_date'),
+    /** จำนวนครั้งที่ดังไปแล้วในรอบนี้ (0 = เงียบ) และเวลาที่จะดังซ้ำ */
+    ringCount: integer('ring_count').notNull().default(0),
+    nextRingAt: text('next_ring_at'),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [index('alarms_user_idx').on(t.userId), index('alarms_time_idx').on(t.enabled, t.time)],
+);

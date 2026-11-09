@@ -22,6 +22,7 @@ export interface AppCtx {
   openGcal: () => void;
   openExport: () => void;
   openImport: () => void;
+  openAlarms: () => void;
   /** เปิดตัวช่วยตั้งค่าเริ่มต้น (onboarding) อีกครั้ง */
   openOnboarding: () => void;
   logout: () => void;

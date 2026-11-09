@@ -21,6 +21,7 @@ import subtasksRoutes from './routes/subtasks';
 import accountRoutes from './routes/account';
 import importRoutes from './routes/importTasks';
 import pushRoutes from './routes/push';
+import alarmRoutes from './routes/alarms';
 import tasksRoutes from './routes/tasks';
 import type { AppEnv } from './types';
 import { nowIso } from './lib/time';
@@ -106,6 +107,7 @@ api.get('/me', async (c) => {
 api.route('/', accountRoutes);
 api.route('/', importRoutes);
 api.route('/', pushRoutes);
+api.route('/', alarmRoutes);
 api.route('/', tasksRoutes);
 api.route('/', categoriesRoutes);
 api.route('/', attachmentsRoutes);

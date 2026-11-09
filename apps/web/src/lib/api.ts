@@ -1,6 +1,7 @@
 import { clearApiCache } from './pwa';
 import { t } from './i18n';
 import type {
+  Alarm,
   Attachment,
   Category,
   FocusSession,
@@ -157,6 +158,14 @@ export const api = {
   ) => req<SettingsView>('PATCH', '/api/settings', p),
   importTasks: (tasks: unknown[]) =>
     req<{ imported: number; skipped: number }>('POST', '/api/import/tasks', { tasks }),
+  listAlarms: () => req<{ alarms: Alarm[] }>('GET', '/api/alarms').then((r) => r.alarms),
+  createAlarm: (p: { time: string; label: string; days: number[] }) =>
+    req<{ alarm: Alarm }>('POST', '/api/alarms', p).then((r) => r.alarm),
+  patchAlarm: (
+    id: string,
+    p: Partial<{ time: string; label: string; days: number[]; enabled: boolean }>,
+  ) => req<{ alarm: Alarm }>('PATCH', `/api/alarms/${id}`, p).then((r) => r.alarm),
+  deleteAlarm: (id: string) => req<{ ok: boolean }>('DELETE', `/api/alarms/${id}`),
   pushConfig: () =>
     req<{ configured: boolean; publicKey: string | null; devices: number }>(
       'GET',

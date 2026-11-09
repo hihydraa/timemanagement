@@ -4,7 +4,7 @@
  *  - ไม่แคช: คำสั่งเขียน (POST/PATCH/DELETE), /auth, /webhook, ไฟล์แนบ, ไฟล์ export, คำตอบที่ไม่สำเร็จ
  *  - แคชข้อมูลส่วนตัว (dobby-api-*) ถูกล้างเมื่อออกจากระบบ (ดู apps/web/src/lib/pwa.ts)
  */
-const VERSION = 'v2';
+const VERSION = 'v3';
 const STATIC = `dobby-static-${VERSION}`;
 const API = `dobby-api-${VERSION}`;
 const SHELL = [
@@ -165,21 +165,54 @@ self.addEventListener('push', (e) => {
     d = { body: e.data ? e.data.text() : '' };
   }
   const url = typeof d.url === 'string' && d.url.startsWith('/') ? d.url : '/';
-  e.waitUntil(
-    self.registration.showNotification(String(d.title || 'Dobby'), {
-      body: String(d.body || ''),
-      tag: typeof d.tag === 'string' ? d.tag : undefined,
-      icon: '/icons/icon-192.png',
-      badge: '/icons/favicon-64.png',
-      lang: 'th',
-      data: { url },
-    }),
-  );
+  const alarmId =
+    typeof d.alarmId === 'string' && /^[0-9a-f-]{36}$/.test(d.alarmId) ? d.alarmId : null;
+  const opts = {
+    body: String(d.body || ''),
+    tag: typeof d.tag === 'string' ? d.tag : undefined,
+    icon: '/icons/icon-192.png',
+    badge: '/icons/favicon-64.png',
+    lang: 'th',
+    data: { url, alarmId },
+  };
+  if (alarmId) {
+    // นาฬิกาปลุก: ค้างบนหน้าจอจนกดหยุด/เลื่อน, สั่น, ดังซ้ำแม้ tag เดิม
+    Object.assign(opts, {
+      requireInteraction: true,
+      renotify: true,
+      vibrate: [400, 150, 400, 150, 400],
+      actions: [
+        { action: 'stop', title: 'หยุด' },
+        { action: 'snooze', title: 'เลื่อน 5 นาที' },
+      ],
+    });
+  }
+  e.waitUntil(self.registration.showNotification(String(d.title || 'Dobby'), opts));
 });
 
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
-  const url = (e.notification.data && e.notification.data.url) || '/';
+  const data = e.notification.data || {};
+  // ปุ่มบนการแจ้งเตือนของนาฬิกาปลุก: หยุด / เลื่อน — เรียก API ตรง ๆ (cookie ของ session ส่งไปด้วย)
+  if (data.alarmId && (e.action === 'stop' || e.action === 'snooze')) {
+    e.waitUntil(
+      fetch(`/api/alarms/${data.alarmId}/${e.action}`, {
+        method: 'POST',
+        credentials: 'same-origin',
+      }).catch(() => undefined),
+    );
+    return;
+  }
+  if (data.alarmId) {
+    // กดตัวการแจ้งเตือน = หยุดเสียง แล้วเปิดแอป
+    e.waitUntil(
+      fetch(`/api/alarms/${data.alarmId}/stop`, {
+        method: 'POST',
+        credentials: 'same-origin',
+      }).catch(() => undefined),
+    );
+  }
+  const url = data.url || '/';
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
       for (const c of list) {

@@ -21,6 +21,7 @@ import { BottomTabBar, TopTabs } from './nav/MainNav';
 import type { Category, GcalStatus, PushStatus, User } from '../lib/types';
 import { disablePush } from '../lib/webPush';
 import { useOnline } from '../lib/pwa';
+import AlarmsDialog from './AlarmsDialog';
 import ImportDialog from './ImportDialog';
 import ExportDialog from './ExportDialog';
 import GcalDialog from './GcalDialog';
@@ -41,9 +42,9 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
   const [categories, setCategories] = useState<Category[]>([]);
   const [gcal, setGcal] = useState<GcalStatus | null>(null);
   const [push, setPush] = useState<PushStatus | null>(null);
-  const [dialog, setDialog] = useState<'line' | 'settings' | 'gcal' | 'export' | 'import' | null>(
-    null,
-  );
+  const [dialog, setDialog] = useState<
+    'line' | 'settings' | 'gcal' | 'export' | 'import' | 'alarms' | null
+  >(null);
   const [gcalNotice, setGcalNotice] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const online = useOnline();
   // โหมดหน้าจอ: แคชต่อบัญชีใน localStorage กันหน้ากระพริบ แล้วใช้ค่าจริงจากเซิร์ฟเวอร์
@@ -193,6 +194,7 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
       openGcal: () => setDialog('gcal'),
       openExport: () => setDialog('export'),
       openImport: () => setDialog('import'),
+      openAlarms: () => setDialog('alarms'),
       openOnboarding: () => setShowOnboarding(true),
       logout: () => {
         // อุปกรณ์นี้ไม่ควรได้รับแจ้งเตือนของบัญชีเดิมหลังออกจากระบบ
@@ -305,6 +307,7 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
             />
           )}
           {dialog === 'line' && <LineDialog onClose={() => setDialog(null)} />}
+          {dialog === 'alarms' && <AlarmsDialog onClose={() => setDialog(null)} />}
           {dialog === 'import' && <ImportDialog onClose={() => setDialog(null)} />}
           {dialog === 'export' && <ExportDialog onClose={() => setDialog(null)} />}
           {dialog === 'settings' && (
