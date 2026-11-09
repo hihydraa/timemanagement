@@ -157,6 +157,16 @@ export const api = {
   ) => req<SettingsView>('PATCH', '/api/settings', p),
   importTasks: (tasks: unknown[]) =>
     req<{ imported: number; skipped: number }>('POST', '/api/import/tasks', { tasks }),
+  pushConfig: () =>
+    req<{ configured: boolean; publicKey: string | null; devices: number }>(
+      'GET',
+      '/api/push/config',
+    ),
+  pushSubscribe: (sub: { endpoint: string; keys: { p256dh: string; auth: string } }) =>
+    req<{ ok: boolean }>('POST', '/api/push/subscribe', sub),
+  pushUnsubscribe: (endpoint: string) =>
+    req<{ ok: boolean }>('DELETE', '/api/push/subscribe', { endpoint }),
+  pushTest: () => req<{ ok: number; tried: number }>('POST', '/api/push/test'),
   trackEvent: (name: 'morning_plan_opened') =>
     req<{ ok: boolean }>('POST', '/api/events', { name }).catch(() => undefined),
   pushStatus: () => req<PushStatus>('GET', '/api/notifications/status'),

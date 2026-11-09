@@ -71,6 +71,13 @@
       "when": 1793960957039,
       "tag": "0009_notify_defaults",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1794201149947,
+      "tag": "0010_huge_jean_grey",
+      "breakpoints": true
     }
   ]
 }

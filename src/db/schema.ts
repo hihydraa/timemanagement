@@ -150,7 +150,7 @@ export const reminders = sqliteTable(
     taskId: text('task_id').notNull(),
     remindAt: text('remind_at').notNull(),
     sentAt: text('sent_at'),
-    kind: text('kind', { enum: ['before', 'due', 'overdue'] }).notNull(),
+    kind: text('kind', { enum: ['before', 'due', 'overdue', 'web_before'] }).notNull(),
   },
   (t) => [index('reminders_sent_remind_idx').on(t.sentAt, t.remindAt)],
 );
@@ -217,3 +217,20 @@ export const rateLimits = sqliteTable('rate_limits', {
   count: integer('count').notNull().default(0),
   expiresAt: text('expires_at').notNull(),
 });
+
+/** อุปกรณ์/เบราว์เซอร์ที่สมัครรับแจ้งเตือนในเว็บ (Web Push) */
+export const pushSubscriptions = sqliteTable(
+  'push_subscriptions',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    endpoint: text('endpoint').notNull(),
+    p256dh: text('p256dh').notNull(),
+    auth: text('auth').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('push_subscriptions_endpoint_idx').on(t.endpoint),
+    index('push_subscriptions_user_idx').on(t.userId),
+  ],
+);

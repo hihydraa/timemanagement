@@ -21,6 +21,9 @@ export interface Env {
   /** อีเมลติดต่อผู้ดูแลระบบ แสดงในหน้านโยบายความเป็นส่วนตัว */
   CONTACT_EMAIL?: string;
   PUSH_MONTHLY_LIMIT: string;
+  /** กุญแจ VAPID สำหรับแจ้งเตือนในเว็บ (สร้างด้วย scripts/gen-vapid.mjs; ไม่ตั้ง = ปิดฟีเจอร์) */
+  VAPID_PUBLIC_KEY?: string;
+  VAPID_PRIVATE_KEY?: string;
   MAX_UPLOAD_MB: string;
   USER_STORAGE_QUOTA_MB: string;
   /** เฉพาะ dev/test: ชี้ LINE API ไปที่ mock (ค่าเริ่มต้น https://api.line.me / https://api-data.line.me) */

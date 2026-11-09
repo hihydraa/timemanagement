@@ -3,6 +3,7 @@ import { api, ApiClientError } from '../lib/api';
 import { t } from '../lib/i18n';
 import DeleteAccount from './DeleteAccount';
 import TimeField24 from './form/TimeField24';
+import WebPushSettings from './WebPushSettings';
 import ModeSwitch from './ModeSwitch';
 import type { NotificationSettings, PushStatus, WorkSettings } from '../lib/types';
 
@@ -312,6 +313,7 @@ export default function SettingsDialog({ onClose, onOpenLine, onSaved }: Props) 
           )}
         </div>
       </form>
+      <WebPushSettings />
       <section className="space-y-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
         <ModeSwitch />
         <label className="flex items-start gap-2 text-sm">

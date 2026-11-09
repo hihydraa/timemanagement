@@ -12,3 +12,7 @@ MAX_UPLOAD_MB=10
 USER_STORAGE_QUOTA_MB=500
 # เปิดเฉพาะ local เพื่อ login ด้วย /auth/dev-login?email=... โดยไม่ใช้ Google (ห้ามตั้งใน production)
 # DEV_LOGIN=1
+
+# แจ้งเตือนในเว็บ (Web Push): สร้างด้วย `node scripts/gen-vapid.mjs` (ไม่ตั้ง = ปิดฟีเจอร์)
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=

@@ -3,6 +3,7 @@ import { getDb } from './db/client';
 import { now } from './lib/time';
 import { purgeRateLimits } from './lib/rateLimit';
 import { runNotifications } from './services/notifications';
+import { runWebNotifications } from './services/webNotifications';
 import type { Env } from './types';
 
 export default {
@@ -17,6 +18,14 @@ export default {
       runNotifications(env).then(
         (r) => console.log('notifications run', JSON.stringify(r)),
         (e) => console.error('notifications failed', e instanceof Error ? e.message : 'unknown'),
+      ),
+    );
+    // แจ้งเตือนในเว็บ (Web Push) แยกจาก LINE: ไม่กินโควตา push ของ OA
+    ctx.waitUntil(
+      runWebNotifications(env).then(
+        (r) => r.users && console.log('web notifications run', JSON.stringify(r)),
+        (e) =>
+          console.error('web notifications failed', e instanceof Error ? e.message : 'unknown'),
       ),
     );
   },

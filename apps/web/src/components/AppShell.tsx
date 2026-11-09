@@ -19,6 +19,7 @@ import Mascot from './Mascot';
 import MiniTimer from './MiniTimer';
 import { BottomTabBar, TopTabs } from './nav/MainNav';
 import type { Category, GcalStatus, PushStatus, User } from '../lib/types';
+import { disablePush } from '../lib/webPush';
 import { useOnline } from '../lib/pwa';
 import ImportDialog from './ImportDialog';
 import ExportDialog from './ExportDialog';
@@ -193,7 +194,11 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
       openExport: () => setDialog('export'),
       openImport: () => setDialog('import'),
       openOnboarding: () => setShowOnboarding(true),
-      logout: () => void api.logout().finally(onLogout),
+      logout: () => {
+        // อุปกรณ์นี้ไม่ควรได้รับแจ้งเตือนของบัญชีเดิมหลังออกจากระบบ
+        void disablePush().catch(() => undefined);
+        void api.logout().finally(onLogout);
+      },
       goTo,
       newTask,
     }),

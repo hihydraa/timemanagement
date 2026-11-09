@@ -36,19 +36,19 @@ const MAX_ATTEMPTS_PER_KIND_PER_DAY = 3;
 const MAX_FAILURES_PER_USER_PER_DAY = 5;
 const HORIZON_MIN = 1440;
 const MIN = 60_000;
-const OPEN = ['todo', 'doing'] as const;
+export const OPEN = ['todo', 'doing'] as const;
 
 /** หน่วงก่อน retry (มิลลิวินาที) — export ให้ test ตั้งเป็น 0 ได้ */
 export const retryDelays = { ms: [300, 1000] };
 const sleep = (ms: number) =>
   ms > 0 ? new Promise<void>((r) => setTimeout(r, ms)) : Promise.resolve();
 
-type Settings = typeof userSettings.$inferSelect;
+export type Settings = typeof userSettings.$inferSelect;
 type Kind = 'morning_digest' | 'evening_review' | 'reminder';
 const DAILY: Kind[] = ['morning_digest', 'evening_review']; // ลำดับความสำคัญเมื่อชนเพดาน
 const QUOTA_HIT = 'push_quota_hit';
 
-interface Target {
+export interface Target {
   userId: string;
   lineUserId: string;
   s: Settings;
@@ -265,7 +265,7 @@ interface ReminderEvent {
 
 type TaskRow = typeof tasks.$inferSelect;
 
-async function reminderCandidates(
+export async function reminderCandidates(
   db: Db,
   active: Target[],
   at: Date,
@@ -385,7 +385,7 @@ async function runReminders(
 
 // ---------------------------------------------------------------- daily notifications
 const score = (t: TaskDto) => t.urgency * t.importance;
-const bySmart = (a: TaskDto, b: TaskDto) =>
+export const bySmart = (a: TaskDto, b: TaskDto) =>
   score(b) - score(a) || (a.startAt ?? a.dueAt ?? '').localeCompare(b.startAt ?? b.dueAt ?? '');
 
 async function runDaily(rc: RunCtx, t: Target, kind: Kind): Promise<SendResult | 'empty'> {
@@ -447,7 +447,7 @@ async function runDaily(rc: RunCtx, t: Target, kind: Kind): Promise<SendResult |
 }
 
 /** วันนี้เป็นวันทำงานตามที่ผู้ใช้ตั้งไว้หรือไม่ (1=จันทร์ … 7=อาทิตย์) */
-const workDay = (s: Settings, ymd: string): boolean => {
+export const workDay = (s: Settings, ymd: string): boolean => {
   const d = new Date(`${ymd}T00:00:00Z`).getUTCDay();
   return parseWorkDays(s.workDays).includes(d === 0 ? 7 : d);
 };

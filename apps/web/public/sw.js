@@ -4,7 +4,7 @@
  *  - ไม่แคช: คำสั่งเขียน (POST/PATCH/DELETE), /auth, /webhook, ไฟล์แนบ, ไฟล์ export, คำตอบที่ไม่สำเร็จ
  *  - แคชข้อมูลส่วนตัว (dobby-api-*) ถูกล้างเมื่อออกจากระบบ (ดู apps/web/src/lib/pwa.ts)
  */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const STATIC = `dobby-static-${VERSION}`;
 const API = `dobby-api-${VERSION}`;
 const SHELL = [
@@ -153,4 +153,42 @@ self.addEventListener('fetch', (e) => {
       ),
     );
   }
+});
+
+// ---- แจ้งเตือนในเว็บ (Web Push) ----
+// เซิร์ฟเวอร์ส่ง { title, body, url, tag } (เข้ารหัสแล้ว) — แสดงเป็นการแจ้งเตือนของระบบ แม้ปิดแท็บ/แอป
+self.addEventListener('push', (e) => {
+  let d = {};
+  try {
+    d = e.data ? e.data.json() : {};
+  } catch {
+    d = { body: e.data ? e.data.text() : '' };
+  }
+  const url = typeof d.url === 'string' && d.url.startsWith('/') ? d.url : '/';
+  e.waitUntil(
+    self.registration.showNotification(String(d.title || 'Dobby'), {
+      body: String(d.body || ''),
+      tag: typeof d.tag === 'string' ? d.tag : undefined,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/favicon-64.png',
+      lang: 'th',
+      data: { url },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || '/';
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if (new URL(c.url).origin === self.location.origin && 'focus' in c) {
+          c.navigate && c.navigate(url);
+          return c.focus();
+        }
+      }
+      return self.clients.openWindow(url);
+    }),
+  );
 });
