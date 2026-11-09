@@ -344,6 +344,24 @@ export const t = {
   },
   views: { today: 'วันนี้', plan: 'แผน', me: 'ฉัน', focus: 'โฟกัส' } as Record<string, string>,
   mini: { label: 'ไทเมอร์โฟกัส', done: 'หมดเวลาแล้ว', open: 'เปิด' },
+  import: {
+    title: 'นำเข้างานจาก Excel',
+    intro:
+      'ใช้กับไฟล์แม่แบบ Task Management เดิม (คอลัมน์ Title / Detail / Date / Due / Submit / Status / Dep / Note) ไฟล์ถูกอ่านในเบราว์เซอร์ของคุณ ส่งขึ้นเซิร์ฟเวอร์เฉพาะรายการงาน',
+    pick: 'เลือกไฟล์ .xlsx',
+    sheets: 'เลือกชีตที่จะนำเข้า',
+    tasks: 'งาน',
+    aggregateHint: 'ดูเหมือนชีตรวมของชีตอื่น — ไม่เลือกให้ กันงานซ้ำ',
+    rules:
+      'Complete หรือติ๊ก Submit = เสร็จ · Cancel = ยกเลิก · On Process = กำลังทำ · ที่เหลือ = ยังไม่เริ่ม; วันครบกำหนดใช้ Due (ไม่มีใช้ Date); ไม่ซิงก์ Google Calendar; นำเข้าซ้ำไม่เบิ้ล',
+    noTable: 'ไม่พบตารางงาน (ต้องมีหัวคอลัมน์ Title และ Due)',
+    go: 'นำเข้า {n} งาน',
+    working: 'กำลังนำเข้า…',
+    result: 'นำเข้าแล้ว {n} งาน (ข้ามที่ซ้ำ {s})',
+    close: 'ปิด',
+    menu: 'นำเข้างาน',
+    menuHint: 'จากไฟล์ Excel เดิม',
+  },
   menu: { label: 'เมนู', export: 'ส่งออกข้อมูล' },
   export: {
     title: 'ส่งออกข้อมูล',

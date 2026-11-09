@@ -239,3 +239,9 @@
 160. **usage_events**: allowlist ชื่อเหตุการณ์ + `sanitizeProps` (ตัวเลข/boolean/สตริง `[a-z0-9_]{1,24}` เท่านั้น); `signup/first_task_created/gcal_connected` ครั้งเดียวต่อผู้ใช้, `morning_plan_opened` วันละครั้ง (นับการเปิดหน้า "วันนี้" ครั้งแรกของวัน — ยังไม่แยกช่วงเช้า); หน้าเว็บส่งได้เฉพาะ `morning_plan_opened` (ไม่รับ props); opt-out = ไม่เก็บและ **ลบของเดิมทันที**; ลบบัญชีลบ usage_events ด้วย. `auto_plan_*` จะเพิ่มใน Step 5. Query อยู่ `docs/METRICS.md`.
 161. ช่องเลือกเวลาใน Settings (แจ้งเตือน/เวลาทำงาน) เปลี่ยนจาก `<input type=time>` เป็น `TimeField24` (24 ชม.) ให้เหมือนฟอร์มงาน.
 162. แก้บั๊ก Step 2: flag `dobby.openNew` ค้างทำให้ฟอร์มเด้งหลังรีโหลด → เคลียร์เมื่อใช้ และโฟกัส Quick Add แทนการเปิดฟอร์ม.
+
+## นำเข้างานจาก Excel (แม่แบบ Task Management เดิม)
+
+163. **อ่านไฟล์ในเบราว์เซอร์ ไม่ใช้ไลบรารี**: `lib/xlsx.ts` แกะ zip เอง + `DecompressionStream` (ไม่เพิ่ม dependency, ไฟล์ไม่ถูกส่งขึ้นเซิร์ฟเวอร์ — ส่งเฉพาะรายการงานที่แปลงแล้ว); จับคอลัมน์จากหัวตาราง (Title/Detail/Date/Due/Submit/Status/Dep/Note) ใน `lib/importMap.ts`.
+164. **กติกาแปลง**: Complete/ติ๊ก Submit → เสร็จ (เวลาเสร็จ = วันครบกำหนดเดิม), Cancel → ยกเลิก, On Process → กำลังทำ, อื่น ๆ → ยังไม่เริ่ม; due = Due ?? Date; ถ้ามีทั้งคู่และต่างกันเก็บวันเริ่มในรายละเอียด; แท็ก = ชื่อชีต (+ Dep); `gcal_sync=0` ทุกงาน; ชีตชื่อ `AllTask…` ไม่เลือกให้ (ชีตรวม กันซ้ำ).
+165. **`POST /api/import/tasks`**: ≤ 500 งาน/ครั้ง, `db.batch` เป็นก้อน (เพดาน subrequest ฟรี), ข้ามงานที่ ชื่อ+วันครบกำหนด+สถานะ ซ้ำของผู้ใช้เอง (นำเข้าซ้ำไม่เบิ้ล), เคารพ `MAX_TASKS_PER_USER`, rate limit 20/ชม., zod strict (ไม่รับ userId).

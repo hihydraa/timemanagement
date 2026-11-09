@@ -155,6 +155,8 @@ export const api = {
       onboardingDone?: boolean;
     },
   ) => req<SettingsView>('PATCH', '/api/settings', p),
+  importTasks: (tasks: unknown[]) =>
+    req<{ imported: number; skipped: number }>('POST', '/api/import/tasks', { tasks }),
   trackEvent: (name: 'morning_plan_opened') =>
     req<{ ok: boolean }>('POST', '/api/events', { name }).catch(() => undefined),
   pushStatus: () => req<PushStatus>('GET', '/api/notifications/status'),

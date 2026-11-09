@@ -20,6 +20,7 @@ import MiniTimer from './MiniTimer';
 import { BottomTabBar, TopTabs } from './nav/MainNav';
 import type { Category, GcalStatus, PushStatus, User } from '../lib/types';
 import { useOnline } from '../lib/pwa';
+import ImportDialog from './ImportDialog';
 import ExportDialog from './ExportDialog';
 import GcalDialog from './GcalDialog';
 import LineDialog from './LineDialog';
@@ -39,7 +40,9 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
   const [categories, setCategories] = useState<Category[]>([]);
   const [gcal, setGcal] = useState<GcalStatus | null>(null);
   const [push, setPush] = useState<PushStatus | null>(null);
-  const [dialog, setDialog] = useState<'line' | 'settings' | 'gcal' | 'export' | null>(null);
+  const [dialog, setDialog] = useState<'line' | 'settings' | 'gcal' | 'export' | 'import' | null>(
+    null,
+  );
   const [gcalNotice, setGcalNotice] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const online = useOnline();
   // โหมดหน้าจอ: แคชต่อบัญชีใน localStorage กันหน้ากระพริบ แล้วใช้ค่าจริงจากเซิร์ฟเวอร์
@@ -188,6 +191,7 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
       openSettings: () => setDialog('settings'),
       openGcal: () => setDialog('gcal'),
       openExport: () => setDialog('export'),
+      openImport: () => setDialog('import'),
       openOnboarding: () => setShowOnboarding(true),
       logout: () => void api.logout().finally(onLogout),
       goTo,
@@ -296,6 +300,7 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
             />
           )}
           {dialog === 'line' && <LineDialog onClose={() => setDialog(null)} />}
+          {dialog === 'import' && <ImportDialog onClose={() => setDialog(null)} />}
           {dialog === 'export' && <ExportDialog onClose={() => setDialog(null)} />}
           {dialog === 'settings' && (
             <SettingsDialog

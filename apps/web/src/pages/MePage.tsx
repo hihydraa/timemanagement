@@ -20,6 +20,7 @@ export default function MePage({ tab }: { tab: MeTab }) {
     openLine,
     openGcal,
     openExport,
+    openImport,
     openOnboarding,
     logout,
   } = useApp();
@@ -124,6 +125,19 @@ export default function MePage({ tab }: { tab: MeTab }) {
                   <strong className="block">{t.me.export}</strong>
                   <span className="text-sm text-slate-600 dark:text-slate-300">
                     {t.me.exportHint}
+                  </span>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button type="button" onClick={openImport} className={row}>
+                <span aria-hidden className="text-2xl">
+                  📥
+                </span>
+                <span>
+                  <strong className="block">{t.import.menu}</strong>
+                  <span className="text-sm text-slate-600 dark:text-slate-300">
+                    {t.import.menuHint}
                   </span>
                 </span>
               </button>
