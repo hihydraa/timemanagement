@@ -1,7 +1,8 @@
-import { and, eq, gt, gte, inArray, isNotNull, lt, lte, or, sql } from 'drizzle-orm';
+import { and, eq, gt, gte, inArray, isNotNull, lt, lte, sql } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { getDb } from '../db/client';
 import { notificationLog, reminders, tasks, userSettings, users } from '../db/schema';
+import { parseWorkDays } from '../lib/work';
 import { bangkokDate, bangkokHm, fromBangkok, now, nowIso } from '../lib/time';
 import type { Env } from '../types';
 import {
@@ -43,8 +44,8 @@ const sleep = (ms: number) =>
   ms > 0 ? new Promise<void>((r) => setTimeout(r, ms)) : Promise.resolve();
 
 type Settings = typeof userSettings.$inferSelect;
-type Kind = 'morning_digest' | 'deadline_alert' | 'evening_review' | 'reminder';
-const DAILY: Kind[] = ['deadline_alert', 'morning_digest', 'evening_review']; // ลำดับความสำคัญเมื่อชนเพดาน
+type Kind = 'morning_digest' | 'evening_review' | 'reminder';
+const DAILY: Kind[] = ['morning_digest', 'evening_review']; // ลำดับความสำคัญเมื่อชนเพดาน
 const QUOTA_HIT = 'push_quota_hit';
 
 interface Target {
@@ -248,11 +249,9 @@ async function loadDayState(db: Db, userIds: string[], dayStartIso: string): Pro
 const dueDaily = (s: Settings, kind: Kind, hm: string): boolean =>
   kind === 'morning_digest'
     ? inWindow(hm, s.morningDigestTime)
-    : kind === 'deadline_alert'
-      ? inWindow(hm, s.deadlineAlertTime)
-      : kind === 'evening_review'
-        ? s.eveningReviewEnabled === 1 && inWindow(hm, s.eveningReviewTime)
-        : false;
+    : kind === 'evening_review'
+      ? s.eveningReviewEnabled === 1 && inWindow(hm, s.eveningReviewTime)
+      : false;
 
 // ---------------------------------------------------------------- reminders
 interface ReminderEvent {
@@ -260,7 +259,7 @@ interface ReminderEvent {
   /** คีย์กันเตือนซ้ำ: ครั้งของซีรีส์ใช้ <แม่>~<วันที่> เหมือนกันทั้งก่อน/หลังสร้างแถวจริง */
   key: string;
   userId: string;
-  kind: 'before' | 'due';
+  kind: 'before';
   at: string;
 }
 
@@ -285,12 +284,9 @@ async function reminderCandidates(
     const win = byUser.get(r.userId)!.s.remindBeforeMinutes * MIN;
     const within = (iso: string | null): iso is string =>
       !!iso && iso > nowStr && Date.parse(iso) - at.getTime() <= win;
-    // งานละ 1 เหตุการณ์ต่อรอบ: เริ่มงานก่อน แล้วค่อยเดดไลน์ (ทีหลังยังเตือนได้ในรอบถัดไป)
-    if (within(r.startAt))
-      events.push({ taskId: r.id, key, userId: r.userId, kind: 'before', at: r.startAt });
-    else if (within(r.dueAt))
-      events.push({ taskId: r.id, key, userId: r.userId, kind: 'due', at: r.dueAt });
-    else return false;
+    // เตือนเฉพาะ "นัด/งานที่กำหนดเวลาเริ่ม" (ไม่เตือนเดดไลน์ทั่วไปและงานทั้งวัน — อยู่ในสรุปเช้าแล้ว)
+    if (!within(r.startAt)) return false;
+    events.push({ taskId: r.id, key, userId: r.userId, kind: 'before', at: r.startAt });
     return true;
   };
 
@@ -303,10 +299,9 @@ async function reminderCandidates(
         and(
           inArray(tasks.userId, chunkIds),
           inArray(tasks.status, [...OPEN]),
-          or(
-            and(gt(tasks.startAt, nowStr), lte(tasks.startAt, horizon)),
-            and(gt(tasks.dueAt, nowStr), lte(tasks.dueAt, horizon)),
-          ),
+          eq(tasks.allDay, 0),
+          gt(tasks.startAt, nowStr),
+          lte(tasks.startAt, horizon),
         ),
       )
       .limit(200);
@@ -368,7 +363,7 @@ async function runReminders(
       const mins = Math.max(1, Math.ceil((Date.parse(e.at) - rc.at.getTime()) / MIN));
       items.push({
         task,
-        label: e.kind === 'before' ? `⏰ อีก ${mins} นาที` : `📌 เดดไลน์อีก ${mins} นาที`,
+        label: `⏰ อีก ${mins} นาที`,
       });
     }
     if (!items.length) continue;
@@ -399,49 +394,24 @@ async function runDaily(rc: RunCtx, t: Target, kind: Kind): Promise<SendResult |
 
   if (kind === 'morning_digest') {
     const b = await todayBuckets(db, t.userId, at);
+    const planned = b.dueToday.length + b.today.length;
+    const timed = [...b.dueToday, ...b.today].some((x) => !x.allDay && !!x.startAt);
+    // วันหยุด (นอกวันทำงาน) ส่งเฉพาะเมื่อมีนัดที่กำหนดเวลา; วันนี้ไม่มีงาน = ไม่ส่ง (ค้างอย่างเดียวไม่พอ)
+    if (!planned || (!workDay(t.s, today) && !timed)) return 'empty';
     const sections: ListSection[] = [
-      { title: '🔴 เลยกำหนด', color: '#dc2626', tasks: [...b.overdue].sort(bySmart) },
       { title: '⏰ เดดไลน์วันนี้', color: '#ea580c', tasks: [...b.dueToday].sort(bySmart) },
       { title: 'งานวันนี้', tasks: [...b.today].sort(bySmart) },
     ];
-    const total = b.overdue.length + b.dueToday.length + b.today.length;
-    if (!total) return 'empty'; // วันนี้ไม่มีงาน = ไม่ส่ง (ประหยัดโควตา)
     const { message, ids } = listCard(
       `🌅 สรุปงานวันนี้ ${dayLabel(b.date)}`,
       sections,
       base,
       'morning',
+      b.overdue.length ? `🔴 ค้างอยู่ ${b.overdue.length} งาน (ดูในเว็บ)` : undefined,
     );
-    const r = await send(rc, t, kind, message, `n=${total}`);
+    const r = await send(rc, t, kind, message, `n=${planned};overdue=${b.overdue.length}`);
     if (r === 'sent') await setList(db, t.lineUserId, ids); // ให้ตอบ "เสร็จ 1" ได้ทันที
     return r;
-  }
-
-  if (kind === 'deadline_alert') {
-    const start = fromBangkok(today).toISOString();
-    const end = fromBangkok(addOne(today)).toISOString();
-    const rows = await db
-      .select()
-      .from(tasks)
-      .where(
-        and(
-          eq(tasks.userId, t.userId),
-          inArray(tasks.status, [...OPEN]),
-          gte(tasks.dueAt, start),
-          lt(tasks.dueAt, end),
-        ),
-      )
-      .orderBy(tasks.dueAt)
-      .limit(50);
-    if (!rows.length) return 'empty';
-    const items: AlertItem[] = (await withTags(db, rows)).map((task) => ({
-      task,
-      label:
-        Date.parse(task.dueAt!) < at.getTime()
-          ? '🔴 เลยเดดไลน์แล้ว'
-          : `📌 เดดไลน์วันนี้ ${bangkokHm(new Date(task.dueAt!))} น.`,
-    }));
-    return send(rc, t, kind, alertCarousel(items, base), `n=${items.length}`);
   }
 
   // evening_review
@@ -475,6 +445,12 @@ async function runDaily(rc: RunCtx, t: Target, kind: Kind): Promise<SendResult |
   if (r === 'sent') await setList(db, t.lineUserId, ids);
   return r;
 }
+
+/** วันนี้เป็นวันทำงานตามที่ผู้ใช้ตั้งไว้หรือไม่ (1=จันทร์ … 7=อาทิตย์) */
+const workDay = (s: Settings, ymd: string): boolean => {
+  const d = new Date(`${ymd}T00:00:00Z`).getUTCDay();
+  return parseWorkDays(s.workDays).includes(d === 0 ? 7 : d);
+};
 
 const addOne = (d: string): string => {
   const [y, m, dd] = d.split('-').map(Number) as [number, number, number];

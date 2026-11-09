@@ -226,6 +226,8 @@ export function listCard(
   sections: ListSection[],
   baseUrl: string,
   pose?: MascotPose,
+  /** บรรทัดสรุปเล็ก ๆ ท้ายการ์ด (เช่น จำนวนงานค้าง) */
+  footnote?: string,
 ): { message: LineMessage; ids: string[] } {
   const ids: string[] = [];
   const rows: unknown[] = [];
@@ -284,6 +286,7 @@ export function listCard(
         margin: 'md',
       }),
     );
+  if (footnote) rows.push(txt(footnote, { size: 'xs', color: '#dc2626', margin: 'md' }));
   const total = ids.length + hidden;
   return {
     ids,

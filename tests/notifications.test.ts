@@ -103,18 +103,21 @@ describe('สรุปเช้า (morning digest)', () => {
     expect(line.pushes).toHaveLength(1);
     expect(line.pushes[0]).toMatchObject({ to: LA, auth: 'Bearer test-line-token' });
     expect(line.pushes[0]!.messages).toHaveLength(1); // 1 push = 1 message object
-    expect(await logs()).toEqual([{ kind: 'morning_digest', ok: 1, detail: 'n=4;attempts=1' }]);
+    expect(await logs()).toEqual([
+      { kind: 'morning_digest', ok: 1, detail: 'n=3;overdue=1;attempts=1' },
+    ]);
   });
-  it('รวม เลยกำหนด/เดดไลน์วันนี้/งานวันนี้ ในข้อความเดียว เรียงตาม urgency×importance และไม่รวมงานพรุ่งนี้', async () => {
+  it('รวม เดดไลน์วันนี้/งานวันนี้ + สรุปงานค้างบรรทัดเดียว ในข้อความเดียว เรียงตาม urgency×importance และไม่รวมงานพรุ่งนี้', async () => {
     at('07:30');
     await cron();
     const t = pushText();
     expect(line.pushes[0]!.messages[0]!.type).toBe('flex');
-    for (const s of ['ค้างเมื่อวาน', 'ส่งใบเสนอราคา', 'งานสำคัญมาก', 'งานเล็ก'])
-      expect(t).toContain(s);
+    for (const s of ['ส่งใบเสนอราคา', 'งานสำคัญมาก', 'งานเล็ก']) expect(t).toContain(s);
     expect(t).not.toContain('งานพรุ่งนี้');
+    // งานค้างย่อเหลือบรรทัดเดียว ไม่ไล่เป็นรายชิ้น
+    expect(t).not.toContain('ค้างเมื่อวาน');
+    expect(t).toContain('ค้างอยู่ 1 งาน');
     // หัวข้อมีจำนวนต่อท้าย เช่น "งานวันนี้ (2)" (กันชนกับคำว่า "สรุปงานวันนี้" ในหัวการ์ด)
-    expect(t.indexOf('เลยกำหนด (')).toBeLessThan(t.indexOf('เดดไลน์วันนี้ ('));
     expect(t.indexOf('เดดไลน์วันนี้ (')).toBeLessThan(t.indexOf('งานวันนี้ ('));
     expect(t.indexOf('งานสำคัญมาก')).toBeLessThan(t.indexOf('งานเล็ก')); // 16 > 1 แม้งานเล็กเริ่มก่อน
   });
@@ -125,7 +128,7 @@ describe('สรุปเช้า (morning digest)', () => {
     const done = (
       (await a.call('GET', '/api/tasks')).json.tasks as { title: string; status: string }[]
     ).filter((t) => t.status === 'done');
-    expect(done.map((t) => t.title)).toEqual(['ค้างเมื่อวาน']); // ข้อ 1 = รายการแรกในหัวข้อ "เลยกำหนด"
+    expect(done.map((t) => t.title)).toEqual(['ส่งใบเสนอราคา']); // ข้อ 1 = รายการแรกในหัวข้อ "เดดไลน์วันนี้"
   });
   it('นอกหน้าต่าง (หลัง 09:30) ไม่ส่ง; วันถัดไปส่งใหม่ได้', async () => {
     at('09:31');
@@ -137,7 +140,7 @@ describe('สรุปเช้า (morning digest)', () => {
     expect(pushText()).toContain('งานพรุ่งนี้');
     at('07:30', '2026-11-06');
     await cron();
-    expect(line.pushes).toHaveLength(2); // งานค้างจากวันก่อนยังถูกสรุป
+    expect(line.pushes).toHaveLength(1); // วันที่เหลือแต่งานค้าง (ไม่มีงานของวันนั้น) = ไม่ส่ง
   });
   it('วันที่ไม่มีงานเลย → ไม่ส่งและไม่ใช้โควตา แต่ถ้ามีงานเข้ามาในหน้าต่าง ก็ส่งได้', async () => {
     at('07:30', '2026-11-20');
@@ -265,12 +268,12 @@ describe('เตือนก่อนเวลา (reminder)', () => {
     expect(line.pushes).toHaveLength(2);
     expect(pushText(1)).toContain('อีก 25 นาที');
   });
-  it('เดดไลน์ (due_at) เตือนเป็น "เดดไลน์อีก ..."', async () => {
+  it('เดดไลน์ (due_at) ที่ไม่มีเวลาเริ่ม ไม่ถูกเตือนก่อนเวลา (อยู่ในสรุปเช้าแล้ว)', async () => {
     await mk(a, { title: 'ส่งรายงาน', dueAt: iso('17:00') });
     at('16:40');
     await cron();
-    expect(pushText()).toContain('เดดไลน์อีก 20 นาที');
-    expect(await rows('select kind from reminders')).toEqual([{ kind: 'due' }]);
+    expect(line.pushes).toHaveLength(0);
+    expect(await rows('select kind from reminders')).toEqual([]);
   });
   it('ตั้งเตือนล่วงหน้า 0 = ปิด, 60 นาที = กว้างขึ้น', async () => {
     await mk(a, { title: 'งาน', startAt: iso('14:00') });
@@ -309,39 +312,21 @@ describe('เตือนก่อนเวลา (reminder)', () => {
   });
 });
 
-describe('เตือนเดดไลน์วันนี้ (บ่าย)', () => {
-  it('ส่งรอบเดียวตอน 15:00 เฉพาะงานที่มีเดดไลน์วันนี้และยังไม่เสร็จ', async () => {
+describe('ไม่มีเตือนเดดไลน์ตอนบ่ายอีกแล้ว', () => {
+  it('15:00 ไม่ส่งอะไรเพิ่ม แม้มีเดดไลน์วันนี้ (สรุปเช้าครอบคลุมแล้ว)', async () => {
     await mk(a, { title: 'เดดไลน์ 17:00', dueAt: iso('17:00') });
-    await mk(a, { title: 'เดดไลน์พรุ่งนี้', dueAt: iso('17:00', '2026-11-05') });
-    await mk(a, { title: 'เดดไลน์เสร็จแล้ว', dueAt: iso('18:00'), status: 'done' });
-    await mk(a, { title: 'ทั้งวันวันนี้', allDay: true, dueDate: DAY });
-    at('14:59');
-    await cron();
-    expect(line.pushes.filter((p) => json(p.messages).includes('เดดไลน์วันนี้'))).toHaveLength(0);
     at('15:00');
     await cron();
     at('15:30');
     await cron();
-    const alerts = line.pushes.filter((p) => json(p.messages).includes('เดดไลน์วันนี้'));
-    expect(alerts).toHaveLength(1);
-    const t = json(alerts[0]!.messages);
-    expect(t).toContain('เดดไลน์ 17:00');
-    for (const s of ['เดดไลน์พรุ่งนี้', 'เดดไลน์เสร็จแล้ว', 'ทั้งวันวันนี้'])
-      expect(t).not.toContain(s);
-    expect((await logs()).filter((l) => l.kind === 'deadline_alert')).toHaveLength(1);
-  });
-  it('เดดไลน์ที่เลยเวลาแล้วแต่ยังไม่เสร็จ ถูกบอกว่าเลย และถ้าไม่มีเดดไลน์ ไม่ส่ง', async () => {
-    at('15:00');
-    await cron();
     expect(line.pushes).toHaveLength(0);
-    await mk(a, { title: 'เลยแล้ว', dueAt: iso('12:00') });
-    await cron();
-    expect(pushText()).toContain('เลยเดดไลน์แล้ว');
+    expect((await logs()).filter((l) => l.kind === 'deadline_alert')).toHaveLength(0);
   });
 });
 
 describe('สรุปเย็น (evening review) และปุ่มเลื่อนงานค้าง', () => {
   async function seed() {
+    await setting(a, { eveningReviewEnabled: true }); // ค่าเริ่มต้นปิด
     const d1 = await mk(a, { title: 'เสร็จ 1', startAt: iso('09:00') });
     const d2 = await mk(a, { title: 'เสร็จ 2', allDay: true, dueDate: DAY });
     await a.call('POST', `/api/tasks/${d1.id}/complete`);
@@ -453,8 +438,9 @@ describe('โควตา push', () => {
     at('07:30');
     await cron(); // digest A + digest B = 2
     expect(line.pushes).toHaveLength(2);
-    at('15:00');
-    const r = await cron(); // deadline alert ของ A ต้องถูกบล็อก
+    await setting(a, { eveningReviewEnabled: true });
+    at('20:00');
+    const r = await cron(); // สรุปเย็นของ A ต้องถูกบล็อก
     expect(line.pushes).toHaveLength(2);
     expect(r.quotaStop).toBe(true);
     const st = await notificationStatus(env, getDb(env.DB));
@@ -546,7 +532,9 @@ describe('ความทนทานของการส่ง', () => {
     expect(line.pushes).toHaveLength(2);
     expect(line.pushes[0]!.retryKey).toBeTruthy();
     expect(line.pushes[1]!.retryKey).toBe(line.pushes[0]!.retryKey);
-    expect(await logs()).toEqual([{ kind: 'morning_digest', ok: 1, detail: 'n=1;attempts=2' }]);
+    expect(await logs()).toEqual([
+      { kind: 'morning_digest', ok: 1, detail: 'n=1;overdue=0;attempts=2' },
+    ]);
   });
   it('ล้มเหลวติด 3 ครั้งต่อรอบ → log ok=0; รอบถัดไปลองใหม่ แต่จำกัด 3 ครั้งต่อประเภทต่อวัน', async () => {
     line.pushFail = Array(30).fill(500);
@@ -651,7 +639,7 @@ describe('API ตั้งค่า', () => {
     expect(g.settings).toEqual({
       morningDigestTime: '07:30',
       eveningReviewTime: '20:00',
-      eveningReviewEnabled: true,
+      eveningReviewEnabled: false, // ค่าเริ่มต้นปิด
       deadlineAlertTime: '15:00',
       remindBeforeMinutes: 30,
       quietHoursStart: '22:00',
@@ -717,5 +705,27 @@ describe('API ตั้งค่า', () => {
     ).toBe(403);
     await setting(b, { remindBeforeMinutes: 99 });
     expect((await a.call('GET', '/api/settings')).json.settings.remindBeforeMinutes).toBe(30);
+  });
+});
+
+describe('กติกาแจ้งเตือนแบบใหม่', () => {
+  it('วันหยุด (เสาร์ 2026-11-07): ไม่ส่งสรุปเช้าถ้ามีแต่งานทั้งวัน แต่ส่งถ้ามีนัดที่กำหนดเวลา', async () => {
+    await mk(a, { title: 'งานทั้งวัน', allDay: true, dueDate: '2026-11-07' });
+    at('07:30', '2026-11-07');
+    await cron();
+    expect(line.pushes).toHaveLength(0);
+    await mk(a, { title: 'นัดวันเสาร์', startAt: iso('10:00', '2026-11-07') });
+    await cron();
+    expect(line.pushes).toHaveLength(1);
+    expect(pushText()).toContain('นัดวันเสาร์');
+  });
+  it('วันทำงานที่มีแต่งานค้าง (ไม่มีงานของวันนี้) = ไม่ส่งสรุปเช้า', async () => {
+    await mk(a, { title: 'ค้าง', allDay: true, dueDate: '2026-11-01' });
+    at('07:30');
+    await cron();
+    expect(line.pushes).toHaveLength(0);
+  });
+  it('ผู้ใช้ใหม่ได้สรุปเย็นแบบปิดไว้ก่อน', async () => {
+    expect((await b.call('GET', '/api/settings')).json.settings.eveningReviewEnabled).toBe(false);
   });
 });

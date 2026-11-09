@@ -76,7 +76,7 @@ export async function upsertUser(
   await db
     .insert(users)
     .values({ id, email, name: p.name, googleSub: p.googleSub, createdAt: nowIso() });
-  await db.insert(userSettings).values({ userId: id });
+  await db.insert(userSettings).values({ userId: id, eveningReviewEnabled: 0 }); // สรุปเย็นปิดไว้ก่อน (เลือกเปิดเอง)
   await track(db, id, 'signup');
   await db.insert(categories).values(
     DEFAULT_CATEGORIES.map((c, i) => ({

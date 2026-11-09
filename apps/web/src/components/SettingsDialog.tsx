@@ -144,11 +144,13 @@ export default function SettingsDialog({ onClose, onOpenLine, onSaved }: Props) 
             <p className="-mt-2 text-xs text-slate-500 dark:text-slate-400">
               {t.settings.windowHint}
             </p>
+            <p className="rounded-lg bg-slate-50 p-2 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+              {t.settings.whatWeSend}
+            </p>
 
             <fieldset disabled={!s.lineNotifyEnabled} className="space-y-3 disabled:opacity-50">
               <div className="grid grid-cols-2 gap-3">
                 {timeInput('st-morning', t.settings.morning, 'morningDigestTime')}
-                {timeInput('st-deadline', t.settings.deadline, 'deadlineAlertTime')}
                 {timeInput(
                   'st-evening',
                   t.settings.evening,

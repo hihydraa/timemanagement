@@ -72,7 +72,7 @@ async function view(db: ReturnType<typeof getDb>, userId: string) {
     settings: {
       morningDigestTime: d.morningDigestTime ?? '07:30',
       eveningReviewTime: d.eveningReviewTime ?? '20:00',
-      eveningReviewEnabled: (d.eveningReviewEnabled ?? 1) === 1,
+      eveningReviewEnabled: (d.eveningReviewEnabled ?? 0) === 1,
       deadlineAlertTime: d.deadlineAlertTime ?? '15:00',
       remindBeforeMinutes: d.remindBeforeMinutes ?? 30,
       quietHoursStart: d.quietHoursStart ?? '22:00',
