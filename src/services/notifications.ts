@@ -15,6 +15,7 @@ import {
   type ListSection,
 } from './flex';
 import { pushMessage, type LineMessage } from './line';
+import { callNameOf } from './game';
 import { setList } from './lineBot';
 import { isVirtualId, loadSeriesInstances, virtualId } from './series';
 import { todayBuckets, withTags, type TaskDto } from './tasks';
@@ -403,7 +404,10 @@ async function runDaily(rc: RunCtx, t: Target, kind: Kind): Promise<SendResult |
       { title: 'งานวันนี้', tasks: [...b.today].sort(bySmart) },
     ];
     const { message, ids } = listCard(
-      `🌅 สรุปงานวันนี้ ${dayLabel(b.date)}`,
+      `🌅 ${(await callNameOf(db, t.userId)) ?? ''} สรุปงานวันนี้ ${dayLabel(b.date)}`.replace(
+        '🌅  ',
+        '🌅 ',
+      ),
       sections,
       base,
       'morning',

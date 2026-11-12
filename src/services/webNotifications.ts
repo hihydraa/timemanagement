@@ -13,6 +13,7 @@ import {
   type Settings,
   type Target,
 } from './notifications';
+import { callNameOf } from './game';
 import { isVirtualId } from './series';
 import { todayBuckets } from './tasks';
 
@@ -215,7 +216,9 @@ export async function runWebNotifications(env: Env): Promise<WebRunSummary> {
           t,
           kind,
           {
-            title: `🌅 วันนี้ ${planned} งาน`,
+            title: `🌅 ${(await callNameOf(db, t.userId)) ?? ''} วันนี้ ${planned} งาน`
+              .replace('  ', ' ')
+              .replace('🌅  ', '🌅 '),
             body:
               clip(top.title, 60) +
               (b.dueToday.length ? ` · เดดไลน์วันนี้ ${b.dueToday.length}` : '') +

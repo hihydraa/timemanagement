@@ -1,17 +1,25 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useApp } from '../lib/appContext';
 import { t } from '../lib/i18n';
 import Mascot from './Mascot';
 
 export const CELEBRATE_EVENT = 'dobby:celebrate';
 const MESSAGES = t.mascot.celebrate;
+const NAMED = t.mascot.celebrateNamed;
 
 /** ป๊อปอัปมาสคอตฉลองเมื่อทำงานเสร็จ (รับ event จาก api.completeTask/updateTask) แสดง ~2.5 วินาที */
 export default function CelebrateToast() {
+  const { call } = useApp();
+  const callRef = useRef(call);
+  callRef.current = call;
   const [msg, setMsg] = useState<string | null>(null);
   useEffect(() => {
     let timer: number | undefined;
     const on = () => {
-      setMsg(MESSAGES[Math.floor(Math.random() * MESSAGES.length)] ?? MESSAGES[0] ?? '');
+      const c = callRef.current;
+      const pool = c ? NAMED : MESSAGES;
+      const m = pool[Math.floor(Math.random() * pool.length)] ?? pool[0] ?? '';
+      setMsg(c ? m.replace('{name}', c) : m);
       window.clearTimeout(timer);
       timer = window.setTimeout(() => setMsg(null), 2600);
     };

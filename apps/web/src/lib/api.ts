@@ -1,6 +1,7 @@
 import { clearApiCache } from './pwa';
 import { t } from './i18n';
 import type { DashboardData } from './dashboard';
+import type { GameState, Honorific } from './game';
 import type {
   Alarm,
   Attachment,
@@ -62,6 +63,16 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
   return (await res.json()) as T;
 }
 
+/** แจ้ง UI ว่าได้แต้มใหม่ (AppShell แสดง "+N แต้ม" และรีเฟรชยอด) */
+function gotPoints(points: number | undefined) {
+  if (!points || points <= 0) return;
+  try {
+    window.dispatchEvent(new CustomEvent('dobby:points', { detail: { points } }));
+  } catch {
+    /* ไม่มี window */
+  }
+}
+
 /** แจ้ง UI ว่ามีงานเสร็จ (CelebrateToast ฟัง event นี้) */
 function celebrate() {
   try {
@@ -94,10 +105,17 @@ export const api = {
     req<{ movedIds: string[]; hasMore: boolean }>('POST', '/api/today/reschedule-overdue', { to }),
   snoozeTask: (id: string, body: { minutes?: number; days?: number }) =>
     req<{ task: Task }>('POST', `/api/tasks/${id}/snooze`, body).then((r) => r.task),
-  createTask: (p: TaskPayload) => req<{ task: Task }>('POST', '/api/tasks', p).then((r) => r.task),
+  createTask: (p: TaskPayload, src?: 'quick') =>
+    req<{ task: Task; points?: number }>('POST', `/api/tasks${src ? `?src=${src}` : ''}`, p).then(
+      (r) => {
+        gotPoints(r.points);
+        return r.task;
+      },
+    ),
   updateTask: (id: string, p: TaskPayload) =>
-    req<{ task: Task }>('PATCH', `/api/tasks/${id}`, p).then((r) => {
+    req<{ task: Task; points?: number }>('PATCH', `/api/tasks/${id}`, p).then((r) => {
       if (p.status === 'done') celebrate();
+      gotPoints(r.points);
       return r.task;
     }),
   deleteTask: (id: string, scope: 'one' | 'series' = 'one') =>
@@ -130,8 +148,9 @@ export const api = {
     req<WeeklyStats>('GET', `/api/stats/weekly${week ? `?week=${week}` : ''}`),
   overview: (days: number) => req<OverviewStats>('GET', `/api/stats/overview?days=${days}`),
   completeTask: (id: string) =>
-    req<{ task: Task }>('POST', `/api/tasks/${id}/complete`).then((r) => {
+    req<{ task: Task; points?: number }>('POST', `/api/tasks/${id}/complete`).then((r) => {
       celebrate();
+      gotPoints(r.points);
       return r.task;
     }),
   listCategories: () =>
@@ -161,6 +180,12 @@ export const api = {
   ) => req<SettingsView>('PATCH', '/api/settings', p),
   importTasks: (tasks: unknown[]) =>
     req<{ imported: number; skipped: number }>('POST', '/api/import/tasks', { tasks }),
+  getGame: () => req<GameState>('GET', '/api/game'),
+  saveProfile: (p: { characterId: string; displayName: string; honorific: Honorific }) =>
+    req<GameState>('PUT', '/api/game/profile', p),
+  buyItem: (itemId: string) => req<GameState>('POST', '/api/game/buy', { itemId }),
+  equipItem: (itemId: string, equipped: boolean) =>
+    req<GameState>('POST', '/api/game/equip', { itemId, equipped }),
   listAlarms: () => req<{ alarms: Alarm[] }>('GET', '/api/alarms').then((r) => r.alarms),
   createAlarm: (p: { time: string; label: string; days: number[] }) =>
     req<{ alarm: Alarm }>('POST', '/api/alarms', p).then((r) => r.alarm),

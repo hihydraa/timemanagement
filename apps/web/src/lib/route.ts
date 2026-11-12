@@ -4,7 +4,7 @@
  * เส้นทางเก่า (/inbox /calendar /matrix /review /stats) ยังใช้ได้ทั้งแบบ path และ hash ไม่ให้ลิงก์/บุ๊กมาร์กเดิมพัง
  */
 export type View = 'today' | 'plan' | 'me' | 'focus';
-export type MeTab = 'overview' | 'review' | 'stats';
+export type MeTab = 'overview' | 'review' | 'stats' | 'game';
 export type PlanSub = 'matrix';
 
 export interface Route {
@@ -59,7 +59,7 @@ function fromSegments(seg: string[]): Route | null {
     case 'matrix':
       return { view: 'plan', plan: 'matrix' };
     case 'me':
-      return { view: 'me', me: b === 'review' || b === 'stats' ? b : 'overview' };
+      return { view: 'me', me: b === 'review' || b === 'stats' || b === 'game' ? b : 'overview' };
     case 'review':
       return { view: 'me', me: 'review' };
     case 'stats':

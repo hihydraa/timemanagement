@@ -256,3 +256,43 @@ export const alarms = sqliteTable(
   },
   (t) => [index('alarms_user_idx').on(t.userId), index('alarms_time_idx').on(t.enabled, t.time)],
 );
+
+/** เกมสะสม: ตัวละครของผู้ใช้ + ชื่อที่ Dobby ใช้เรียก */
+export const gameProfiles = sqliteTable('game_profiles', {
+  userId: text('user_id').primaryKey(),
+  characterId: text('character_id').notNull(),
+  displayName: text('display_name').notNull().default(''),
+  honorific: text('honorific', { enum: ['name', 'master', 'both'] })
+    .notNull()
+    .default('name'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+/** บัญชีแต้ม (บวก = ได้, ลบ = ซื้อ): ยอดคงเหลือ = ผลรวม; unique (user, kind, ref) กันได้แต้ม/ซื้อซ้ำ */
+export const gameLedger = sqliteTable(
+  'game_ledger',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    kind: text('kind', { enum: ['welcome', 'create', 'complete', 'daily', 'buy'] }).notNull(),
+    ref: text('ref').notNull(),
+    points: integer('points').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('game_ledger_ref_idx').on(t.userId, t.kind, t.ref),
+    index('game_ledger_user_idx').on(t.userId, t.createdAt),
+  ],
+);
+
+export const gameInventory = sqliteTable(
+  'game_inventory',
+  {
+    userId: text('user_id').notNull(),
+    itemId: text('item_id').notNull(),
+    equipped: integer('equipped').notNull().default(0),
+    acquiredAt: text('acquired_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.itemId] })],
+);

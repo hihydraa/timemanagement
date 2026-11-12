@@ -76,7 +76,7 @@ export default function QuickAdd({
     setOver({});
     setBusy(true);
     try {
-      const created = await api.createTask(r.payload);
+      const created = await api.createTask(r.payload, 'quick');
       onSettled(tmp.id);
       onCreated();
       toast.undo(`${t.quick.added}: ${created.title}`, async () => {

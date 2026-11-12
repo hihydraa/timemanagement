@@ -53,7 +53,7 @@ const greeting = (hour: number) =>
 
 /** หน้า "วันนี้" (Today Cockpit): ตอบว่า "ตอนนี้ควรทำอะไร" และ "วันนี้ทำไหวไหม" */
 export default function TodayPage() {
-  const { categories, gcalAvailable, goTo, route } = useApp();
+  const { categories, gcalAvailable, goTo, route, call, game, openCharacter } = useApp();
   const [data, setData] = useState<CockpitData | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -295,7 +295,10 @@ export default function TodayPage() {
     <div className="space-y-3 py-3">
       <header className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <p className="text-sm text-slate-600 dark:text-slate-300">{greeting(hour)}</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            {greeting(hour)}
+            {call ? ` ${call}` : ''}
+          </p>
           <h2 className="text-2xl font-bold text-brand-800 dark:text-brand-200">
             {t.dash.title} · {dayLabel(data.date)}
           </h2>
@@ -332,6 +335,20 @@ export default function TodayPage() {
         >
           {notice}
         </p>
+      )}
+
+      {game && !game.profile && (
+        <button
+          type="button"
+          onClick={openCharacter}
+          className="flex w-full items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-left text-sm hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950 dark:hover:bg-amber-900"
+        >
+          <span aria-hidden className="text-xl">
+            🧙
+          </span>
+          <span className="flex-1">{t.game.banner}</span>
+          <strong className="shrink-0">{t.game.create} ›</strong>
+        </button>
       )}
 
       <ReviewCard now={now} onOpen={() => goTo('me', 'review')} />

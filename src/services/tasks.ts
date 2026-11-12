@@ -18,6 +18,7 @@ import { categories, taskTags, tasks } from '../db/schema';
 import { ApiError } from '../lib/http';
 import { computeUrgency } from '../lib/urgency';
 import { track } from './analytics';
+import { awardComplete, awardCreate, setReward } from './game';
 import { countsByTask, deleteTaskFiles } from './attachments';
 import { deleteSubtasksOf, subtaskCounts } from './subtasks';
 import {
@@ -207,7 +208,9 @@ export async function createTask(
     updatedAt: ts,
   });
   await replaceTags(db, id, t.tags);
-  return (await withTags(db, [await getOwned(db, userId, id)]))[0]!;
+  const created = (await withTags(db, [await getOwned(db, userId, id)]))[0]!;
+  setReward(created, await awardCreate(db, userId, id));
+  return created;
 }
 
 export async function updateTask(
@@ -260,7 +263,19 @@ export async function updateTask(
     .where(and(eq(tasks.id, id), eq(tasks.userId, userId)));
   if (patch.tags) await replaceTags(db, id, patch.tags);
   if (status === 'done' && cur.status !== 'done') await track(db, userId, 'task_completed');
-  return (await withTags(db, [await getOwned(db, userId, id)]))[0]!;
+  const updated = (await withTags(db, [await getOwned(db, userId, id)]))[0]!;
+  if (status === 'done' && cur.status !== 'done')
+    setReward(
+      updated,
+      await awardComplete(db, userId, {
+        id,
+        importance: updated.importance,
+        dueAt: updated.dueAt,
+        dueDate: updated.dueDate,
+        completedAt: ts,
+      }),
+    );
+  return updated;
 }
 
 export interface DeleteResult {

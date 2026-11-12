@@ -23,6 +23,7 @@ import {
   withTags,
 } from '../services/tasks';
 import { trackTaskCreated } from '../services/analytics';
+import { rewardOf } from '../services/game';
 import { dashboard } from '../services/dashboard';
 import { cockpit, rescheduleOverdue, trayTasks } from '../services/cockpit';
 import type { AppEnv } from '../types';
@@ -44,7 +45,7 @@ r.post('/tasks', async (c) => {
     c.req.query('src') === 'quick' ? 'web_quick' : 'web_form',
   );
   await background(c, syncTaskSafe(c.env, c.get('userId'), task.id));
-  return c.json({ task }, 201);
+  return c.json({ task, points: rewardOf(task) }, 201);
 });
 
 r.get('/tasks/:id', async (c) => {
@@ -57,7 +58,7 @@ r.patch('/tasks/:id', async (c) => {
   const body = await parseJson(c, taskPatch);
   const task = await updateTask(getDb(c.env.DB), c.get('userId'), c.req.param('id'), body);
   await background(c, syncTaskSafe(c.env, c.get('userId'), task.id));
-  return c.json({ task });
+  return c.json({ task, points: rewardOf(task) });
 });
 
 r.delete('/tasks/:id', async (c) => {
@@ -96,7 +97,7 @@ r.post('/tasks/:id/complete', async (c) => {
     status: 'done',
   });
   await background(c, syncTaskSafe(c.env, c.get('userId'), task.id));
-  return c.json({ task });
+  return c.json({ task, points: rewardOf(task) });
 });
 
 const snoozeInput = z

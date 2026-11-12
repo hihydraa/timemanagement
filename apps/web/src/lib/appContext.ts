@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { Route, View } from './route';
+import type { GameState } from './game';
 import type { Category, GcalStatus, User } from './types';
 
 export type { View } from './route';
@@ -7,6 +8,13 @@ export type { View } from './route';
 export type UiMode = 'simple' | 'full';
 
 export interface AppCtx {
+  /** เกมสะสม: ตัวละคร/แต้ม/คลัง (null = ยังโหลดไม่เสร็จ) */
+  game: GameState | null;
+  setGame: (s: GameState) => void;
+  reloadGame: () => void;
+  /** ชื่อที่ Dobby ใช้เรียกผู้ใช้ (null = ยังไม่มีตัวละคร) */
+  call: string | null;
+  openCharacter: () => void;
   /** โหมดหน้าจอ: simple ซ่อนฟีเจอร์ละเอียด (ไม่ลบ) / full เปิดทั้งหมด */
   uiMode: UiMode;
   setUiMode: (m: UiMode) => void;
