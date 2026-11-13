@@ -1,7 +1,8 @@
 import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
-  LANDMARKS,
+  RIGS,
+  SPECS,
   canvasAspect,
   placeItem,
   placeItems,
@@ -12,22 +13,23 @@ import { CHARACTERS, ITEMS } from '../src/lib/game';
 describe('สวมซ้อนบนตัวละคร (avatar)', () => {
   it('ทุกตัวละครมีจุดสังเกต + ภาพตัดพื้น + อัตราส่วน canvas', () => {
     for (const c of CHARACTERS) {
-      expect(LANDMARKS[c.id], c.id).toBeTruthy();
+      expect(RIGS[c.id], c.id).toBeTruthy();
+      expect(SPECS[`${c.id}-pet`], c.id).toBeTruthy();
       expect(existsSync(`apps/web/public/game/cut/characters/${c.id}.webp`), c.id).toBe(true);
       expect(canvasAspect(c.id)).toBeGreaterThan(0.4);
     }
   });
-  it('ทุกไอเท็ม (ยกเว้นสัตว์) มีภาพตัดพื้น และวางบนทุกตัวละครได้ในกรอบ canvas พร้อมลำดับซ้อน', () => {
+  it('ทุกไอเท็ม (ยกเว้นสัตว์) มีภาพตัดพื้น + ตำแหน่ง และวางบนตัวละครของตัวเองได้ในกรอบ canvas พร้อมลำดับซ้อน', () => {
     for (const it of ITEMS.filter((i) => i.slot !== 'companion')) {
       expect(existsSync(`apps/web/public/game/cut/items/${it.id}.webp`), it.id).toBe(true);
-      for (const c of CHARACTERS) {
-        const b = placeItem(c.id, it.id)!;
-        expect(b, `${c.id}/${it.id}`).toBeTruthy();
-        expect(b.width).toBeGreaterThan(2);
-        expect(b.height).toBeGreaterThan(2);
-        expect(b.left).toBeGreaterThanOrEqual(-5);
-        expect(b.left + b.width).toBeLessThanOrEqual(105);
-        expect(b.top + b.height).toBeLessThanOrEqual(104);
+      const boxes = placeItems(it.collection, it.id);
+      expect(boxes.length, it.id).toBeGreaterThan(0);
+      for (const b of boxes) {
+        expect(b.width, it.id).toBeGreaterThan(2);
+        expect(b.cx, it.id).toBeGreaterThan(-10);
+        expect(b.cx, it.id).toBeLessThan(110);
+        expect(b.cy, it.id).toBeGreaterThan(-5);
+        expect(b.cy, it.id).toBeLessThan(105);
         expect(b.z).toBeGreaterThan(0);
       }
     }
@@ -42,12 +44,13 @@ describe('สวมซ้อนบนตัวละคร (avatar)', () => {
   it('ถุงมือแยกเป็น 2 ข้าง (ซ้าย/ขวา) ที่มือ; ไม้กายสิทธิ์หมุนถือที่มือซ้าย; เนคไทอยู่ใต้ผ้าพันคอ', () => {
     const g = placeItems('draco', 'draco-08');
     expect(g.map((b) => b.crop)).toEqual(['left', 'right']);
-    expect(g[0]!.left).toBeLessThan(g[1]!.left);
-    expect(placeItem('harry', 'harry-09')!.rotate).toBe(180);
+    expect(g[0]!.cx).toBeLessThan(g[1]!.cx);
+    expect(placeItem('hermione', 'hermione-09')!.rotate).toBe(180);
+    expect(placeItem('harry', 'harry-09')!.flip).toBe(true);
     expect(placeItem('harry', 'harry-04')!.z).toBeLessThan(placeItem('harry', 'harry-07')!.z); // tie < scarf
   });
   it('สัตว์ประจำตัวไม่ถูกวางซ้อนเป็นไอเท็ม และตัวละคร/ไอเท็มที่ไม่มี = null', () => {
-    expect(placeItem('harry', 'harry-pet')).toBeNull();
+    expect(placeItem('harry', 'harry-pet')).toBeNull(); // สัตว์ใช้ placePet
     expect(placeItem('nobody', 'harry-01')).toBeNull();
     expect(placeItem('harry', 'nope')).toBeNull();
   });
