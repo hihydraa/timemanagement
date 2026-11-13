@@ -19,12 +19,12 @@ export interface Rig {
   handDx: number;
 }
 export const RIGS: Record<string, Rig> = {
-  harry: { w: 290, h: 454, cx: 0.47, chin: 0.5, feet: 0.99, handDx: 0.5 },
-  hermione: { w: 408, h: 437, cx: 0.56, chin: 0.5, feet: 0.99, handDx: 0.45 },
-  ron: { w: 292, h: 453, cx: 0.52, chin: 0.5, feet: 0.99, handDx: 0.5 },
-  dumbledore: { w: 324, h: 458, cx: 0.47, chin: 0.5, feet: 0.99, handDx: 0.5 },
-  draco: { w: 256, h: 408, cx: 0.52, chin: 0.44, feet: 0.99, handDx: 0.33 },
-  hagrid: { w: 471, h: 506, cx: 0.5, chin: 0.55, feet: 0.99, handDx: 0.85 },
+  harry: { w: 290, h: 454, cx: 0.59, chin: 0.55, feet: 0.99, handDx: 0.5 },
+  hermione: { w: 408, h: 437, cx: 0.55, chin: 0.56, feet: 0.99, handDx: 0.45 },
+  ron: { w: 292, h: 453, cx: 0.575, chin: 0.55, feet: 0.99, handDx: 0.5 },
+  dumbledore: { w: 324, h: 458, cx: 0.56, chin: 0.55, feet: 0.99, handDx: 0.5 },
+  draco: { w: 256, h: 471, cx: 0.59, chin: 0.5, feet: 0.99, handDx: 0.33 },
+  hagrid: { w: 471, h: 506, cx: 0.535, chin: 0.55, feet: 0.99, handDx: 0.85 },
 };
 
 export interface Spec {
@@ -50,7 +50,7 @@ export const SPECS: Record<string, Spec> = {
   'harry-05': { w: 0.5, top: 0.5, bottom: 0.78 },
   'harry-06': { x: 0.02, w: 0.66, top: 0.78, bottom: 1.0 },
   'harry-07': { x: -0.04, w: 0.58, top: -0.03, bottom: 0.56 },
-  'harry-08': { x: 0.16, w: 0.7, y: -0.25 },
+  'harry-08': { x: -0.05, w: 0.72, y: -0.36 },
   'harry-09': { x: -0.6, w: 0.35, y: 0.2, flip: true, rot: 10 },
   'harry-10': { x: 0.55, w: 1.1, y: 0.25, rot: -40 },
   'harry-pet': { x: -0.43, w: 0.38, y: -0.01 },
@@ -74,7 +74,7 @@ export const SPECS: Record<string, Spec> = {
   'ron-05': { w: 0.5, top: 0.38, bottom: 0.97 },
   'ron-06': { w: 0.62, top: 0.87, bottom: 1.0 },
   'ron-07': { x: -0.02, w: 0.55, top: -0.03, bottom: 0.5 },
-  'ron-08': { x: -0.08, w: 0.74, y: -0.84 },
+  'ron-08': { x: -0.02, w: 0.74, y: -1.0 },
   'ron-09': { x: -0.42, w: 0.2, y: 0.65, rot: 180 },
   'ron-10': { x: 0.37, w: 0.26, y: 0.72 },
   'ron-pet': { x: 0.27, w: 0.26, y: 0.05 },
@@ -83,8 +83,8 @@ export const SPECS: Record<string, Spec> = {
   'dumbledore-02': { w: 0.55, top: 0.05, bottom: 0.62 },
   'dumbledore-03': { w: 0.42, top: 0.55, bottom: 0.93 },
   'dumbledore-04': { w: 0.62, top: 0.8, bottom: 1.0 },
-  'dumbledore-05': { x: 0.02, w: 0.8, top: -1.05, bottom: -0.5 },
-  'dumbledore-06': { x: 0.14, w: 0.64, y: -0.42 },
+  'dumbledore-05': { x: -0.04, w: 0.8, top: -1.4, bottom: -0.8 },
+  'dumbledore-06': { x: -0.04, w: 0.78, y: -0.62 },
   'dumbledore-07': { w: 0.88, top: 0, bottom: 0.86 },
   'dumbledore-08': { w: 0.38, top: 0.33, bottom: 0.5 },
   'dumbledore-09': { x: 0.56, w: 0.43, y: -0.07, rot: -25 },
@@ -120,6 +120,7 @@ export const SPECS: Record<string, Spec> = {
 export const Z: Record<Exclude<Slot, 'companion'>, number> = {
   bottom: 1,
   shoes: 2,
+  shirt: 2.5,
   top: 3,
   outer: 4,
   waist: 5,

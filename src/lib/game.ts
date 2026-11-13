@@ -8,6 +8,7 @@ export const MASTER = 'นายท่าน';
 
 export type Slot =
   | 'outer'
+  | 'shirt'
   | 'top'
   | 'bottom'
   | 'shoes'
@@ -54,7 +55,7 @@ type Tier = keyof typeof PRICE;
 const RAW: Record<string, [string, Slot, Tier][]> = {
   harry: [
     ['ชุดคลุมกริฟฟินดอร์', 'outer', 'rare'],
-    ['เสื้อเชิ้ตขาว', 'top', 'basic'],
+    ['เสื้อเชิ้ตขาว', 'shirt', 'basic'],
     ['เสื้อกั๊กถักลายขวาง', 'top', 'mid'],
     ['เนคไทลายทาง', 'tie', 'mid'],
     ['กางเกงขาสั้นสีเทาเข้ม', 'bottom', 'basic'],
@@ -66,7 +67,7 @@ const RAW: Record<string, [string, Slot, Tier][]> = {
   ],
   hermione: [
     ['ชุดคลุมกริฟฟินดอร์', 'outer', 'rare'],
-    ['เสื้อเชิ้ตขาว', 'top', 'basic'],
+    ['เสื้อเชิ้ตขาว', 'shirt', 'basic'],
     ['สเวตเตอร์ถักลายขวาง', 'top', 'mid'],
     ['เนคไทลายทาง', 'tie', 'mid'],
     ['กระโปรงพลีทสีเทาเข้ม', 'bottom', 'basic'],
@@ -78,7 +79,7 @@ const RAW: Record<string, [string, Slot, Tier][]> = {
   ],
   ron: [
     ['ชุดคลุมสีดำเลือดหมู', 'outer', 'rare'],
-    ['เสื้อเชิ้ตขาว', 'top', 'basic'],
+    ['เสื้อเชิ้ตขาว', 'shirt', 'basic'],
     ['สเวตเตอร์สีแดงเลือดหมูอักษร R', 'top', 'mid'],
     ['เนคไทแดงทอง', 'tie', 'mid'],
     ['กางเกงสีเทาถ่าน', 'bottom', 'basic'],
@@ -102,7 +103,7 @@ const RAW: Record<string, [string, Slot, Tier][]> = {
   ],
   draco: [
     ['ชุดคลุมสีดำขลิบเขียว', 'outer', 'rare'],
-    ['เสื้อเชิ้ตขาว', 'top', 'basic'],
+    ['เสื้อเชิ้ตขาว', 'shirt', 'basic'],
     ['เสื้อกั๊กเทาขลิบเขียว', 'top', 'mid'],
     ['เนคไทเขียวเงิน', 'tie', 'mid'],
     ['กางเกงสีดำ', 'bottom', 'basic'],
@@ -114,7 +115,7 @@ const RAW: Record<string, [string, Slot, Tier][]> = {
   ],
   hagrid: [
     ['เสื้อโค้ทตัวใหญ่สีน้ำตาล', 'outer', 'rare'],
-    ['เสื้อทำงานสีเบจ', 'top', 'basic'],
+    ['เสื้อทำงานสีเบจ', 'shirt', 'basic'],
     ['เสื้อกั๊กหนังสีน้ำตาล', 'top', 'mid'],
     ['กางเกงขายานทรงกว้าง', 'bottom', 'basic'],
     ['รองเท้าบูทหนัก', 'shoes', 'mid'],

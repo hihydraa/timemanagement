@@ -8,7 +8,7 @@ import {
   placeItems,
   placePet,
 } from '../apps/web/src/lib/avatar';
-import { CHARACTERS, ITEMS } from '../src/lib/game';
+import { CHARACTERS, ITEMS, getItem } from '../src/lib/game';
 
 describe('สวมซ้อนบนตัวละคร (avatar)', () => {
   it('ทุกตัวละครมีจุดสังเกต + ภาพตัดพื้น + อัตราส่วน canvas', () => {
@@ -59,5 +59,10 @@ describe('สวมซ้อนบนตัวละคร (avatar)', () => {
     expect(z('harry-01')).toBeGreaterThan(z('harry-02')); // robe > shirt
     expect(z('harry-08')).toBeGreaterThan(z('harry-01')); // glasses > robe
     expect(z('harry-05')).toBeLessThan(z('harry-02')); // trousers < shirt
+  });
+  it('เสื้อเชิ้ต (shirt) กับเสื้อกั๊ก/สเวตเตอร์ (top) อยู่คนละช่อง สวมซ้อนกันได้', () => {
+    expect(getItem('harry-02')!.slot).toBe('shirt');
+    expect(getItem('harry-03')!.slot).toBe('top');
+    expect(placeItem('harry', 'harry-02')!.z).toBeLessThan(placeItem('harry', 'harry-03')!.z);
   });
 });
