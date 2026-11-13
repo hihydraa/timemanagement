@@ -8,6 +8,7 @@ import {
   placeItems,
   placePet,
 } from '../apps/web/src/lib/avatar';
+import { LAYERS, hasLayers, layerKey } from '../apps/web/src/lib/layers';
 import { CHARACTERS, ITEMS, getItem } from '../src/lib/game';
 
 describe('สวมซ้อนบนตัวละคร (avatar)', () => {
@@ -64,5 +65,20 @@ describe('สวมซ้อนบนตัวละคร (avatar)', () => {
     expect(getItem('harry-02')!.slot).toBe('shirt');
     expect(getItem('harry-03')!.slot).toBe('top');
     expect(placeItem('harry', 'harry-02')!.z).toBeLessThan(placeItem('harry', 'harry-03')!.z);
+  });
+  it('แฮร์รี่ใช้เลเยอร์พอดีตัว: ไฟล์ครบ ทุกไอเท็ม/สัตว์ของเขามีชั้น และลำดับซ้อนไม่ซ้ำ', () => {
+    expect(hasLayers('harry')).toBe(true);
+    expect(hasLayers('ron')).toBe(false); // ยังไม่มีเลเยอร์ → ใช้ระบบวางตำแหน่งเดิม
+    const set = LAYERS.harry!;
+    expect(existsSync('apps/web/public/game/layers/harry/base.webp')).toBe(true);
+    for (const k of set.order)
+      expect(existsSync(`apps/web/public/game/layers/harry/${k}.webp`), k).toBe(true);
+    const mine = ITEMS.filter((i) => i.collection === 'harry').map((i) => layerKey(i.id));
+    expect([...mine].sort()).toEqual([...set.order].sort());
+    expect(new Set(set.order).size).toBe(set.order.length);
+    const at = (k: string) => set.order.indexOf(k);
+    expect(at('02')).toBeLessThan(at('03')); // เชิ้ต < กั๊ก
+    expect(at('03')).toBeLessThan(at('01')); // กั๊ก < ชุดคลุม
+    expect(at('01')).toBeLessThan(at('07')); // ชุดคลุม < ผ้าพันคอ
   });
 });

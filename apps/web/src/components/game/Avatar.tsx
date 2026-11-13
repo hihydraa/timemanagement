@@ -1,5 +1,7 @@
 import { FIGURE, canvasAspect, placeItems, placePet, type Box } from '../../lib/avatar';
 import { getItem } from '../../lib/game';
+import { t } from '../../lib/i18n';
+import { LAYERS, hasLayers, layerKey } from '../../lib/layers';
 
 const pct = (n: number) => `${n}%`;
 /** อัตราส่วนกว้าง/สูงของภาพถุงมือทั้งคู่ (ครึ่งหนึ่ง = ถุงมือข้างเดียว) */
@@ -39,8 +41,45 @@ export default function Avatar({
   height?: number;
   className?: string;
 }) {
-  const aspect = canvasAspect(characterId);
   const pet = companionId ? getItem(companionId) : null;
+  if (hasLayers(characterId)) {
+    // เลเยอร์พอดีตัว: ภาพทุกชั้นขนาดเท่ากัน ซ้อนกันที่ 0,0 ตามลำดับ
+    const set = LAYERS[characterId]!;
+    const on = new Set([...worn.map(layerKey), ...(pet ? ['pet'] : [])]);
+    const dir = `/game/layers/${characterId}`;
+    const names = [...worn, ...(pet ? [pet.id] : [])]
+      .map((i) => getItem(i)?.th)
+      .filter(Boolean)
+      .join(', ');
+    return (
+      <div
+        className={`relative shrink-0 ${className}`}
+        style={{ height, width: (height * set.w) / set.h }}
+        role="img"
+        aria-label={names || t.game.title}
+      >
+        <img
+          src={`${dir}/base.webp`}
+          alt=""
+          decoding="async"
+          className="absolute inset-0 h-full w-full"
+        />
+        {set.order
+          .filter((k) => on.has(k))
+          .map((k, i) => (
+            <img
+              key={k}
+              src={`${dir}/${k}.webp`}
+              alt=""
+              decoding="async"
+              className="pointer-events-none absolute inset-0 h-full w-full"
+              style={{ zIndex: i + 1 }}
+            />
+          ))}
+      </div>
+    );
+  }
+  const aspect = canvasAspect(characterId);
   const petBox = pet ? placePet(characterId) : null;
   return (
     <div
