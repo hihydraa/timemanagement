@@ -1,7 +1,9 @@
-import { canvasAspect, placeItem } from '../../lib/avatar';
+import { FIGURE, canvasAspect, placeItems, placePet } from '../../lib/avatar';
 import { getItem } from '../../lib/game';
 
-/** ตัวละครที่ "สวมจริง": ซ้อนภาพไอเท็มที่สวมอยู่บนตัวละคร + สัตว์ประจำตัวเป็นป้ายกลมที่มุม */
+const pct = (n: number) => `${n}%`;
+
+/** ตัวละครที่ "สวมจริง": ซ้อนภาพไอเท็มที่สวมอยู่บนตัวละคร + สัตว์ประจำตัวบนไหล่/ข้างเท้า (ตำแหน่งดู lib/avatar.ts) */
 export default function Avatar({
   characterId,
   worn,
@@ -18,16 +20,14 @@ export default function Avatar({
 }) {
   const aspect = canvasAspect(characterId);
   const pet = companionId ? getItem(companionId) : null;
+  const petBox = pet ? placePet(characterId) : null;
   return (
     <div
       className={`relative shrink-0 ${className}`}
       style={{ height, width: height * aspect }}
       role="img"
       aria-label={
-        worn
-          .map((i) => getItem(i)?.th)
-          .filter(Boolean)
-          .join(', ') || undefined
+        [...worn.map((i) => getItem(i)?.th), pet?.th].filter(Boolean).join(', ') || undefined
       }
     >
       <img
@@ -35,35 +35,64 @@ export default function Avatar({
         alt=""
         decoding="async"
         className="absolute object-contain"
-        style={{ left: '17.95%', top: '18.75%', width: '64.1%', height: '78.1%' }}
+        style={{
+          left: pct(FIGURE.left),
+          top: pct(FIGURE.top),
+          width: pct(FIGURE.width),
+          height: pct(FIGURE.height),
+        }}
       />
-      {worn.map((id) => {
-        const b = placeItem(characterId, id);
-        if (!b) return null;
-        return (
-          <img
-            key={id}
-            src={`/game/cut/items/${id}.webp`}
-            alt=""
-            decoding="async"
-            className="pointer-events-none absolute object-contain drop-shadow-sm"
-            style={{
-              left: `${b.left}%`,
-              top: `${b.top}%`,
-              width: `${b.width}%`,
-              height: `${b.height}%`,
-              zIndex: b.z,
-            }}
-          />
-        );
-      })}
-      {pet && (
+      {worn.flatMap((id) =>
+        placeItems(characterId, id).map((b, i) => {
+          const style = {
+            left: pct(b.left),
+            top: pct(b.top),
+            width: pct(b.width),
+            height: pct(b.height),
+            zIndex: Math.round(b.z * 2),
+            transform: b.rotate ? `rotate(${b.rotate}deg)` : undefined,
+          };
+          const src = `/game/cut/items/${id}.webp`;
+          // ถุงมือเป็นภาพคู่: ตัดครึ่งซ้าย/ขวาไปวางที่มือแต่ละข้าง
+          return b.crop ? (
+            <div
+              key={`${id}-${i}`}
+              className="pointer-events-none absolute overflow-hidden"
+              style={style}
+            >
+              <img
+                src={src}
+                alt=""
+                decoding="async"
+                className="absolute top-0 h-full w-auto max-w-none drop-shadow-sm"
+                style={b.crop === 'left' ? { left: 0 } : { right: 0 }}
+              />
+            </div>
+          ) : (
+            <img
+              key={`${id}-${i}`}
+              src={src}
+              alt=""
+              decoding="async"
+              className="pointer-events-none absolute object-contain drop-shadow-sm"
+              style={style}
+            />
+          );
+        }),
+      )}
+      {pet && petBox && (
         <img
-          src={`/game/companions/${pet.collection}.webp`}
-          alt={pet.th}
+          src={`/game/cut/companions/${pet.collection}.webp`}
+          alt=""
           decoding="async"
-          className="absolute -bottom-1 -left-1 rounded-full border-2 border-amber-400 bg-[#fcf5e6] object-cover shadow"
-          style={{ width: height * 0.3, height: height * 0.3, zIndex: 20 }}
+          className="pointer-events-none absolute object-contain drop-shadow"
+          style={{
+            left: pct(petBox.left),
+            top: pct(petBox.top),
+            width: pct(petBox.width),
+            height: pct(petBox.height),
+            zIndex: Math.round(petBox.z * 2),
+          }}
         />
       )}
     </div>

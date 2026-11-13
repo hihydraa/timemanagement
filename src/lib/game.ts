@@ -12,9 +12,11 @@ export type Slot =
   | 'bottom'
   | 'shoes'
   | 'neck'
+  | 'tie'
   | 'head'
   | 'face'
   | 'hand'
+  | 'carry'
   | 'gloves'
   | 'bag'
   | 'waist'
@@ -54,19 +56,19 @@ const RAW: Record<string, [string, Slot, Tier][]> = {
     ['ชุดคลุมกริฟฟินดอร์', 'outer', 'rare'],
     ['เสื้อเชิ้ตขาว', 'top', 'basic'],
     ['เสื้อกั๊กถักลายขวาง', 'top', 'mid'],
-    ['เนคไทลายทาง', 'neck', 'mid'],
+    ['เนคไทลายทาง', 'tie', 'mid'],
     ['กางเกงขาสั้นสีเทาเข้ม', 'bottom', 'basic'],
     ['รองเท้าหนังสีดำ', 'shoes', 'basic'],
     ['ผ้าพันคอลายขวาง', 'neck', 'mid'],
     ['แว่นกลมกรอบดำ', 'face', 'rare'],
     ['ไม้กายสิทธิ์', 'hand', 'rare'],
-    ['ไม้กวาด', 'hand', 'rare'],
+    ['ไม้กวาด', 'carry', 'rare'],
   ],
   hermione: [
     ['ชุดคลุมกริฟฟินดอร์', 'outer', 'rare'],
     ['เสื้อเชิ้ตขาว', 'top', 'basic'],
     ['สเวตเตอร์ถักลายขวาง', 'top', 'mid'],
-    ['เนคไทลายทาง', 'neck', 'mid'],
+    ['เนคไทลายทาง', 'tie', 'mid'],
     ['กระโปรงพลีทสีเทาเข้ม', 'bottom', 'basic'],
     ['รองเท้ามีสายคาด', 'shoes', 'basic'],
     ['ผ้าพันคอลายขวาง', 'neck', 'mid'],
@@ -78,7 +80,7 @@ const RAW: Record<string, [string, Slot, Tier][]> = {
     ['ชุดคลุมสีดำเลือดหมู', 'outer', 'rare'],
     ['เสื้อเชิ้ตขาว', 'top', 'basic'],
     ['สเวตเตอร์สีแดงเลือดหมูอักษร R', 'top', 'mid'],
-    ['เนคไทแดงทอง', 'neck', 'mid'],
+    ['เนคไทแดงทอง', 'tie', 'mid'],
     ['กางเกงสีเทาถ่าน', 'bottom', 'basic'],
     ['รองเท้าหนังสีน้ำตาล', 'shoes', 'basic'],
     ['ผ้าพันคอแดงทอง', 'neck', 'mid'],
@@ -102,7 +104,7 @@ const RAW: Record<string, [string, Slot, Tier][]> = {
     ['ชุดคลุมสีดำขลิบเขียว', 'outer', 'rare'],
     ['เสื้อเชิ้ตขาว', 'top', 'basic'],
     ['เสื้อกั๊กเทาขลิบเขียว', 'top', 'mid'],
-    ['เนคไทเขียวเงิน', 'neck', 'mid'],
+    ['เนคไทเขียวเงิน', 'tie', 'mid'],
     ['กางเกงสีดำ', 'bottom', 'basic'],
     ['รองเท้าหนังสีดำ', 'shoes', 'basic'],
     ['ผ้าพันคอเขียวเงิน', 'neck', 'mid'],
@@ -119,7 +121,7 @@ const RAW: Record<string, [string, Slot, Tier][]> = {
     ['เข็มขัดหัวทองเหลือง', 'waist', 'basic'],
     ['ถุงมือทำงาน', 'gloves', 'mid'],
     ['ผ้าพันคอสีเขียวมอส', 'neck', 'mid'],
-    ['ร่มสีชมพู', 'hand', 'rare'],
+    ['ร่มสีชมพู', 'carry', 'rare'],
     ['กระเป๋าสะพายหนังสไตล์ชนบท', 'bag', 'rare'],
   ],
 };
@@ -132,12 +134,20 @@ const PETS: Record<string, string> = {
   hagrid: 'แฟง (สุนัขตัวใหญ่)',
 };
 
-/** ทรงที่ต้องรู้ตอนสวมซ้อน: long = กางเกงขายาว, ring = แหวน */
-export const FIT: Record<string, 'long' | 'ring'> = {
+/** ชนิดของไอเท็มที่ต้องวางต่างจากค่าเริ่มต้นของช่อง (ใช้ตอนสวมซ้อนบนตัวละคร) */
+export type Fit = 'long' | 'ring' | 'wand' | 'broom' | 'umbrella';
+export const FIT: Record<string, Fit> = {
   'ron-05': 'long',
   'dumbledore-03': 'long',
   'draco-05': 'long',
   'dumbledore-10': 'ring',
+  'harry-09': 'wand',
+  'hermione-09': 'wand',
+  'ron-09': 'wand',
+  'dumbledore-09': 'wand',
+  'draco-09': 'wand',
+  'harry-10': 'broom',
+  'hagrid-09': 'umbrella',
 };
 
 export const ITEMS: readonly Item[] = [

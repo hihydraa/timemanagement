@@ -1,6 +1,12 @@
 import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { LANDMARKS, canvasAspect, placeItem } from '../apps/web/src/lib/avatar';
+import {
+  LANDMARKS,
+  canvasAspect,
+  placeItem,
+  placeItems,
+  placePet,
+} from '../apps/web/src/lib/avatar';
 import { CHARACTERS, ITEMS } from '../src/lib/game';
 
 describe('สวมซ้อนบนตัวละคร (avatar)', () => {
@@ -26,7 +32,21 @@ describe('สวมซ้อนบนตัวละคร (avatar)', () => {
       }
     }
   });
-  it('สัตว์ประจำตัวไม่ถูกวางซ้อน (แสดงเป็นป้าย) และตัวละคร/ไอเท็มที่ไม่มี = null', () => {
+  it('สัตว์ประจำตัวทุกตัวมีภาพตัดพื้นและตำแหน่ง (บนไหล่/ข้างเท้า)', () => {
+    for (const c of CHARACTERS) {
+      expect(existsSync(`apps/web/public/game/cut/companions/${c.id}.webp`), c.id).toBe(true);
+      expect(placePet(c.id), c.id).toBeTruthy();
+    }
+    expect(placePet('nobody')).toBeNull();
+  });
+  it('ถุงมือแยกเป็น 2 ข้าง (ซ้าย/ขวา) ที่มือ; ไม้กายสิทธิ์หมุนถือที่มือซ้าย; เนคไทอยู่ใต้ผ้าพันคอ', () => {
+    const g = placeItems('draco', 'draco-08');
+    expect(g.map((b) => b.crop)).toEqual(['left', 'right']);
+    expect(g[0]!.left).toBeLessThan(g[1]!.left);
+    expect(placeItem('harry', 'harry-09')!.rotate).toBe(180);
+    expect(placeItem('harry', 'harry-04')!.z).toBeLessThan(placeItem('harry', 'harry-07')!.z); // tie < scarf
+  });
+  it('สัตว์ประจำตัวไม่ถูกวางซ้อนเป็นไอเท็ม และตัวละคร/ไอเท็มที่ไม่มี = null', () => {
     expect(placeItem('harry', 'harry-pet')).toBeNull();
     expect(placeItem('nobody', 'harry-01')).toBeNull();
     expect(placeItem('harry', 'nope')).toBeNull();
