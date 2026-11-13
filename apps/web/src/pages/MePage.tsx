@@ -15,6 +15,7 @@ const TABS: MeTab[] = ['overview', 'game', 'review', 'stats'];
 export default function MePage({ tab }: { tab: MeTab }) {
   const {
     user,
+    call,
     gcalStatus,
     goTo,
     openSettings,
@@ -58,7 +59,7 @@ export default function MePage({ tab }: { tab: MeTab }) {
             <div className="min-w-0">
               <h2 className="text-lg font-bold text-brand-800 dark:text-brand-200">
                 {t.me.hello}
-                {user.name ? ` ${user.name}` : ''}
+                {call ? ` ${call}` : user.name ? ` ${user.name}` : ''}
               </h2>
               <p className="truncate text-sm text-slate-600 dark:text-slate-300">{user.email}</p>
             </div>
