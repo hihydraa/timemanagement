@@ -41,7 +41,7 @@ export default function MiniTimer({ onOpen }: { onOpen: () => void }) {
     <button
       type="button"
       onClick={onOpen}
-      className="fixed bottom-28 right-3 z-30 flex items-center gap-2 rounded-full bg-brand-700 px-4 py-2 text-sm font-medium text-white shadow-lg hover:bg-brand-800 md:bottom-6 md:right-6"
+      className="fixed bottom-28 left-3 z-30 flex items-center gap-2 rounded-full bg-brand-700 px-4 py-2 text-sm font-medium text-white shadow-lg hover:bg-brand-800 md:bottom-6 md:left-6"
       aria-label={`${t.mini.label}: ${done ? t.mini.done : mmss(left)}`}
     >
       <span aria-hidden>{run.phase === 'break' ? '☕' : '⏱'}</span>

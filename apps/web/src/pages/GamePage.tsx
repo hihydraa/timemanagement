@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { CharacterImage, ItemImage } from '../components/game/GameImage';
+import Avatar from '../components/game/Avatar';
+import { ItemImage } from '../components/game/GameImage';
 import { api, ApiClientError } from '../lib/api';
 import { useApp } from '../lib/appContext';
 import { CHARACTERS, ITEMS, MASTER, callName, getCharacter, getItem, type Item } from '../lib/game';
@@ -57,7 +58,12 @@ export default function GamePage() {
       <section className={`${card} flex flex-wrap items-center gap-4`} aria-label={g.title}>
         {p && ch ? (
           <>
-            <CharacterImage id={p.characterId} alt={ch.th} height={150} />
+            <Avatar
+              characterId={p.characterId}
+              worn={wearing.map((x) => x.id)}
+              companionId={pet?.id}
+              height={260}
+            />
             <div className="min-w-0 flex-1 space-y-1">
               <h2 className="text-lg font-bold text-brand-800 dark:text-brand-200">
                 {p.honorific === 'master' ? MASTER : p.displayName}

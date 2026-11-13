@@ -132,6 +132,14 @@ const PETS: Record<string, string> = {
   hagrid: 'แฟง (สุนัขตัวใหญ่)',
 };
 
+/** ทรงที่ต้องรู้ตอนสวมซ้อน: long = กางเกงขายาว, ring = แหวน */
+export const FIT: Record<string, 'long' | 'ring'> = {
+  'ron-05': 'long',
+  'dumbledore-03': 'long',
+  'draco-05': 'long',
+  'dumbledore-10': 'ring',
+};
+
 export const ITEMS: readonly Item[] = [
   ...CHARACTERS.flatMap((c) =>
     RAW[c.id]!.map(([th, slot, tier], i) => ({

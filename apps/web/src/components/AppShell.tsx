@@ -20,6 +20,7 @@ import MiniTimer from './MiniTimer';
 import { BottomTabBar, TopTabs } from './nav/MainNav';
 import type { Category, GcalStatus, PushStatus, User } from '../lib/types';
 import CharacterDialog from './game/CharacterDialog';
+import PartnerWidget from './game/PartnerWidget';
 import PointsListener from './game/PointsListener';
 import { callName, type GameState } from '../lib/game';
 import { disablePush } from '../lib/webPush';
@@ -373,6 +374,7 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
           )}
         </div>
         <PointsListener />
+        <PartnerWidget />
         <CelebrateToast />
       </ToastProvider>
     </AppContext.Provider>
