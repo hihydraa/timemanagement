@@ -1,35 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../lib/appContext';
-import { t } from '../lib/i18n';
+import { isCornerVisible, useAvatarSnapshot } from '../lib/avatarSnapshot';
+import { useCelebrateMessage } from '../lib/celebrate';
 import Mascot from './Mascot';
 
-export const CELEBRATE_EVENT = 'dobby:celebrate';
-const MESSAGES = t.mascot.celebrate;
-const NAMED = t.mascot.celebrateNamed;
-
-/** ป๊อปอัปมาสคอตฉลองเมื่อทำงานเสร็จ (รับ event จาก api.completeTask/updateTask) แสดง ~2.5 วินาที */
+/**
+ * ป๊อปอัปมาสคอตฉลองเมื่อทำงานเสร็จ ใช้เมื่อไม่มีตัวละครมุมขวาล่าง
+ * (ถ้ามี ตัวละครจะฉลองเองด้วยกล่องคำพูด ดู avatar/AvatarCorner)
+ */
 export default function CelebrateToast() {
-  const { call } = useApp();
-  const callRef = useRef(call);
-  callRef.current = call;
-  const [msg, setMsg] = useState<string | null>(null);
-  useEffect(() => {
-    let timer: number | undefined;
-    const on = () => {
-      const c = callRef.current;
-      const pool = c ? NAMED : MESSAGES;
-      const m = pool[Math.floor(Math.random() * pool.length)] ?? pool[0] ?? '';
-      setMsg(c ? m.replace('{name}', c) : m);
-      window.clearTimeout(timer);
-      timer = window.setTimeout(() => setMsg(null), 2600);
-    };
-    window.addEventListener(CELEBRATE_EVENT, on);
-    return () => {
-      window.removeEventListener(CELEBRATE_EVENT, on);
-      window.clearTimeout(timer);
-    };
-  }, []);
-  if (!msg) return null;
+  const { call, route } = useApp();
+  const snapshot = useAvatarSnapshot();
+  const msg = useCelebrateMessage(call);
+  if (!msg || isCornerVisible(route, snapshot)) return null;
   return (
     <div
       role="status"

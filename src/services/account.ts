@@ -2,6 +2,7 @@ import { eq, inArray, or, sql } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import {
   alarms,
+  avatarProfiles,
   gameInventory,
   gameLedger,
   gameProfiles,
@@ -78,6 +79,7 @@ export async function deleteAccount(
     db.delete(gameInventory).where(eq(gameInventory.userId, userId)),
     db.delete(gameLedger).where(eq(gameLedger.userId, userId)),
     db.delete(gameProfiles).where(eq(gameProfiles.userId, userId)),
+    db.delete(avatarProfiles).where(eq(avatarProfiles.userId, userId)),
     db.delete(alarms).where(eq(alarms.userId, userId)),
     db.delete(pushSubscriptions).where(eq(pushSubscriptions.userId, userId)),
     db.delete(usageEvents).where(eq(usageEvents.userId, userId)),

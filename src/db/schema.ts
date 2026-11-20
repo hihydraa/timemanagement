@@ -269,6 +269,16 @@ export const gameProfiles = sqliteTable('game_profiles', {
   updatedAt: text('updated_at').notNull(),
 });
 
+/** อวตาร 3D ของผู้ใช้: ตัวละคร + ทรงผม + ชุด (ชุดเต็มตัวใช้แทนตัวละครและทรงผม จึงมีทรงผมพร้อมชุดไม่ได้) + ภาพนิ่งสำหรับมุมขวาล่าง */
+export const avatarProfiles = sqliteTable('avatar_profiles', {
+  userId: text('user_id').primaryKey(),
+  body: text('body').notNull(),
+  hair: text('hair'),
+  outfit: text('outfit'),
+  snapshot: text('snapshot'),
+  updatedAt: text('updated_at').notNull(),
+});
+
 /** บัญชีแต้ม (บวก = ได้, ลบ = ซื้อ): ยอดคงเหลือ = ผลรวม; unique (user, kind, ref) กันได้แต้ม/ซื้อซ้ำ */
 export const gameLedger = sqliteTable(
   'game_ledger',
