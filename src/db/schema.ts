@@ -306,3 +306,13 @@ export const gameInventory = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.userId, t.itemId] })],
 );
+
+/**
+ * ลิงก์สมัครรับปฏิทิน (ICS feed) สำหรับ Apple Calendar / ปฏิทินอื่น: token สุ่มเป็นความลับ
+ * (ผู้ถือลิงก์อ่านงานของเจ้าของได้ ไม่ต้องล็อกอิน) — หมุน/ปิดได้ทุกเมื่อ; 1 แถวต่อผู้ใช้
+ */
+export const calendarFeeds = sqliteTable('calendar_feeds', {
+  userId: text('user_id').primaryKey(),
+  token: text('token').notNull().unique(),
+  createdAt: text('created_at').notNull(),
+});

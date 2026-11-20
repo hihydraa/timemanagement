@@ -9,6 +9,7 @@ import { originCheck, requireAuth } from './middleware';
 import { readSessionCookie, verifySession } from './lib/session';
 import attachmentsRoutes from './routes/attachments';
 import auth from './routes/auth';
+import { calendarFeedApi, calendarFeedPublic } from './routes/calendarFeed';
 import categoriesRoutes from './routes/categories';
 import exportRoutes from './routes/export';
 import focusRoutes from './routes/focus';
@@ -86,6 +87,7 @@ app.get('/api/session', async (c) => {
 app.route('/', legal);
 app.route('/auth', auth);
 app.route('/webhook/line', lineWebhook);
+app.route('/ics', calendarFeedPublic);
 
 const api = new Hono<AppEnv>();
 // JSON ของ API เล็กเสมอ (รายละเอียดงาน ≤ 5,000 ตัวอักษร): จำกัด 256 KB; การอัปโหลดไฟล์มีเพดานของตัวเอง
@@ -117,6 +119,7 @@ api.route('/', categoriesRoutes);
 api.route('/', attachmentsRoutes);
 api.route('/line', lineApi);
 api.route('/gcal', gcalRoutes);
+api.route('/calendar-feed', calendarFeedApi);
 api.route('/', settingsRoutes);
 api.route('/', subtasksRoutes);
 api.route('/', focusRoutes);
@@ -135,7 +138,12 @@ app.onError((err, c) => {
 
 app.notFound((c) => {
   const p = c.req.path;
-  if (p.startsWith('/api/') || p.startsWith('/auth/') || p.startsWith('/webhook/')) {
+  if (
+    p.startsWith('/api/') ||
+    p.startsWith('/auth/') ||
+    p.startsWith('/webhook/') ||
+    p.startsWith('/ics/')
+  ) {
     return c.json(errorBody('not_found', 'ไม่พบเส้นทางนี้'), 404);
   }
   return c.env.ASSETS.fetch(c.req.raw);

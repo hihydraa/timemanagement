@@ -13,6 +13,7 @@ import { withTags, type TaskDto } from './tasks';
 const OPEN = ['todo', 'doing'] as const;
 const MONTH_CAP = 150;
 const WEEK_CAP = 100;
+const LIST_CAP = 5;
 const WEEKS = 8;
 
 type Row = typeof tasks.$inferSelect;
@@ -281,6 +282,26 @@ export async function dashboard(db: Db, userId: string, at: Date, monthParam?: s
     )
     .get();
 
+  const openTop = and(
+    eq(tasks.userId, userId),
+    inArray(tasks.status, [...OPEN]),
+    isNull(tasks.parentTaskId),
+  );
+  const overdueRows = await db
+    .select()
+    .from(tasks)
+    .where(and(openTop, or(lt(tasks.dueDate, today), lt(tasks.dueAt, nowStr))))
+    .orderBy(sql`coalesce(${tasks.dueAt}, ${tasks.dueDate}) asc`)
+    .limit(LIST_CAP);
+  const unscheduledRows = await db
+    .select()
+    .from(tasks)
+    .where(and(openTop, isNull(tasks.startAt), isNull(tasks.dueAt), isNull(tasks.dueDate)))
+    .orderBy(sql`${tasks.createdAt} desc`)
+    .limit(LIST_CAP);
+  const overdueTasks = overdueRows.length ? await withTags(db, overdueRows) : [];
+  const unscheduledTasks = unscheduledRows.length ? await withTags(db, unscheduledRows) : [];
+
   const s = await db.select().from(userSettings).where(eq(userSettings.userId, userId)).get();
   return {
     today,
@@ -312,6 +333,8 @@ export async function dashboard(db: Db, userId: string, at: Date, monthParam?: s
     week,
     attention: {
       stalled,
+      overdueTasks,
+      unscheduledTasks,
       overdue: Number(counts?.overdue ?? 0),
       unscheduled: Number(counts?.unscheduled ?? 0),
     },

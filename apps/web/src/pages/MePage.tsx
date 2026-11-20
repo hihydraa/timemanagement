@@ -1,4 +1,5 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
+import AppleCalendarDialog from '../components/AppleCalendarDialog';
 import Mascot from '../components/Mascot';
 import ModeSwitch from '../components/ModeSwitch';
 import { useApp } from '../lib/appContext';
@@ -27,6 +28,7 @@ export default function MePage({ tab }: { tab: MeTab }) {
     openOnboarding,
     logout,
   } = useApp();
+  const [apple, setApple] = useState(false);
   const row =
     'flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm hover:shadow-md dark:border-slate-700 dark:bg-slate-800';
   const gcalText = gcalStatus?.needsReconnect
@@ -120,6 +122,19 @@ export default function MePage({ tab }: { tab: MeTab }) {
               </button>
             </li>
             <li>
+              <button type="button" onClick={() => setApple(true)} className={row}>
+                <span aria-hidden className="text-2xl">
+                  🍎
+                </span>
+                <span>
+                  <strong className="block">{t.me.apple}</strong>
+                  <span className="text-sm text-slate-600 dark:text-slate-300">
+                    {t.me.appleHint}
+                  </span>
+                </span>
+              </button>
+            </li>
+            <li>
               <button type="button" onClick={openExport} className={row}>
                 <span aria-hidden className="text-2xl">
                   📦
@@ -193,6 +208,7 @@ export default function MePage({ tab }: { tab: MeTab }) {
         </div>
       )}
 
+      {apple && <AppleCalendarDialog onClose={() => setApple(false)} />}
       <Suspense fallback={<p role="status">{t.loading}</p>}>
         {tab === 'review' && <ReviewPage />}
         {tab === 'avatar' && <AvatarPage />}

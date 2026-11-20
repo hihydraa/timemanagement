@@ -13,6 +13,7 @@ import MonthDeadlines from '../components/dashboard/MonthDeadlines';
 import PerformancePanel from '../components/dashboard/PerformancePanel';
 import WorkloadStrip from '../components/dashboard/WorkloadStrip';
 import QuickAdd from '../components/QuickAdd';
+import TaskQuickDialog from '../components/TaskQuickDialog';
 import UnscheduledList from '../components/UnscheduledList';
 import { api, ApiClientError } from '../lib/api';
 import { useApp } from '../lib/appContext';
@@ -58,6 +59,7 @@ export default function TodayPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [drawer, setDrawer] = useState<DrawerInit | null>(null);
+  const [quick, setQuick] = useState<Task | null>(null);
   const nowMs = useNowMs();
   const timelineRef = useRef<HTMLElement>(null);
   const toast = useToast();
@@ -221,6 +223,7 @@ export default function TodayPage() {
         });
       })
       .catch(fail);
+  const openById = (id: string) => void api.getTask(id).then(setQuick).catch(fail);
   const startFocus = (task: Task) => {
     try {
       sessionStorage.setItem(FOCUS_TASK_KEY, task.id);
@@ -366,7 +369,7 @@ export default function TodayPage() {
             onFocus={startFocus}
             onDone={complete}
             onSnooze={snoozeTomorrow}
-            onOpen={(x) => setDrawer({ task: x })}
+            onOpen={setQuick}
             onAdd={() => setDrawer({ prefill: { allDay: false } })}
             onInbox={scrollToUnscheduled}
           />
@@ -392,7 +395,7 @@ export default function TodayPage() {
                     />
                     <button
                       type="button"
-                      onClick={() => setDrawer({ task: x })}
+                      onClick={() => setQuick(x)}
                       className="min-w-0 flex-1 text-left"
                     >
                       <UrgencyText level={x.urgency} />
@@ -436,7 +439,7 @@ export default function TodayPage() {
                     />
                     <button
                       type="button"
-                      onClick={() => setDrawer({ task: x })}
+                      onClick={() => setQuick(x)}
                       className="min-w-0 flex-1 text-left"
                     >
                       <UrgencyText level={x.urgency} />
@@ -474,11 +477,7 @@ export default function TodayPage() {
           className={`${card} scroll-mt-4`}
         >
           <h2 className="mb-3 text-sm font-semibold">{t.cockpit.timeline}</h2>
-          <DayTimeline
-            entries={view.timeline}
-            onOpen={(x) => setDrawer({ task: x })}
-            onGap={addAtGap}
-          />
+          <DayTimeline entries={view.timeline} onOpen={setQuick} onGap={addAtGap} />
           {view.untimed.length > 0 && (
             <div className="mt-4 border-t border-slate-200 pt-3 dark:border-slate-700">
               <h3 className="mb-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
@@ -497,7 +496,7 @@ export default function TodayPage() {
                     />
                     <button
                       type="button"
-                      onClick={() => setDrawer({ task: x })}
+                      onClick={() => setQuick(x)}
                       className={`min-w-0 flex-1 truncate text-left text-sm ${x.status === 'done' ? 'line-through' : ''}`}
                     >
                       {x.title}
@@ -532,7 +531,7 @@ export default function TodayPage() {
               d={dash}
               month={dash.month}
               onMonth={setMonth}
-              onOpen={(x) => setDrawer({ task: x })}
+              onOpen={setQuick}
               onComplete={complete}
             />
           </div>
@@ -540,14 +539,14 @@ export default function TodayPage() {
             <ImportantList
               tasks={dash.important}
               today={dash.today}
-              onOpen={(x) => setDrawer({ task: x })}
+              onOpen={setQuick}
               onComplete={complete}
               onSchedule={schedule}
             />
-            <WorkloadStrip d={dash} onGo={() => goTo('plan')} />
+            <WorkloadStrip d={dash} onGo={() => goTo('plan')} onOpen={openById} />
             <AttentionPanel
               d={dash}
-              onOpen={(x) => setDrawer({ task: x })}
+              onOpen={setQuick}
               onOverdue={scrollToOverdue}
               onUnscheduled={scrollToUnscheduled}
             />
@@ -557,6 +556,19 @@ export default function TodayPage() {
       )}
 
       <UnscheduledList onChanged={load} />
+
+      {quick && (
+        <TaskQuickDialog
+          key={quick.id}
+          task={quick}
+          onClose={() => setQuick(null)}
+          onChanged={load}
+          onEdit={(x) => {
+            setQuick(null);
+            setDrawer({ task: x });
+          }}
+        />
+      )}
 
       {drawer && (
         <Suspense fallback={null}>

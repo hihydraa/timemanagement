@@ -239,3 +239,10 @@ export interface Alarm {
   enabled: boolean;
   ringing: boolean;
 }
+
+/** ลิงก์สมัครรับปฏิทิน (ICS) สำหรับ Apple Calendar */
+export interface CalendarFeed {
+  enabled: boolean;
+  url: string | null;
+  webcalUrl: string | null;
+}

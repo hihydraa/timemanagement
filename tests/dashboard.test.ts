@@ -183,6 +183,16 @@ describe('GET /api/dashboard', () => {
     expect(at.overdue).toBe(1);
     expect(at.unscheduled).toBe(1);
     expect(at.stalled.map((t: { title: string }) => t.title)).toEqual(['เลื่อนบ่อย']);
+    // รายการงานจริง (ไม่ใช่แค่จำนวน) — ใช้แสดงชื่องานกดเปิดได้ในแผง "ควรจัดการ"
+    expect(at.overdueTasks.map((t: { title: string }) => t.title)).toEqual(['ค้าง']);
+    expect(at.unscheduledTasks.map((t: { title: string }) => t.title)).toEqual(['ไม่มีวัน']);
+  });
+  it('ควรจัดการ: รายการงานไม่ปนของผู้ใช้อื่น', async () => {
+    await mk(b, { title: 'ค้างของ B', ...day('2026-11-01') });
+    await mk(b, { title: 'ไม่มีวันของ B' });
+    const at = (await dash(a)).attention;
+    expect(at.overdueTasks).toEqual([]);
+    expect(at.unscheduledTasks).toEqual([]);
   });
   it('งาน 7 วันข้างหน้า (ภาระงาน): เฉพาะที่ยังไม่เสร็จในช่วงวันนี้–+6', async () => {
     await mk(a, { title: 'วันนี้', ...day(TODAY), estimateMinutes: 60 });

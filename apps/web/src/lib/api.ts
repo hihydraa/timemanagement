@@ -4,6 +4,7 @@ import type { AvatarState, BodyId, HairId, OutfitId } from './avatarModels';
 import type { DashboardData } from './dashboard';
 import type { GameState, Honorific } from './game';
 import type {
+  CalendarFeed,
   Alarm,
   Attachment,
   Category,
@@ -167,6 +168,9 @@ export const api = {
     req<GcalStatus>('PATCH', '/api/gcal/settings', p),
   gcalDisconnect: () => req<GcalStatus>('POST', '/api/gcal/disconnect', {}),
   gcalResync: (cursor: string | null) => req<ResyncResult>('POST', '/api/gcal/resync', { cursor }),
+  calendarFeed: () => req<CalendarFeed>('GET', '/api/calendar-feed'),
+  calendarFeedCreate: () => req<CalendarFeed>('POST', '/api/calendar-feed', {}),
+  calendarFeedDisable: () => req<CalendarFeed>('DELETE', '/api/calendar-feed'),
   getSettings: () => req<SettingsView>('GET', '/api/settings'),
   patchSettings: (
     p: Partial<NotificationSettings> & {
@@ -181,8 +185,7 @@ export const api = {
   ) => req<SettingsView>('PATCH', '/api/settings', p),
   importTasks: (tasks: unknown[]) =>
     req<{ imported: number; skipped: number }>('POST', '/api/import/tasks', { tasks }),
-  getAvatar: () =>
-    req<{ avatar: AvatarState | null }>('GET', '/api/avatar').then((r) => r.avatar),
+  getAvatar: () => req<{ avatar: AvatarState | null }>('GET', '/api/avatar').then((r) => r.avatar),
   saveAvatar: (p: {
     body: BodyId;
     hair: HairId | null;

@@ -30,7 +30,14 @@ export interface DashboardData {
     focusMinutesWeek: number;
   };
   week: PlanTask[];
-  attention: { stalled: Task[]; overdue: number; unscheduled: number };
+  attention: {
+    stalled: Task[];
+    /** งานเลยกำหนดที่เก่าสุด (สูงสุด 5) / งานที่ยังไม่ตั้งวันล่าสุด (สูงสุด 5) */
+    overdueTasks: Task[];
+    unscheduledTasks: Task[];
+    overdue: number;
+    unscheduled: number;
+  };
 }
 
 export const shiftMonth = (month: string, delta: number): string => {
