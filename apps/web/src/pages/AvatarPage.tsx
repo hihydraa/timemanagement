@@ -4,6 +4,7 @@ import {
   BODIES,
   HAIRS,
   OUTFITS,
+  resolveOutfit,
   type BodyId,
   type HairId,
   type OutfitId,
@@ -41,7 +42,11 @@ export default function AvatarPage() {
         if (!alive.current) return;
         if (a) {
           saved.current = { key: keyOf(a), hasSnapshot: !!a.snapshot };
-          setChoice({ body: a.body, hair: a.hair, outfit: a.outfit });
+          setChoice({
+            body: a.body,
+            hair: a.hair,
+            outfit: a.outfit ? resolveOutfit(a.outfit) : null,
+          });
         } else setChoice(DEFAULT);
       })
       .catch(() => {
@@ -111,17 +116,11 @@ export default function AvatarPage() {
 
       <fieldset>
         <legend className="mb-2 text-sm font-semibold">{t.me.avatarBody}</legend>
-        {choice.outfit !== null && (
-          <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">
-            {t.me.avatarOutfitNoHair}
-          </p>
-        )}
         <div className="flex flex-wrap gap-2">
           {BODIES.map((b) => (
             <button
               key={b.id}
               type="button"
-              disabled={choice.outfit !== null}
               aria-pressed={choice.body === b.id}
               onClick={() => pick({ ...choice, body: b.id })}
               className={btn(choice.body === b.id)}
@@ -137,7 +136,6 @@ export default function AvatarPage() {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            disabled={choice.outfit !== null}
             aria-pressed={choice.hair === null}
             onClick={() => pick({ ...choice, hair: null })}
             className={btn(choice.hair === null)}
@@ -148,7 +146,6 @@ export default function AvatarPage() {
             <button
               key={h.id}
               type="button"
-              disabled={choice.outfit !== null}
               aria-pressed={choice.hair === h.id}
               onClick={() => pick({ ...choice, hair: h.id })}
               className={btn(choice.hair === h.id)}
@@ -175,7 +172,7 @@ export default function AvatarPage() {
               key={o.id}
               type="button"
               aria-pressed={choice.outfit === o.id}
-              onClick={() => pick({ ...choice, outfit: o.id, hair: null })}
+              onClick={() => pick({ ...choice, outfit: o.id })}
               className={btn(choice.outfit === o.id)}
             >
               {o.th}
@@ -184,7 +181,11 @@ export default function AvatarPage() {
         </div>
       </fieldset>
 
-      <p role="status" aria-live="polite" className="min-h-[1rem] text-xs text-slate-600 dark:text-slate-300">
+      <p
+        role="status"
+        aria-live="polite"
+        className="min-h-[1rem] text-xs text-slate-600 dark:text-slate-300"
+      >
         {statusText}
       </p>
       <p className="text-xs text-slate-500 dark:text-slate-400">{t.me.avatarNote}</p>

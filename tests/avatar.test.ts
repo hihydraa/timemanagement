@@ -50,9 +50,20 @@ describe('อวตาร 3D ตามบัญชี', () => {
     expect((await put(a, { ...ok, hair: 'mohawk' })).status).toBe(400);
     expect((await put(a, { ...ok, outfit: 'tuxedo' })).status).toBe(400);
     expect((await put(a, { ...ok, extra: 1 })).status).toBe(400);
-    // ชุดเต็มตัวมีหัวของตัวเอง ใช้ร่วมกับทรงผมไม่ได้
-    expect((await put(a, { ...ok, hair: 'bob', outfit: 'ghost-a' })).status).toBe(400);
     expect(await count()).toBe(0);
+  });
+
+  it('เลือกตัวละคร ทรงผม และชุดพร้อมกันได้ (ประกอบแยกชิ้น)', async () => {
+    const r = await put(a, { body: 'nonbinary', hair: 'bob', outfit: 'cape-vest-a' });
+    expect(r.status).toBe(200);
+    expect((await get(a)).json).toEqual({
+      avatar: { body: 'nonbinary', hair: 'bob', outfit: 'cape-vest-a', snapshot: null },
+    });
+  });
+
+  it('ยังรับค่าชุดแบบ B ที่เคยบันทึกไว้ (แสดงเป็นแบบ A)', async () => {
+    for (const outfit of ['cape-vest-b', 'ghost-b'])
+      expect((await put(a, { body: 'female', hair: null, outfit })).status).toBe(200);
   });
 
   it('ปฏิเสธภาพที่ไม่ใช่ webp/png base64 หรือใหญ่เกินกำหนด', async () => {
@@ -71,7 +82,9 @@ describe('อวตาร 3D ตามบัญชี', () => {
     expect((await get(b)).json).toEqual({ avatar: null });
     await put(b, { body: 'female', hair: null, outfit: 'cape-vest-a' });
     expect((await get(a)).json).toMatchObject({ avatar: { body: 'male', hair: 'bob' } });
-    expect((await get(b)).json).toMatchObject({ avatar: { body: 'female', outfit: 'cape-vest-a' } });
+    expect((await get(b)).json).toMatchObject({
+      avatar: { body: 'female', outfit: 'cape-vest-a' },
+    });
     expect(await count()).toBe(2);
   });
 

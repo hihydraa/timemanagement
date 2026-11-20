@@ -4,11 +4,17 @@ import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import {
+  HAIR_PARTS,
+  HEAD_CUT_Y,
+  OUTFIT_PARTS,
   hairFit,
   bodyUrl,
   hairUrl,
+  outfitFit,
   outfitUrl,
+  resolveOutfit,
   type BodyId,
+  type Fit,
   type HairId,
   type OutfitId,
 } from '../../lib/avatarModels';
@@ -38,20 +44,33 @@ function normalize(root: THREE.Group): THREE.Matrix4 {
   return root.matrix.clone();
 }
 
-/**
- * ไฟล์ทรงผมมีชุดบอดี้ติดมาด้วย (เป็นตัวละครทั้งตัว) จึงตัด mesh ที่แตะพื้น (เท้า) ออก
- * (ใช้หลัง normalize แล้ว: เท้า y=0 ถึงหัว y=2 → ตัด mesh ที่ min.y < 0.2 ซึ่งเป็นบอดี้ ไม่ใช่ทรงผม)
- */
-function keepHeadMeshes(root: THREE.Object3D, cutY: number) {
-  const meshes: THREE.Object3D[] = [];
+/** เก็บเฉพาะ mesh ที่ชื่ออยู่ในรายการ (ไฟล์ทรงผม/ชุดเป็นตัวละครทั้งตัวที่แยกเป็นชิ้น ชิ้นที่เหลือคือหัว/มือ/เท้าของต้นฉบับ) */
+function keepParts(root: THREE.Object3D, names: readonly string[]) {
+  const drop: THREE.Object3D[] = [];
   root.traverse((o) => {
-    if ((o as THREE.Mesh).isMesh) meshes.push(o);
+    if ((o as THREE.Mesh).isMesh && !names.includes(o.name)) drop.push(o);
   });
-  for (const m of meshes) {
-    const b = new THREE.Box3().setFromObject(m, true);
-    if (b.min.y < cutY) m.removeFromParent();
-  }
+  for (const m of drop) m.removeFromParent();
 }
+
+/** วางชิ้นส่วน (ผม/เสื้อผ้า) ด้วยวิธีเดียวกับตัวละคร (สูง 2, เท้า y=0) แล้วปรับขนาด/ตำแหน่งรอบจุดหมุน (0,1.2,0) */
+function placePart(gltf: GLTF, names: readonly string[], fit: Fit): THREE.Group {
+  const inner = new THREE.Group();
+  inner.add(gltf.scene.clone(true));
+  normalize(inner); // ต้อง normalize ทั้งไฟล์ก่อนตัดชิ้น เพื่อให้สเกลเท่ากับตัวละครพื้นฐาน
+  keepParts(inner, names);
+  inner.traverse((o) => {
+    const k = fit.partSx?.[o.name];
+    if (k) o.scale.set(o.scale.x * k, o.scale.y, o.scale.z * k);
+  });
+  const outer = new THREE.Group();
+  outer.position.set(0, (1 - fit.s) * PIVOT_Y + fit.dy, fit.dz ?? 0);
+  outer.scale.set(fit.s * (fit.sx ?? 1), fit.s, fit.s * (fit.sz ?? fit.sx ?? 1));
+  outer.add(inner);
+  return outer;
+}
+
+const PIVOT_Y = 1.5;
 
 /** ถ่ายภาพตัวละครจากกล้องมุมมาตรฐาน (ไม่ใช่มุมที่ผู้ใช้หมุนไว้) ครอปกึ่งกลางเป็นภาพโปร่งใส */
 function takeSnapshot(r: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera) {
@@ -96,13 +115,14 @@ export default function AvatarViewer({
     renderer: THREE.WebGLRenderer;
     camera: THREE.PerspectiveCamera;
     main: THREE.Group | null;
-    hairGroup: THREE.Group | null;
+    extras: THREE.Group[];
   } | null>(null);
 
   // สร้างฉาก/กล้อง/renderer ครั้งเดียว
   useEffect(() => {
     const mount = mountRef.current!;
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.localClippingEnabled = true; // ตัดหัวตัวละครพื้นฐานเมื่อใช้ผมที่มีหน้ามาด้วย
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.domElement.style.display = 'block';
     mount.appendChild(renderer.domElement);
@@ -138,7 +158,7 @@ export default function AvatarViewer({
     };
     tick();
 
-    sceneRef.current = { scene, renderer, camera, main: null, hairGroup: null };
+    sceneRef.current = { scene, renderer, camera, main: null, extras: [] };
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
@@ -157,34 +177,46 @@ export default function AvatarViewer({
       if (!ctx) return;
       const isCurrent = () => !cancelled && sceneRef.current === ctx;
 
-      // ตัวหลัก: ชุดเต็มตัวแทนตัวละคร (ถ้าเลือกชุด)
-      const mainGltf = await load(outfit ? outfitUrl(outfit) : bodyUrl(body));
+      // ตัวละครพื้นฐาน + ผม + เสื้อผ้า ประกอบแยกชิ้น (เลือกอิสระต่อกันเหมือนแต่งตัวในเกม)
+      const hairDef = hair ? HAIR_PARTS[hair] : null;
+      const outfitId = outfit ? resolveOutfit(outfit) : null;
+      const [bodyGltf, hairGltf, outfitGltf] = await Promise.all([
+        load(bodyUrl(body)),
+        hair ? load(hairUrl(hair)) : null,
+        outfitId ? load(outfitUrl(outfitId)) : null,
+      ]);
       if (!isCurrent()) return;
+
       if (ctx.main) ctx.scene.remove(ctx.main);
-      if (ctx.hairGroup) ctx.scene.remove(ctx.hairGroup);
-      ctx.hairGroup = null;
+      for (const g of ctx.extras) ctx.scene.remove(g);
+      ctx.extras = [];
+
       const main = new THREE.Group();
-      main.add(mainGltf.scene.clone(true));
+      main.add(bodyGltf.scene.clone(true));
       normalize(main);
+      // วัสดุถูกแชร์ระหว่าง clone จึงสร้างสำเนาก่อนใส่ระนาบตัด ไม่งั้นค่านี้ค้างไปยังครั้งถัดไป
+      const cut = hairDef?.replacesHead
+        ? [new THREE.Plane(new THREE.Vector3(0, -1, 0), HEAD_CUT_Y)]
+        : null;
+      main.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (!m.isMesh) return;
+        const mat = (m.material as THREE.Material).clone();
+        mat.clippingPlanes = cut;
+        m.material = mat;
+      });
       ctx.scene.add(main);
       ctx.main = main;
 
-      // ทรงผม: ปรับขนาดไฟล์ทรงผมด้วยวิธีเดียวกับตัวละคร (สูง 2, เท้า y=0) แล้วตัดเฉพาะส่วนหัว
-      if (!outfit && hair) {
-        const hairGltf = await load(hairUrl(hair));
-        if (!isCurrent()) return;
-        const inner = new THREE.Group();
-        inner.add(hairGltf.scene.clone(true));
-        normalize(inner);
-        keepHeadMeshes(inner, 0.2);
-        const f = hairFit(body, hair);
-        // จุดหมุนการปรับขนาดอยู่ที่ (0,1.5,0): p' = s*p + (1-s)*1.5 + dy
-        const outer = new THREE.Group();
-        outer.position.set(0, (1 - f.s) * 1.5 + f.dy, 0);
-        outer.scale.setScalar(f.s);
-        outer.add(inner);
-        ctx.scene.add(outer);
-        ctx.hairGroup = outer;
+      if (outfitGltf && outfitId) {
+        const g = placePart(outfitGltf, OUTFIT_PARTS[outfitId], outfitFit(body, outfitId));
+        ctx.scene.add(g);
+        ctx.extras.push(g);
+      }
+      if (hairGltf && hair && hairDef) {
+        const g = placePart(hairGltf, hairDef.parts, hairFit(body, hair));
+        ctx.scene.add(g);
+        ctx.extras.push(g);
       }
 
       // ถ่ายภาพหลังเฟรมแรกที่วาดโมเดลครบ (เท็กซ์เจอร์อัปโหลดแล้ว)
@@ -203,5 +235,12 @@ export default function AvatarViewer({
     };
   }, [body, hair, outfit]);
 
-  return <div ref={mountRef} style={{ width: '100%', height: '100%' }} role="img" aria-label="ตัวละคร 3D" />;
+  return (
+    <div
+      ref={mountRef}
+      style={{ width: '100%', height: '100%' }}
+      role="img"
+      aria-label="ตัวละคร 3D"
+    />
+  );
 }
