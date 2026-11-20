@@ -4,22 +4,31 @@ import { useCelebrateMessage } from '../lib/celebrate';
 import Mascot from './Mascot';
 
 /**
- * ป๊อปอัปมาสคอตฉลองเมื่อทำงานเสร็จ ใช้เมื่อไม่มีตัวละครมุมขวาล่าง
- * (ถ้ามี ตัวละครจะฉลองเองด้วยกล่องคำพูด ดู avatar/AvatarCorner)
+ * Dobby ประจำมุมขวาล่าง: อยู่ค้างตลอด ใช้เมื่อไม่มีตัวละครอวตารที่มุมนั้น
+ * (ถ้ามีอวตาร ตัวละครจะฉลองเองด้วยกล่องคำพูด ดู avatar/AvatarCorner)
+ * ทำงานเสร็จ = เปลี่ยนท่าและมีกล่องคำพูดฉลอง ~2.6 วินาที แล้วกลับท่าปกติ
  */
 export default function CelebrateToast() {
   const { call, route } = useApp();
   const snapshot = useAvatarSnapshot();
   const msg = useCelebrateMessage(call);
-  if (!msg || isCornerVisible(route, snapshot)) return null;
+  if (isCornerVisible(route, snapshot)) return null;
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="pointer-events-none fixed bottom-4 right-4 z-[60] flex animate-pop items-end gap-2 rounded-2xl border border-brand-200 bg-white px-4 py-3 shadow-soft dark:border-brand-700 dark:bg-slate-800"
-    >
-      <Mascot pose="done" height={84} className="-mb-1 -ml-1" />
-      <p className="pb-2 font-semibold text-brand-700 dark:text-brand-300">{msg}</p>
+    <div className="pointer-events-none fixed bottom-24 right-3 z-30 md:bottom-4 md:right-4">
+      {msg && (
+        <p
+          role="status"
+          aria-live="polite"
+          className="absolute bottom-full right-0 mb-1 w-max max-w-[12rem] animate-pop rounded-2xl rounded-br-sm border border-brand-200 bg-white px-3 py-2 text-sm font-semibold text-brand-700 shadow-soft dark:border-brand-700 dark:bg-slate-800 dark:text-brand-300"
+        >
+          {msg}
+        </p>
+      )}
+      <Mascot
+        pose={msg ? 'done' : 'hello'}
+        height={88}
+        className={`drop-shadow-lg ${msg ? 'animate-pop' : ''}`}
+      />
     </div>
   );
 }
