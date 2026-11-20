@@ -4,18 +4,21 @@ import { useCelebrateMessage } from '../lib/celebrate';
 import Mascot from './Mascot';
 
 /**
- * Dobby ประจำมุมขวาล่าง: อยู่ค้างตลอด ใช้เมื่อไม่มีตัวละครอวตารที่มุมนั้น
- * (ถ้ามีอวตาร ตัวละครจะฉลองเองด้วยกล่องคำพูด ดู avatar/AvatarCorner)
- * ทำงานเสร็จ = เปลี่ยนท่าและมีกล่องคำพูดฉลอง ~2.6 วินาที แล้วกลับท่าปกติ
+ * Dobby ประจำมุมขวาล่าง: อยู่ค้างตลอดทุกหน้า
+ * - ไม่มีตัวละครอวตารที่มุมนั้น: Dobby อยู่มุมขวาล่าง ทำงานเสร็จ = เปลี่ยนท่า + กล่องคำพูดฉลอง ~2.6 วินาที
+ * - มีตัวละครอวตาร (ดู avatar/AvatarCorner): Dobby ยืนข้างตัวละคร (ซ้ายมือ) ส่วนกล่องคำพูดฉลองเป็นของตัวละคร
  */
 export default function CelebrateToast() {
   const { call, route } = useApp();
   const snapshot = useAvatarSnapshot();
   const msg = useCelebrateMessage(call);
-  if (isCornerVisible(route, snapshot)) return null;
+  const withAvatar = isCornerVisible(route, snapshot);
+  const pos = withAvatar
+    ? 'bottom-24 right-[7rem] md:bottom-4 md:right-40'
+    : 'bottom-24 right-3 md:bottom-4 md:right-4';
   return (
-    <div className="pointer-events-none fixed bottom-24 right-3 z-30 md:bottom-4 md:right-4">
-      {msg && (
+    <div className={`pointer-events-none fixed z-30 ${pos}`}>
+      {msg && !withAvatar && (
         <p
           role="status"
           aria-live="polite"
@@ -26,7 +29,7 @@ export default function CelebrateToast() {
       )}
       <Mascot
         pose={msg ? 'done' : 'hello'}
-        height={88}
+        height={withAvatar ? 72 : 88}
         className={`drop-shadow-lg ${msg ? 'animate-pop' : ''}`}
       />
     </div>
