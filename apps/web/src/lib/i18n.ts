@@ -51,7 +51,7 @@ export const t = {
     pastDim: 'ผ่านไปแล้ว',
   },
   onboarding: {
-    step: 'ข้อ {n} จาก 4 (ข้ามได้)',
+    step: 'ข้อ {n} จาก 3 (ข้ามได้)',
     workTitle: 'เวลาทำงานของคุณ',
     workHint: 'ใช้คำนวณว่าวันนี้ว่างกี่ชั่วโมง (แก้ทีหลังได้)',
     gcalTitle: 'เชื่อม Google Calendar',

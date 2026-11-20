@@ -19,9 +19,6 @@ import Mascot from './Mascot';
 import MiniTimer from './MiniTimer';
 import { BottomTabBar, TopTabs } from './nav/MainNav';
 import type { Category, GcalStatus, PushStatus, User } from '../lib/types';
-import CharacterDialog from './game/CharacterDialog';
-import PartnerWidget from './game/PartnerWidget';
-import PointsListener from './game/PointsListener';
 import { callName, type GameState } from '../lib/game';
 import { disablePush } from '../lib/webPush';
 import { useOnline } from '../lib/pwa';
@@ -47,7 +44,7 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
   const [gcal, setGcal] = useState<GcalStatus | null>(null);
   const [push, setPush] = useState<PushStatus | null>(null);
   const [dialog, setDialog] = useState<
-    'line' | 'settings' | 'gcal' | 'export' | 'import' | 'alarms' | 'character' | null
+    'line' | 'settings' | 'gcal' | 'export' | 'import' | 'alarms' | null
   >(null);
   const [gcalNotice, setGcalNotice] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const online = useOnline();
@@ -211,7 +208,6 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
       setGame,
       reloadGame,
       call: callName(game?.profile),
-      openCharacter: () => setDialog('character'),
       openOnboarding: () => setShowOnboarding(true),
       logout: () => {
         // อุปกรณ์นี้ไม่ควรได้รับแจ้งเตือนของบัญชีเดิมหลังออกจากระบบ
@@ -265,17 +261,6 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
                 <TopTabs view={route.view} warn={!!gcal?.needsReconnect} onGo={(v) => goTo(v)} />
               ) : (
                 <span className="flex-1" />
-              )}
-              {game && (
-                <a
-                  href="#/me/game"
-                  aria-label={`${t.game.chip}: ${game.balance}`}
-                  title={t.game.chip}
-                  className="ml-auto flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm font-semibold tabular-nums text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
-                >
-                  <span aria-hidden>🪙</span>
-                  {game.balance}
-                </a>
               )}
             </PageContainer>
           </header>
@@ -348,7 +333,6 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
             />
           )}
           {dialog === 'line' && <LineDialog onClose={() => setDialog(null)} />}
-          {dialog === 'character' && <CharacterDialog onClose={() => setDialog(null)} />}
           {dialog === 'alarms' && <AlarmsDialog onClose={() => setDialog(null)} />}
           {dialog === 'import' && <ImportDialog onClose={() => setDialog(null)} />}
           {dialog === 'export' && <ExportDialog onClose={() => setDialog(null)} />}
@@ -373,8 +357,6 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
             />
           )}
         </div>
-        <PointsListener />
-        <PartnerWidget />
         <CelebrateToast />
       </ToastProvider>
     </AppContext.Provider>

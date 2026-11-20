@@ -14,7 +14,6 @@ export interface AppCtx {
   reloadGame: () => void;
   /** ชื่อที่ Dobby ใช้เรียกผู้ใช้ (null = ยังไม่มีตัวละคร) */
   call: string | null;
-  openCharacter: () => void;
   /** โหมดหน้าจอ: simple ซ่อนฟีเจอร์ละเอียด (ไม่ลบ) / full เปิดทั้งหมด */
   uiMode: UiMode;
   setUiMode: (m: UiMode) => void;

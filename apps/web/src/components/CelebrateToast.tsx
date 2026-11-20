@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../lib/appContext';
-import { usePartnerHidden } from '../lib/widget';
 import { t } from '../lib/i18n';
 import Mascot from './Mascot';
 
@@ -10,9 +9,7 @@ const NAMED = t.mascot.celebrateNamed;
 
 /** ป๊อปอัปมาสคอตฉลองเมื่อทำงานเสร็จ (รับ event จาก api.completeTask/updateTask) แสดง ~2.5 วินาที */
 export default function CelebrateToast() {
-  const { call, game } = useApp();
-  const [partnerHidden] = usePartnerHidden();
-  const widgetActive = !!game?.profile && !partnerHidden; // ตัวละครมุมล่างขวาฉลองแทน
+  const { call } = useApp();
   const callRef = useRef(call);
   callRef.current = call;
   const [msg, setMsg] = useState<string | null>(null);
@@ -32,7 +29,7 @@ export default function CelebrateToast() {
       window.clearTimeout(timer);
     };
   }, []);
-  if (!msg || widgetActive) return null;
+  if (!msg) return null;
   return (
     <div
       role="status"

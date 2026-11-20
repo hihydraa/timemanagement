@@ -3,7 +3,6 @@ import { api, ApiClientError } from '../lib/api';
 import { t } from '../lib/i18n';
 import type { WorkSettings } from '../lib/types';
 import { useApp } from '../lib/appContext';
-import CharacterCreator from './game/CharacterCreator';
 import Mascot from './Mascot';
 import TimeField24 from './form/TimeField24';
 
@@ -22,19 +21,15 @@ export default function Onboarding({
   onFinish: (firstTask: boolean) => void;
   onOpenLine: () => void;
 }) {
-  const { game, setGame } = useApp();
-  const [step, setStep] = useState<0 | 1 | 2 | 3>(() => {
+  const [step, setStep] = useState<1 | 2 | 3>(() => {
     try {
       const v = Number(sessionStorage.getItem(STEP_KEY));
       if (v === 2 || v === 3) return v;
     } catch {
       /* ไม่มี storage */
     }
-    return game?.profile ? 1 : 0; // ข้อ 0 = สร้างตัวละคร (ข้ามถ้ามีแล้ว)
+    return 1;
   });
-  useEffect(() => {
-    if (step === 0 && game?.profile) setStep(1);
-  }, [step, game]);
   const [work, setWork] = useState<WorkSettings>({
     start: '09:00',
     end: '18:00',
@@ -53,7 +48,7 @@ export default function Onboarding({
       .catch(() => undefined);
   }, []);
   useEffect(() => headRef.current?.focus(), [step]);
-  const go = (n: 0 | 1 | 2 | 3) => {
+  const go = (n: 1 | 2 | 3) => {
     try {
       sessionStorage.setItem(STEP_KEY, String(n));
     } catch {
@@ -106,7 +101,7 @@ export default function Onboarding({
           <Mascot pose="hello" height={64} />
           <div>
             <p className="text-xs text-slate-600 dark:text-slate-300">
-              {o.step.replace('{n}', String(step + 1))}
+              {o.step.replace('{n}', String(step))}
             </p>
             <h2
               id="onb-title"
@@ -114,30 +109,10 @@ export default function Onboarding({
               tabIndex={-1}
               className="text-lg font-bold text-brand-800 outline-none dark:text-brand-200"
             >
-              {step === 0
-                ? t.game.createTitle
-                : step === 1
-                  ? o.workTitle
-                  : step === 2
-                    ? o.gcalTitle
-                    : o.notifyTitle}
+              {step === 1 ? o.workTitle : step === 2 ? o.gcalTitle : o.notifyTitle}
             </h2>
           </div>
         </div>
-
-        {step === 0 && (
-          <div className="space-y-2">
-            <p className="text-sm text-slate-600 dark:text-slate-300">{t.game.welcomeBonus}</p>
-            <CharacterCreator
-              submitLabel={o.next}
-              onSaved={(st) => {
-                setGame(st);
-                go(1);
-              }}
-              onSkip={() => go(1)}
-            />
-          </div>
-        )}
 
         {step === 1 && (
           <div className="space-y-3">
