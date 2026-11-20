@@ -173,9 +173,6 @@ const BY_ID = new Map(ITEMS.map((i) => [i.id, i]));
 export const getItem = (id: string): Item | undefined => BY_ID.get(id);
 export const getCharacter = (id: string): Character | undefined =>
   CHARACTERS.find((c) => c.id === id);
-export const imagePath = (it: Item): string =>
-  it.slot === 'companion' ? `/game/companions/${it.collection}.webp` : `/game/items/${it.id}.webp`;
-export const characterImage = (id: string): string => `/game/characters/${id}.webp`;
 
 // ---------------------------------------------------------------- แต้ม
 export const WELCOME_POINTS = 30;
