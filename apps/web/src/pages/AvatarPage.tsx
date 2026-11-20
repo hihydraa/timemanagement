@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from 'react';
 import { BODIES, HAIRS, OUTFITS, type BodyId, type HairId, type OutfitId } from '../lib/avatarModels';
+import { saveAvatarSnapshot } from '../lib/avatarSnapshot';
 import { t } from '../lib/i18n';
 
 const AvatarViewer = lazy(() => import('../components/avatar/AvatarViewer'));
@@ -44,7 +45,12 @@ export default function AvatarPage() {
     <div className="space-y-4">
       <div className="h-[360px] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900">
         <Suspense fallback={<p className="p-4 text-sm">{t.loading}</p>}>
-          <AvatarViewer body={choice.body} hair={choice.hair} outfit={choice.outfit} />
+          <AvatarViewer
+            body={choice.body}
+            hair={choice.hair}
+            outfit={choice.outfit}
+            onSnapshot={saveAvatarSnapshot}
+          />
         </Suspense>
       </div>
 

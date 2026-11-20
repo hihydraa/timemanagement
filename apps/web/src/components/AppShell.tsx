@@ -12,6 +12,7 @@ import {
 import { useMedia } from '../lib/useMedia';
 import { t } from '../lib/i18n';
 import Onboarding from './Onboarding';
+import AvatarCorner from './avatar/AvatarCorner';
 import CelebrateToast from './CelebrateToast';
 import { ToastProvider } from './UndoToast';
 import PageContainer from './PageContainer';
@@ -357,6 +358,7 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
             />
           )}
         </div>
+        <AvatarCorner />
         <CelebrateToast />
       </ToastProvider>
     </AppContext.Provider>

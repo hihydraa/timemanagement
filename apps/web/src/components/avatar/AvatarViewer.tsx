@@ -53,19 +53,45 @@ function keepHeadMeshes(root: THREE.Object3D, cutY: number) {
   }
 }
 
+/** ถ่ายภาพตัวละครจากกล้องมุมมาตรฐาน (ไม่ใช่มุมที่ผู้ใช้หมุนไว้) ครอปกึ่งกลางเป็นภาพโปร่งใส */
+function takeSnapshot(r: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera) {
+  const snapCam = camera.clone();
+  snapCam.position.set(0, 1.1, 4.2);
+  snapCam.lookAt(0, 1, 0);
+  snapCam.updateMatrixWorld(true);
+  r.render(scene, snapCam); // ต้องดึงภาพทันทีในรอบเดียวกับที่ render ไม่งั้นบัฟเฟอร์ถูกล้าง
+  const src = r.domElement;
+  const h = src.height;
+  const w = Math.min(src.width, Math.round(h * 0.75));
+  const out = document.createElement('canvas');
+  out.width = 240;
+  out.height = Math.round((240 * h) / w);
+  const g = out.getContext('2d');
+  if (!g) return null;
+  g.drawImage(src, Math.round((src.width - w) / 2), 0, w, h, 0, 0, out.width, out.height);
+  return out.toDataURL('image/webp', 0.85);
+}
+
 /** แสดงตัวละคร 3D: ตัวละคร + ทรงผม, หรือชุดเต็มตัว (ชุดมีหัวของตัวเองจึงไม่ใส่ทรงผมซ้อน) */
 export default function AvatarViewer({
   body,
   hair,
   outfit,
+  onSnapshot,
 }: {
   body: BodyId;
   hair: HairId | null;
   outfit: OutfitId | null;
+  /** เรียกทุกครั้งที่โหลดตัวละครครบ พร้อมภาพนิ่ง (data URL) */
+  onSnapshot?: (dataUrl: string) => void;
 }) {
+  const onSnapshotRef = useRef(onSnapshot);
+  onSnapshotRef.current = onSnapshot;
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<{
     scene: THREE.Scene;
+    renderer: THREE.WebGLRenderer;
+    camera: THREE.PerspectiveCamera;
     main: THREE.Group | null;
     hairGroup: THREE.Group | null;
   } | null>(null);
@@ -109,7 +135,7 @@ export default function AvatarViewer({
     };
     tick();
 
-    sceneRef.current = { scene, main: null, hairGroup: null };
+    sceneRef.current = { scene, renderer, camera, main: null, hairGroup: null };
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
@@ -156,6 +182,17 @@ export default function AvatarViewer({
         outer.add(inner);
         ctx.scene.add(outer);
         ctx.hairGroup = outer;
+      }
+
+      // ถ่ายภาพหลังเฟรมแรกที่วาดโมเดลครบ (เท็กซ์เจอร์อัปโหลดแล้ว)
+      if (onSnapshotRef.current) {
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            if (!isCurrent()) return;
+            const url = takeSnapshot(ctx.renderer, ctx.scene, ctx.camera);
+            if (url) onSnapshotRef.current?.(url);
+          }),
+        );
       }
     })().catch(() => undefined);
     return () => {
