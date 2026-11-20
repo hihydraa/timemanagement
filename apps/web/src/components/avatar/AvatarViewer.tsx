@@ -82,8 +82,11 @@ export default function AvatarViewer({
   body: BodyId;
   hair: HairId | null;
   outfit: OutfitId | null;
-  /** เรียกทุกครั้งที่โหลดตัวละครครบ พร้อมภาพนิ่ง (data URL) */
-  onSnapshot?: (dataUrl: string) => void;
+  /** เรียกทุกครั้งที่โหลดตัวละครครบ พร้อมภาพนิ่ง (data URL) และตัวเลือกที่ถ่ายภาพนั้น */
+  onSnapshot?: (
+    dataUrl: string,
+    sel: { body: BodyId; hair: HairId | null; outfit: OutfitId | null },
+  ) => void;
 }) {
   const onSnapshotRef = useRef(onSnapshot);
   onSnapshotRef.current = onSnapshot;
@@ -190,7 +193,7 @@ export default function AvatarViewer({
           requestAnimationFrame(() => {
             if (!isCurrent()) return;
             const url = takeSnapshot(ctx.renderer, ctx.scene, ctx.camera);
-            if (url) onSnapshotRef.current?.(url);
+            if (url) onSnapshotRef.current?.(url, { body, hair, outfit });
           }),
         );
       }

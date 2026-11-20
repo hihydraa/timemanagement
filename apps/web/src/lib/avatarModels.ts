@@ -1,8 +1,16 @@
 /** แคตาล็อกโมเดล 3D: ตัวละคร / ทรงผม / เสื้อผ้า (ไฟล์อยู่ที่ apps/web/public/models/, ดู character/models/MANIFEST.md) */
 
-export type BodyId = 'female' | 'male' | 'nonbinary';
-export type HairId = 'bob' | 'curly-elf';
-export type OutfitId = 'cape-vest-a' | 'cape-vest-b' | 'ghost-a' | 'ghost-b';
+import type { BodyId, HairId, OutfitId } from '../../../../src/lib/avatar';
+
+export type { BodyId, HairId, OutfitId };
+
+/** อวตารที่บันทึกในบัญชี (snapshot = ภาพนิ่ง data URL สำหรับมุมขวาล่าง) */
+export interface AvatarState {
+  body: BodyId;
+  hair: HairId | null;
+  outfit: OutfitId | null;
+  snapshot: string | null;
+}
 
 export const BODIES: readonly { id: BodyId; th: string }[] = [
   { id: 'female', th: 'ตัวละครหญิง' },

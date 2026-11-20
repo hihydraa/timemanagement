@@ -1,37 +1,30 @@
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
+import type { Route } from './route';
 
-const KEY = 'dobby.avatar.snapshot';
-const EVT = 'dobby:avatar-snapshot';
+/**
+ * ภาพนิ่งตัวละครมุมขวาล่าง เก็บในหน่วยความจำของหน้าเว็บเท่านั้น (ค่าจริงอยู่ที่เซิร์ฟเวอร์ตามบัญชี)
+ * ไม่ใช้ localStorage เพื่อไม่ให้ผู้ใช้อีกบัญชีบนเครื่องเดียวกันเห็นภาพของคนก่อนหน้า
+ */
+let current: string | null = null;
+const listeners = new Set<() => void>();
 
-const read = (): string | null => {
-  try {
-    return localStorage.getItem(KEY);
-  } catch {
-    return null;
-  }
-};
-
-/** เก็บภาพตัวละครที่เลือกไว้ในเครื่อง (ใช้แสดงมุมขวาล่างโดยไม่ต้องโหลดโมเดล 3D) */
-export function saveAvatarSnapshot(dataUrl: string) {
-  try {
-    localStorage.setItem(KEY, dataUrl);
-  } catch {
-    /* ไม่มี storage หรือเต็ม: ข้าม ภาพมุมขวาล่างจะไม่ขึ้น */
-  }
-  window.dispatchEvent(new Event(EVT));
+export function setAvatarSnapshot(url: string | null) {
+  current = url;
+  for (const l of listeners) l();
 }
 
-/** ภาพตัวละครล่าสุด (null = ยังไม่เคยเลือก) อัปเดตเมื่อมีการบันทึกใหม่ */
 export function useAvatarSnapshot(): string | null {
-  const [url, setUrl] = useState<string | null>(read);
-  useEffect(() => {
-    const on = () => setUrl(read());
-    window.addEventListener(EVT, on);
-    window.addEventListener('storage', on);
-    return () => {
-      window.removeEventListener(EVT, on);
-      window.removeEventListener('storage', on);
-    };
-  }, []);
-  return url;
+  return useSyncExternalStore(
+    (cb) => {
+      listeners.add(cb);
+      return () => {
+        listeners.delete(cb);
+      };
+    },
+    () => current,
+  );
 }
+
+/** ตัวละครมุมขวาล่างแสดงเมื่อมีภาพ และไม่ใช่ตอนที่อยู่แท็บอวตารซึ่งมีตัวใหญ่อยู่แล้ว */
+export const isCornerVisible = (route: Route, snapshot: string | null): boolean =>
+  !!snapshot && !(route.view === 'me' && route.me === 'avatar');

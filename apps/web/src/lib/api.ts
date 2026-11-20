@@ -1,5 +1,6 @@
 import { clearApiCache } from './pwa';
 import { t } from './i18n';
+import type { AvatarState, BodyId, HairId, OutfitId } from './avatarModels';
 import type { DashboardData } from './dashboard';
 import type { GameState, Honorific } from './game';
 import type {
@@ -180,6 +181,14 @@ export const api = {
   ) => req<SettingsView>('PATCH', '/api/settings', p),
   importTasks: (tasks: unknown[]) =>
     req<{ imported: number; skipped: number }>('POST', '/api/import/tasks', { tasks }),
+  getAvatar: () =>
+    req<{ avatar: AvatarState | null }>('GET', '/api/avatar').then((r) => r.avatar),
+  saveAvatar: (p: {
+    body: BodyId;
+    hair: HairId | null;
+    outfit: OutfitId | null;
+    snapshot?: string | null;
+  }) => req<{ avatar: AvatarState }>('PUT', '/api/avatar', p).then((r) => r.avatar),
   getGame: () => req<GameState>('GET', '/api/game'),
   saveProfile: (p: { characterId: string; displayName: string; honorific: Honorific }) =>
     req<GameState>('PUT', '/api/game/profile', p),
