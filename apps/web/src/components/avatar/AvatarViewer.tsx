@@ -125,6 +125,9 @@ export default function AvatarViewer({
     renderer.localClippingEnabled = true; // ตัดหัวตัวละครพื้นฐานเมื่อใช้ผมที่มีหน้ามาด้วย
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.domElement.style.display = 'block';
+    // setSize(..., false) ไม่แตะ CSS: ต้องล็อกขนาดแสดงผลเท่ากล่อง ไม่งั้นจอ Retina (DPR 2) ได้ canvas ใหญ่ 2 เท่าและตัวละครถูกตัดขอบ
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
     mount.appendChild(renderer.domElement);
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 100);
