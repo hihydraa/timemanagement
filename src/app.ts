@@ -33,11 +33,11 @@ export const app = new Hono<AppEnv>();
 const baseSecureHeaders = secureHeaders({
   contentSecurityPolicy: {
     defaultSrc: ["'self'"],
-    scriptSrc: ["'self'"],
+    scriptSrc: ["'self'", "'wasm-unsafe-eval'"], // ตัวถอดรหัส meshopt ของโมเดล 3D เป็น WebAssembly (ไม่เปิด eval ของ JS)
     styleSrc: ["'self'", "'unsafe-inline'"], // FullCalendar inject style
     imgSrc: ["'self'", 'data:', 'blob:'],
     fontSrc: ["'self'", 'data:'],
-    connectSrc: ["'self'"],
+    connectSrc: ["'self'", 'blob:'], // three.js อ่านรูปเท็กซ์เจอร์ในไฟล์ .glb ผ่าน blob: URL
     manifestSrc: ["'self'"],
     workerSrc: ["'self'"],
     baseUri: ["'self'"],
