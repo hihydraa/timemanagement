@@ -47,7 +47,10 @@ describe('security headers', () => {
     ]) {
       expect(csp).toContain(d);
     }
-    expect(csp).not.toContain('unsafe-eval');
+    // 'wasm-unsafe-eval' อนุญาตเฉพาะ WebAssembly (ตัวถอดรหัสโมเดล 3D) ส่วน 'unsafe-eval' ของ JS ต้องไม่มี
+    expect(csp).toContain("script-src 'self' 'wasm-unsafe-eval'");
+    expect(csp).not.toMatch(/(?<!wasm-)unsafe-eval/);
+    expect(csp).toMatch(/connect-src 'self' blob:/);
     expect(csp).not.toMatch(/script-src[^;]*unsafe-inline/);
     expect(res.headers.get('x-content-type-options')).toBe('nosniff');
     expect(res.headers.get('x-frame-options')).toBe('DENY');
