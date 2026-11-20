@@ -18,11 +18,7 @@ export const avatarInput = z
       .nullable()
       .optional(),
   })
-  .strict()
-  .refine((v) => !(v.outfit && v.hair), {
-    message: 'ชุดเต็มตัวมีหัวของตัวเอง ใช้ร่วมกับทรงผมไม่ได้',
-    path: ['hair'],
-  });
+  .strict();
 
 export interface AvatarView {
   body: (typeof BODY_IDS)[number];

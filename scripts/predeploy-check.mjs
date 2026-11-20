@@ -2,7 +2,11 @@
 // ตรวจค่าก่อน deploy จริง: ล้มเหลว (exit 1) ถ้ายังเป็นค่า placeholder / ไม่ปลอดภัย
 import { readFileSync } from 'node:fs';
 
-const toml = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
+// WRANGLER_CONFIG: ตรวจไฟล์อื่นแทน (เช่น wrangler.prod.toml ที่ CI สร้างจากค่าจริง)
+const toml = readFileSync(
+  process.env.WRANGLER_CONFIG ?? new URL('../wrangler.toml', import.meta.url),
+  'utf8',
+);
 const errors = [];
 if (toml.includes('REPLACE_WITH_YOUR_D1_ID'))
   errors.push(
