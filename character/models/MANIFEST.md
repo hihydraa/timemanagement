@@ -41,4 +41,18 @@
 | ไฟล์ | ขนาด (ต้นฉบับ ~60 MB) |
 |---|---|
 | `base/female.glb`, `base/male.glb`, `base/nonbinary.glb` | ~11 MB |
-| `hair/hair-cute-girl.glb`, `hair/hair-e1b9-multipart.glb`, `hair/hair-e1b9-single.glb`, `hair/hair-elf-boy.glb`, `hair/hair-tripo-58cc9f16.glb`, `hair/hair-tripo-959b8b8b.glb` | ~10–12 MB |
+| `hair/hair-bob.glb`, `hair/hair-curly-elf.glb`, `outfit/outfit-cape-vest-a.glb`, `outfit/outfit-cape-vest-b.glb`, `outfit/outfit-ghost-a.glb`, `outfit/outfit-ghost-b.glb` | ~10–12 MB (ดูตารางการจัดประเภทด้านล่าง) |
+
+## การจัดประเภทหลังเรนเดอร์ดูจริง (ไฟล์ใน `Seperate_Part` ไม่ได้มีแต่ทรงผม)
+
+| ไฟล์ต้นฉบับ (`hair/separate-part/`) | ประเภท | ไฟล์ที่ใช้ในเว็บ |
+|---|---|---|
+| `hair-cute-girl.glb` | ทรงผมบ็อบ (มีบอดี้ชุดรัดรูปติดมาด้วย) | `hair/hair-bob.glb` |
+| `hair-elf-boy.glb` | ผมหยิกหูแหลม (มีบอดี้ติดมาด้วย) | `hair/hair-curly-elf.glb` |
+| `hair-e1b9-multipart.glb` | ชุดเต็มตัว: ชุดคลุมแดง-เสื้อกั๊ก (แบบ A) | `outfit/outfit-cape-vest-a.glb` |
+| `hair-e1b9-single.glb` | ชุดเต็มตัว: ชุดคลุมแดง-เสื้อกั๊ก (แบบ B หน้าตาเหมือน A) | `outfit/outfit-cape-vest-b.glb` |
+| `hair-tripo-58cc9f16.glb` | ชุดเต็มตัว: ชุดผี (แบบ A) | `outfit/outfit-ghost-a.glb` |
+| `hair-tripo-959b8b8b.glb` | ชุดเต็มตัว: ชุดผี (แบบ B หน้าตาเหมือน A) | `outfit/outfit-ghost-b.glb` |
+
+- ชุดทั้ง 4 เป็นตัวละครเต็มตัว (มีหัวล้านและร่างของตัวเอง) ไม่ใช่เสื้อผ้าแยกชิ้น จึงใช้แทนตัวละครพื้นฐาน
+- ไฟล์ทรงผมมีบอดี้ติดมาด้วย โค้ดจะตัด mesh ที่แตะพื้นออก เหลือเฉพาะส่วนผม
