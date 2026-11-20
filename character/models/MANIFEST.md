@@ -32,3 +32,13 @@
 ## ข้อควรรู้ก่อนใช้งานในเว็บ
 
 - Cloudflare Workers static assets จำกัดไฟล์ละ 25 MiB ไฟล์เหล่านี้ใหญ่กว่านั้นมาก ต้องบีบอัด (เช่น gltf-transform: Draco/meshopt + ลดขนาดเท็กซ์เจอร์) ก่อนนำไปแสดงในแอป
+
+## ไฟล์ที่บีบอัดแล้ว (ใช้ในเว็บ)
+
+อยู่ที่ `apps/web/public/models/` สร้างด้วย `@gltf-transform/cli` (optimize) ตั้งค่า: meshopt, เท็กซ์เจอร์ WebP ขนาดสูงสุด 1024 px,
+ปิด simplify/join/instance/palette เพื่อคงโครงสร้างชิ้นส่วนผมไว้ (จำนวน node/mesh/primitive ตรงกับต้นฉบับ)
+
+| ไฟล์ | ขนาด (ต้นฉบับ ~60 MB) |
+|---|---|
+| `base/female.glb`, `base/male.glb`, `base/nonbinary.glb` | ~11 MB |
+| `hair/hair-cute-girl.glb`, `hair/hair-e1b9-multipart.glb`, `hair/hair-e1b9-single.glb`, `hair/hair-elf-boy.glb`, `hair/hair-tripo-58cc9f16.glb`, `hair/hair-tripo-959b8b8b.glb` | ~10–12 MB |
