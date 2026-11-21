@@ -91,7 +91,11 @@ export const HAIR_FIT: Partial<Record<BodyId, Partial<Record<HairId, Fit>>>> = {
 export const OUTFIT_FIT: Partial<Record<BodyId, Partial<Record<OutfitId, Fit>>>> = {
   female: { 'cape-vest-a': { dy: 0, s: 1, sx: 1.12 } },
   male: { 'cape-vest-a': { dy: 0, s: 1, sx: 1.12 } },
-  nonbinary: { 'cape-vest-a': { dy: 0, s: 1, sx: 1.12, sz: 1.22, partSx: { tripo_part_4: 1.22 } } },
+  nonbinary: {
+    'cape-vest-a': { dy: 0, s: 1, sx: 1.12, sz: 1.22, partSx: { tripo_part_4: 1.22 } },
+    // ลำตัวกว้างกว่าตัวอื่น: ชุดผีขนาดเดิมแคบเกินจนลำตัวโผล่ทะลุที่หน้าอก (ตรวจด้วยการเรนเดอร์หน้าตรง/ข้าง)
+    'ghost-a': { dy: 0, s: 1, sx: 1.18, sz: 1.35 },
+  },
 };
 
 export const hairFit = (body: BodyId, hair: HairId): Fit =>
