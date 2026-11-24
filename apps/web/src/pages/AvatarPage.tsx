@@ -18,7 +18,7 @@ import { t } from '../lib/i18n';
 const AvatarViewer = lazy(() => import('../components/avatar/AvatarViewer'));
 
 type Choice = { body: BodyId; hair: HairId | null; outfit: OutfitId | null };
-const DEFAULT: Choice = { body: 'female', hair: 'bob', outfit: null };
+const DEFAULT: Choice = { body: 'female', hair: null, outfit: null };
 const keyOf = (c: Choice) => `${c.body}|${c.hair ?? ''}|${c.outfit ?? ''}`;
 type Status = 'idle' | 'saving' | 'saved' | 'failed';
 
@@ -204,12 +204,12 @@ export default function AvatarPage() {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            aria-pressed={choice.hair === null}
+            aria-pressed={choice.hair === null && preview?.kind !== 'hair'}
             onClick={() => {
               setPreview(null);
               pick({ ...choice, hair: null });
             }}
-            className={btn(choice.hair === null)}
+            className={btn(choice.hair === null && preview?.kind !== 'hair')}
           >
             {t.me.avatarNoHair}
           </button>
@@ -236,12 +236,12 @@ export default function AvatarPage() {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            aria-pressed={choice.outfit === null}
+            aria-pressed={choice.outfit === null && preview?.kind !== 'outfit'}
             onClick={() => {
               setPreview(null);
               pick({ ...choice, outfit: null });
             }}
-            className={btn(choice.outfit === null)}
+            className={btn(choice.outfit === null && preview?.kind !== 'outfit')}
           >
             {t.me.avatarNoOutfit}
           </button>
