@@ -1,96 +1,107 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { api } from '../lib/api';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Avatar2D from '../components/avatar/Avatar2D';
+import { api, ApiClientError, type Avatar2dState } from '../lib/api';
 import {
-  BODIES,
-  HAIRS,
-  OUTFITS,
-  resolveOutfit,
-  type BodyId,
-  type HairId,
-  type OutfitId,
-} from '../lib/avatarModels';
-import { setAvatarSnapshot } from '../lib/avatarSnapshot';
+  AVATAR_ITEMS,
+  DEFAULT_LOOK,
+  HAIR_COLORS,
+  SKINS,
+  SLOTS,
+  SLOT_FOCUS,
+  SLOT_TH,
+  type AvatarItem,
+  type AvatarLook,
+  type AvatarSlot,
+} from '../lib/avatar2d';
+import { setAvatarLook } from '../lib/avatarLook';
 import { t } from '../lib/i18n';
 
-const AvatarViewer = lazy(() => import('../components/avatar/AvatarViewer'));
-
-type Choice = { body: BodyId; hair: HairId | null; outfit: OutfitId | null };
-const DEFAULT: Choice = { body: 'female', hair: 'bob', outfit: null };
-const keyOf = (c: Choice) => `${c.body}|${c.hair ?? ''}|${c.outfit ?? ''}`;
 type Status = 'idle' | 'saving' | 'saved' | 'failed';
+/** ช่องที่ถอดออกได้ (เว้นว่างได้) — ทุกช่องเว้นว่างได้ */
+const GROUPS: AvatarSlot[] = [...SLOTS];
+
+const swatch = (on: boolean) =>
+  `h-9 w-9 rounded-full border-2 transition ${on ? 'border-brand-600 ring-2 ring-brand-300' : 'border-white shadow dark:border-slate-700'}`;
 
 /**
- * แท็บ "อวตาร" ในหน้าฉัน: เลือกตัวละคร/ทรงผม/ชุดแล้วดูแบบ 3D — บันทึกลงบัญชี (ใช้ได้ทุกเครื่อง)
- * เลือกแล้วบันทึกทันที และบันทึกซ้ำพร้อมภาพนิ่งเมื่อโมเดลโหลดเสร็จ (ภาพนี้ใช้แสดงมุมขวาล่าง)
+ * แท็บ "ตัวละคร" ในหน้าฉัน: แต่งตัวละคร 2D (สีผิว/สีผม/ทรงผม/ชุด/เครื่องประดับ/สัตว์เลี้ยง)
+ * ของฟรีใส่ได้ทันที ที่เหลือปลดล็อกด้วยแต้มจากการทำงานเสร็จ — เลือกแล้วบันทึกทันที (ใช้ได้ทุกเครื่อง)
  */
 export default function AvatarPage() {
-  const [choice, setChoice] = useState<Choice | null>(null); // null = กำลังโหลดจากบัญชี
+  const [state, setState] = useState<Avatar2dState | null>(null);
+  const [look, setLook] = useState<AvatarLook>(DEFAULT_LOOK);
   const [status, setStatus] = useState<Status>('idle');
-  /** ค่าที่เซิร์ฟเวอร์รับล่าสุด (null = ยังไม่มีอวตารในบัญชี) */
-  const saved = useRef<{ key: string; hasSnapshot: boolean } | null>(null);
-  /** ผู้ใช้เลือกเองแล้ว (ก่อนหน้านั้นไม่บันทึกค่าเริ่มต้นแทนผู้ใช้) */
-  const touched = useRef(false);
-  /** คิวบันทึก: เรียงทีละคำขอ กันภาพเก่าไปเขียนทับของใหม่ */
+  const [error, setError] = useState('');
+  const [open, setOpen] = useState<AvatarSlot>('hair');
+  /** คิวบันทึก: เรียงทีละคำขอ กันค่าเก่าไปเขียนทับของใหม่ */
   const queue = useRef<Promise<void>>(Promise.resolve());
   const alive = useRef(true);
 
   useEffect(() => {
     alive.current = true;
     api
-      .getAvatar()
-      .then((a) => {
+      .getAvatar2d()
+      .then((s) => {
         if (!alive.current) return;
-        if (a) {
-          saved.current = { key: keyOf(a), hasSnapshot: !!a.snapshot };
-          setChoice({
-            body: a.body,
-            hair: a.hair,
-            outfit: a.outfit ? resolveOutfit(a.outfit) : null,
-          });
-        } else setChoice(DEFAULT);
+        setState(s);
+        if (s.look) setLook(s.look);
       })
-      .catch(() => {
-        if (!alive.current) return;
-        setChoice(DEFAULT);
-        setStatus('failed');
-      });
+      .catch(() => alive.current && setError(t.me.avatarLoadFailed));
     return () => {
       alive.current = false;
     };
   }, []);
 
-  const persist = (sel: Choice, snapshot: string | null) => {
+  const persist = useCallback((next: AvatarLook) => {
     queue.current = queue.current.then(async () => {
       if (alive.current) setStatus('saving');
       try {
-        const a = await api.saveAvatar({ ...sel, snapshot });
-        saved.current = { key: keyOf(a), hasSnapshot: !!a.snapshot };
-        if (alive.current) setStatus('saved');
-      } catch {
-        if (alive.current) setStatus('failed');
+        const s = await api.saveAvatarLook(next);
+        setAvatarLook(s.look);
+        if (alive.current) {
+          setState(s);
+          setStatus('saved');
+        }
+      } catch (e) {
+        if (alive.current) {
+          setStatus('failed');
+          setError(e instanceof ApiClientError ? e.message : t.me.avatarSaveFailed);
+        }
       }
     });
+  }, []);
+
+  const change = (next: AvatarLook) => {
+    setError('');
+    setLook(next);
+    persist(next);
   };
 
-  const pick = (next: Choice) => {
-    touched.current = true;
-    setChoice(next);
-    persist(next, null);
+  const owned = useMemo(() => new Set(state?.owned ?? []), [state]);
+  const items = useMemo(() => AVATAR_ITEMS.filter((i) => i.slot === open), [open]);
+  const balance = state?.balance ?? 0;
+
+  const equip = (item: AvatarItem) => {
+    const on = look.items[item.slot] === item.id;
+    const nextItems = { ...look.items };
+    if (on) delete nextItems[item.slot];
+    else nextItems[item.slot] = item.id;
+    change({ ...look, items: nextItems });
   };
 
-  // ตัวแสดงโมเดลถ่ายภาพเมื่อโหลดตัวละครครบ → บันทึกคู่กับตัวเลือก (ข้ามถ้าเซิร์ฟเวอร์มีค่านี้พร้อมภาพแล้ว)
-  const onSnapshot = (url: string, sel: Choice) => {
-    if (!saved.current && !touched.current) return;
-    setAvatarSnapshot(url);
-    const s = saved.current;
-    if (s && s.key === keyOf(sel) && s.hasSnapshot) return;
-    persist(sel, url);
+  const buy = async (item: AvatarItem) => {
+    setError('');
+    try {
+      const s = await api.buyAvatarItem(item.id);
+      setState(s);
+      // ซื้อแล้วสวมให้ทันที
+      change({ ...look, items: { ...look.items, [item.slot]: item.id } });
+    } catch (e) {
+      setError(e instanceof ApiClientError ? e.message : t.error.generic);
+    }
   };
 
-  const btn = (on: boolean) =>
-    `rounded-full px-3 py-1.5 text-sm disabled:opacity-50 ${on ? 'bg-brand-600 font-medium text-white' : 'border border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800'}`;
-
-  if (!choice) return <p role="status">{t.loading}</p>;
+  if (!state && !error) return <p role="status">{t.loading}</p>;
 
   const statusText =
     status === 'saving'
@@ -103,91 +114,149 @@ export default function AvatarPage() {
 
   return (
     <div className="space-y-4">
-      <div className="h-[360px] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900">
-        <Suspense fallback={<p className="p-4 text-sm">{t.loading}</p>}>
-          <AvatarViewer
-            body={choice.body}
-            hair={choice.hair}
-            outfit={choice.outfit}
-            onSnapshot={onSnapshot}
-          />
-        </Suspense>
+      <div className="grid gap-4 md:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
+        <div className="space-y-2">
+          <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-brand-50 to-white p-3 dark:border-slate-700 dark:from-slate-800 dark:to-slate-900">
+            <Avatar2D look={look} label={t.me.avatar} className="mx-auto w-full max-w-[240px]" />
+          </div>
+          <p className="text-center text-sm">
+            <span aria-hidden>⭐ </span>
+            {t.me.avatarPoints.replace('{n}', String(balance))}
+          </p>
+          <p
+            role="status"
+            aria-live="polite"
+            className="min-h-[1rem] text-center text-xs text-slate-600 dark:text-slate-300"
+          >
+            {statusText}
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <fieldset>
+            <legend className="mb-2 text-sm font-semibold">{t.me.avatarSkin}</legend>
+            <div className="flex flex-wrap gap-2">
+              {SKINS.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  aria-label={s.th}
+                  title={s.th}
+                  aria-pressed={look.skin === s.id}
+                  onClick={() => change({ ...look, skin: s.id })}
+                  className={swatch(look.skin === s.id)}
+                  style={{ background: s.color }}
+                />
+              ))}
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend className="mb-2 text-sm font-semibold">{t.me.avatarHairColor}</legend>
+            <div className="flex flex-wrap gap-2">
+              {HAIR_COLORS.map((h) => (
+                <button
+                  key={h.id}
+                  type="button"
+                  aria-label={h.th}
+                  title={h.th}
+                  aria-pressed={look.hairColor === h.id}
+                  onClick={() => change({ ...look, hairColor: h.id })}
+                  className={swatch(look.hairColor === h.id)}
+                  style={{ background: h.color }}
+                />
+              ))}
+            </div>
+          </fieldset>
+        </div>
       </div>
 
-      <fieldset>
-        <legend className="mb-2 text-sm font-semibold">{t.me.avatarBody}</legend>
-        <div className="flex flex-wrap gap-2">
-          {BODIES.map((b) => (
-            <button
-              key={b.id}
-              type="button"
-              aria-pressed={choice.body === b.id}
-              onClick={() => pick({ ...choice, body: b.id })}
-              className={btn(choice.body === b.id)}
-            >
-              {b.th}
-            </button>
-          ))}
-        </div>
-      </fieldset>
-
-      <fieldset>
-        <legend className="mb-2 text-sm font-semibold">{t.me.avatarHair}</legend>
-        <div className="flex flex-wrap gap-2">
+      <div role="tablist" aria-label={t.me.avatarParts} className="flex gap-1 overflow-x-auto pb-1">
+        {GROUPS.map((g) => (
           <button
+            key={g}
             type="button"
-            aria-pressed={choice.hair === null}
-            onClick={() => pick({ ...choice, hair: null })}
-            className={btn(choice.hair === null)}
+            role="tab"
+            aria-selected={open === g}
+            onClick={() => setOpen(g)}
+            className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${open === g ? 'bg-brand-600 font-medium text-white' : 'border border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800'}`}
           >
-            {t.me.avatarNoHair}
+            {SLOT_TH[g]}
           </button>
-          {HAIRS.map((h) => (
-            <button
-              key={h.id}
-              type="button"
-              aria-pressed={choice.hair === h.id}
-              onClick={() => pick({ ...choice, hair: h.id })}
-              className={btn(choice.hair === h.id)}
-            >
-              {h.th}
-            </button>
-          ))}
-        </div>
-      </fieldset>
+        ))}
+      </div>
 
-      <fieldset>
-        <legend className="mb-2 text-sm font-semibold">{t.me.avatarOutfit}</legend>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            aria-pressed={choice.outfit === null}
-            onClick={() => pick({ ...choice, outfit: null })}
-            className={btn(choice.outfit === null)}
-          >
-            {t.me.avatarNoOutfit}
-          </button>
-          {OUTFITS.map((o) => (
-            <button
-              key={o.id}
-              type="button"
-              aria-pressed={choice.outfit === o.id}
-              onClick={() => pick({ ...choice, outfit: o.id })}
-              className={btn(choice.outfit === o.id)}
-            >
-              {o.th}
-            </button>
-          ))}
-        </div>
-      </fieldset>
-
-      <p
-        role="status"
-        aria-live="polite"
-        className="min-h-[1rem] text-xs text-slate-600 dark:text-slate-300"
+      <ul
+        className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4"
+        aria-label={SLOT_TH[open]}
       >
-        {statusText}
-      </p>
+        <li>
+          <button
+            type="button"
+            aria-pressed={!look.items[open]}
+            onClick={() => {
+              const nextItems = { ...look.items };
+              delete nextItems[open];
+              change({ ...look, items: nextItems });
+            }}
+            className={`flex h-full w-full flex-col items-center justify-center gap-1 rounded-2xl border p-2 text-sm ${!look.items[open] ? 'border-brand-600 bg-brand-50 dark:bg-brand-950' : 'border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'}`}
+          >
+            <span aria-hidden className="text-2xl">
+              ∅
+            </span>
+            {t.me.avatarNone}
+          </button>
+        </li>
+        {items.map((item) => {
+          const have = owned.has(item.id);
+          const worn = look.items[item.slot] === item.id;
+          const can = balance >= item.price;
+          return (
+            <li
+              key={item.id}
+              className={`flex flex-col items-center gap-1 rounded-2xl border p-2 ${worn ? 'border-brand-600 bg-brand-50 dark:bg-brand-950' : 'border-slate-200 dark:border-slate-700'}`}
+            >
+              <Avatar2D
+                look={{ ...look, items: { ...look.items, [item.slot]: item.id } }}
+                label=""
+                viewBox={SLOT_FOCUS[item.slot]}
+                className="w-20"
+              />
+              <span className="text-center text-xs font-medium">{item.th}</span>
+              {have ? (
+                <button
+                  type="button"
+                  aria-pressed={worn}
+                  onClick={() => equip(item)}
+                  className={`rounded-full px-3 py-1 text-xs ${worn ? 'bg-brand-600 text-white' : 'border border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700'}`}
+                >
+                  {worn ? `✓ ${t.me.avatarWorn}` : t.me.avatarWear}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={!can}
+                  onClick={() => void buy(item)}
+                  title={
+                    can ? '' : t.me.avatarNeedPoints.replace('{n}', String(item.price - balance))
+                  }
+                  className="rounded-full border border-amber-500 px-3 py-1 text-xs text-amber-800 hover:bg-amber-50 disabled:opacity-50 dark:text-amber-300 dark:hover:bg-amber-950"
+                >
+                  🔒 {t.me.avatarBuy.replace('{n}', String(item.price))}
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+
+      {error && (
+        <p
+          role="alert"
+          className="rounded bg-red-50 p-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300"
+        >
+          {error}
+        </p>
+      )}
       <p className="text-xs text-slate-500 dark:text-slate-400">{t.me.avatarNote}</p>
     </div>
   );

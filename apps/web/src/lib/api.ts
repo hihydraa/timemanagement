@@ -1,6 +1,6 @@
 import { clearApiCache } from './pwa';
 import { t } from './i18n';
-import type { AvatarState, BodyId, HairId, OutfitId } from './avatarModels';
+import type { AvatarLook } from './avatarLook';
 import type { DashboardData } from './dashboard';
 import type { GameState, Honorific } from './game';
 import type {
@@ -26,6 +26,13 @@ import type {
   User,
   WeeklyStats,
 } from './types';
+
+/** สถานะตัวละคร 2D: look = null เมื่อยังไม่เคยบันทึก; owned = ไอเท็มฟรี + ที่ซื้อแล้ว */
+export interface Avatar2dState {
+  look: AvatarLook | null;
+  owned: string[];
+  balance: number;
+}
 
 export class ApiClientError extends Error {
   constructor(
@@ -185,13 +192,9 @@ export const api = {
   ) => req<SettingsView>('PATCH', '/api/settings', p),
   importTasks: (tasks: unknown[]) =>
     req<{ imported: number; skipped: number }>('POST', '/api/import/tasks', { tasks }),
-  getAvatar: () => req<{ avatar: AvatarState | null }>('GET', '/api/avatar').then((r) => r.avatar),
-  saveAvatar: (p: {
-    body: BodyId;
-    hair: HairId | null;
-    outfit: OutfitId | null;
-    snapshot?: string | null;
-  }) => req<{ avatar: AvatarState }>('PUT', '/api/avatar', p).then((r) => r.avatar),
+  getAvatar2d: () => req<Avatar2dState>('GET', '/api/avatar2d'),
+  saveAvatarLook: (look: AvatarLook) => req<Avatar2dState>('PUT', '/api/avatar2d/look', look),
+  buyAvatarItem: (itemId: string) => req<Avatar2dState>('POST', '/api/avatar2d/buy', { itemId }),
   getGame: () => req<GameState>('GET', '/api/game'),
   saveProfile: (p: { characterId: string; displayName: string; honorific: Honorific }) =>
     req<GameState>('PUT', '/api/game/profile', p),

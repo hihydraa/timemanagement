@@ -2,6 +2,8 @@
  * เกมสะสม: ตัวละคร 6 ตัว, เครื่องแต่งกาย 10 ชิ้นต่อชุด, สัตว์ประจำตัว — แคตาล็อกคงที่ (ใช้ร่วมกันทั้งเซิร์ฟเวอร์และเว็บ)
  * ภาพอยู่ที่ apps/web/public/game/{characters,items,companions}/<id>.webp (ตัดจากแผ่นต้นฉบับใน design/game/)
  */
+import { AVATAR_ITEMS } from './avatar2d';
+
 export type Honorific = 'name' | 'master' | 'both';
 export const HONORIFICS: readonly Honorific[] = ['name', 'master', 'both'];
 export const MASTER = 'นายท่าน';
@@ -22,7 +24,11 @@ export type Slot =
   | 'bag'
   | 'waist'
   | 'accessory'
-  | 'companion';
+  | 'companion'
+  | 'hair'
+  | 'outfit'
+  | 'hat'
+  | 'glasses';
 
 export interface Character {
   id: string;
@@ -167,6 +173,14 @@ export const ITEMS: readonly Item[] = [
     th: PETS[c.id]!,
     slot: 'companion',
     price: PRICE.pet,
+  })),
+  // ไอเท็มตัวละคร 2D แบบชั้นภาพ (ดู avatar2d.ts) ใช้บัญชีแต้ม/คลังเดียวกับของเดิม
+  ...AVATAR_ITEMS.map<Item>((a) => ({
+    id: a.id,
+    collection: 'avatar',
+    th: a.th,
+    slot: a.slot,
+    price: a.price,
   })),
 ];
 const BY_ID = new Map(ITEMS.map((i) => [i.id, i]));

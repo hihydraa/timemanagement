@@ -316,3 +316,10 @@ export const calendarFeeds = sqliteTable('calendar_feeds', {
   token: text('token').notNull().unique(),
   createdAt: text('created_at').notNull(),
 });
+
+/** ตัวละคร 2D แบบชั้นภาพ: look = JSON {skin, hairColor, items: {ช่อง: รหัสไอเท็ม}} (ดู lib/avatar2d.ts) */
+export const avatar2dProfiles = sqliteTable('avatar2d_profiles', {
+  userId: text('user_id').primaryKey(),
+  look: text('look').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});

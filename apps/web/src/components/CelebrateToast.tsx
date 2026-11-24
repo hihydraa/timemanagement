@@ -1,5 +1,5 @@
 import { useApp } from '../lib/appContext';
-import { isCornerVisible, useAvatarSnapshot } from '../lib/avatarSnapshot';
+import { isCornerVisible, useAvatarLook } from '../lib/avatarLook';
 import { useCelebrateMessage } from '../lib/celebrate';
 import Mascot from './Mascot';
 
@@ -10,9 +10,9 @@ import Mascot from './Mascot';
  */
 export default function CelebrateToast() {
   const { call, route } = useApp();
-  const snapshot = useAvatarSnapshot();
+  const look = useAvatarLook();
   const msg = useCelebrateMessage(call);
-  const withAvatar = isCornerVisible(route, snapshot);
+  const withAvatar = isCornerVisible(route, look);
   const pos = withAvatar
     ? 'bottom-24 right-[7rem] md:bottom-4 md:right-40'
     : 'bottom-24 right-3 md:bottom-4 md:right-4';

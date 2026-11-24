@@ -33,8 +33,10 @@ const mk = async (c: Client, body: object) => (await c.call('POST', '/api/tasks'
 describe('แคตาล็อก', () => {
   it('6 ตัวละคร × (10 ชิ้น + 1 สัตว์ประจำตัว) และภาพมีอยู่จริง', async () => {
     expect(CHARACTERS).toHaveLength(6);
-    expect(ITEMS).toHaveLength(66);
-    expect(new Set(ITEMS.map((i) => i.id)).size).toBe(66);
+    // ชุดสะสมเดิม 66 ชิ้น (ไอเท็มตัวละคร 2D แบบชั้นภาพ collection 'avatar' นับแยก ดู avatar2d.test.ts)
+    const legacy = ITEMS.filter((i) => i.collection !== 'avatar');
+    expect(legacy).toHaveLength(66);
+    expect(new Set(ITEMS.map((i) => i.id)).size).toBe(ITEMS.length);
     for (const c of CHARACTERS) {
       expect(ITEMS.filter((i) => i.collection === c.id && i.slot !== 'companion')).toHaveLength(10);
       expect(ITEMS.filter((i) => i.collection === c.id && i.slot === 'companion')).toHaveLength(1);
