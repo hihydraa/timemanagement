@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Avatar2D from '../components/avatar/Avatar2D';
 import { api, ApiClientError, type Avatar2dState } from '../lib/api';
 import {
   AVATAR_ITEMS,
   DEFAULT_LOOK,
   HAIR_COLORS,
-  SKINS,
+  REQUIRED_SLOTS,
   SLOTS,
   SLOT_FOCUS,
   SLOT_TH,
@@ -17,8 +17,8 @@ import { setAvatarLook } from '../lib/avatarLook';
 import { t } from '../lib/i18n';
 
 type Status = 'idle' | 'saving' | 'saved' | 'failed';
-/** ช่องที่ถอดออกได้ (เว้นว่างได้) — ทุกช่องเว้นว่างได้ */
-const GROUPS: AvatarSlot[] = [...SLOTS];
+/** แท็บหมวด: ทรงผมก่อน แล้วชุด */
+const GROUPS: AvatarSlot[] = [...SLOTS].reverse();
 
 const swatch = (on: boolean) =>
   `h-9 w-9 rounded-full border-2 transition ${on ? 'border-brand-600 ring-2 ring-brand-300' : 'border-white shadow dark:border-slate-700'}`;
@@ -134,23 +134,6 @@ export default function AvatarPage() {
 
         <div className="space-y-4">
           <fieldset>
-            <legend className="mb-2 text-sm font-semibold">{t.me.avatarSkin}</legend>
-            <div className="flex flex-wrap gap-2">
-              {SKINS.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  aria-label={s.th}
-                  title={s.th}
-                  aria-pressed={look.skin === s.id}
-                  onClick={() => change({ ...look, skin: s.id })}
-                  className={swatch(look.skin === s.id)}
-                  style={{ background: s.color }}
-                />
-              ))}
-            </div>
-          </fieldset>
-          <fieldset>
             <legend className="mb-2 text-sm font-semibold">{t.me.avatarHairColor}</legend>
             <div className="flex flex-wrap gap-2">
               {HAIR_COLORS.map((h) => (
@@ -189,62 +172,74 @@ export default function AvatarPage() {
         className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4"
         aria-label={SLOT_TH[open]}
       >
-        <li>
-          <button
-            type="button"
-            aria-pressed={!look.items[open]}
-            onClick={() => {
-              const nextItems = { ...look.items };
-              delete nextItems[open];
-              change({ ...look, items: nextItems });
-            }}
-            className={`flex h-full w-full flex-col items-center justify-center gap-1 rounded-2xl border p-2 text-sm ${!look.items[open] ? 'border-brand-600 bg-brand-50 dark:bg-brand-950' : 'border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'}`}
-          >
-            <span aria-hidden className="text-2xl">
-              ∅
-            </span>
-            {t.me.avatarNone}
-          </button>
-        </li>
-        {items.map((item) => {
+        {!REQUIRED_SLOTS.includes(open) && (
+          <li>
+            <button
+              type="button"
+              aria-pressed={!look.items[open]}
+              onClick={() => {
+                const nextItems = { ...look.items };
+                delete nextItems[open];
+                change({ ...look, items: nextItems });
+              }}
+              className={`flex h-full w-full flex-col items-center justify-center gap-1 rounded-2xl border p-2 text-sm ${!look.items[open] ? 'border-brand-600 bg-brand-50 dark:bg-brand-950' : 'border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'}`}
+            >
+              <span aria-hidden className="text-2xl">
+                ∅
+              </span>
+              {t.me.avatarNone}
+            </button>
+          </li>
+        )}
+        {items.map((item, idx) => {
+          const heading = idx === 0 || items[idx - 1]!.group !== item.group ? item.group : null;
           const have = owned.has(item.id);
           const worn = look.items[item.slot] === item.id;
           const can = balance >= item.price;
           return (
-            <li
-              key={item.id}
-              className={`flex flex-col items-center gap-1 rounded-2xl border p-2 ${worn ? 'border-brand-600 bg-brand-50 dark:bg-brand-950' : 'border-slate-200 dark:border-slate-700'}`}
-            >
-              <Avatar2D
-                look={{ ...look, items: { ...look.items, [item.slot]: item.id } }}
-                label=""
-                viewBox={SLOT_FOCUS[item.slot]}
-                className="w-20"
-              />
-              <span className="text-center text-xs font-medium">{item.th}</span>
-              {have ? (
-                <button
-                  type="button"
-                  aria-pressed={worn}
-                  onClick={() => equip(item)}
-                  className={`rounded-full px-3 py-1 text-xs ${worn ? 'bg-brand-600 text-white' : 'border border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700'}`}
+            <Fragment key={item.id}>
+              {heading && (
+                <li
+                  role="presentation"
+                  className="col-span-full pt-2 text-xs font-semibold text-slate-600 dark:text-slate-300"
                 >
-                  {worn ? `✓ ${t.me.avatarWorn}` : t.me.avatarWear}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled={!can}
-                  onClick={() => void buy(item)}
-                  title={
-                    can ? '' : t.me.avatarNeedPoints.replace('{n}', String(item.price - balance))
-                  }
-                  className="rounded-full border border-amber-500 px-3 py-1 text-xs text-amber-800 hover:bg-amber-50 disabled:opacity-50 dark:text-amber-300 dark:hover:bg-amber-950"
-                >
-                  🔒 {t.me.avatarBuy.replace('{n}', String(item.price))}
-                </button>
+                  {heading}
+                </li>
               )}
-            </li>
+              <li
+                className={`flex flex-col items-center gap-1 rounded-2xl border p-2 ${worn ? 'border-brand-600 bg-brand-50 dark:bg-brand-950' : 'border-slate-200 dark:border-slate-700'}`}
+              >
+                <Avatar2D
+                  look={{ ...look, items: { ...look.items, [item.slot]: item.id } }}
+                  label=""
+                  viewBox={SLOT_FOCUS[item.slot]}
+                  className="w-20"
+                />
+                <span className="text-center text-xs font-medium">{item.th}</span>
+                {have ? (
+                  <button
+                    type="button"
+                    aria-pressed={worn}
+                    onClick={() => equip(item)}
+                    className={`rounded-full px-3 py-1 text-xs ${worn ? 'bg-brand-600 text-white' : 'border border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700'}`}
+                  >
+                    {worn ? `✓ ${t.me.avatarWorn}` : t.me.avatarWear}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={!can}
+                    onClick={() => void buy(item)}
+                    title={
+                      can ? '' : t.me.avatarNeedPoints.replace('{n}', String(item.price - balance))
+                    }
+                    className="rounded-full border border-amber-500 px-3 py-1 text-xs text-amber-800 hover:bg-amber-50 disabled:opacity-50 dark:text-amber-300 dark:hover:bg-amber-950"
+                  >
+                    🔒 {t.me.avatarBuy.replace('{n}', String(item.price))}
+                  </button>
+                )}
+              </li>
+            </Fragment>
           );
         })}
       </ul>

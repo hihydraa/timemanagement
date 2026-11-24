@@ -6,7 +6,6 @@ import {
   AVATAR_ITEMS,
   DEFAULT_LOOK,
   HAIR_COLOR_IDS,
-  SKIN_IDS,
   SLOTS,
   getAvatarItem,
   isFreeItem,
@@ -22,7 +21,6 @@ const itemId = z.string().min(1).max(60);
 
 export const lookInput = z
   .object({
-    skin: z.enum(SKIN_IDS),
     hairColor: z.enum(HAIR_COLOR_IDS),
     items: z
       .object(
