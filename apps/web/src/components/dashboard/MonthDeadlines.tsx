@@ -8,6 +8,7 @@ import {
   deadlineYmd,
   type DashboardData,
 } from '../../lib/dashboard';
+import { STYLE, kindTh } from '../../lib/daysOffStyle';
 import { t } from '../../lib/i18n';
 import type { Task } from '../../lib/types';
 import { CountdownChip, ImportanceChip, UrgencyText } from '../TaskChips';
@@ -36,6 +37,7 @@ export default function MonthDeadlines({
 }) {
   const [pick, setPick] = useState<string | null>(null);
   const grid = useMemo(() => monthGrid(month), [month]);
+  const offByDate = useMemo(() => new Map(d.leave.month.map((x) => [x.date, x])), [d.leave.month]);
   const w = t.dash.month;
   const shown = pick ? d.deadlines.tasks.filter((x) => deadlineYmd(x) === pick) : d.deadlines.tasks;
   const groups = useMemo(() => {
@@ -108,16 +110,26 @@ export default function MonthDeadlines({
               const total = n.open + n.done;
               const late = n.open > 0 && c.ymd < d.today;
               const isToday = c.ymd === d.today;
+              const off = offByDate.get(c.ymd);
               return (
                 <button
                   key={j}
                   type="button"
                   aria-pressed={pick === c.ymd}
-                  aria-label={`${dayLabel(c.ymd)}: ${total ? w.cellLabel.replace('{o}', String(n.open)).replace('{d}', String(n.done)) : w.noDeadline}${late ? ` (${w.late})` : ''}`}
+                  aria-label={`${dayLabel(c.ymd)}: ${total ? w.cellLabel.replace('{o}', String(n.open)).replace('{d}', String(n.done)) : w.noDeadline}${late ? ` (${w.late})` : ''}${off ? ` — ${t.dash.leave.cellOff}: ${kindTh(off.kind)}` : ''}`}
                   disabled={total === 0}
                   onClick={() => setPick(pick === c.ymd ? null : c.ymd)}
                   className={`relative flex h-11 flex-col items-center justify-center rounded-lg text-xs tabular-nums ${HEAT[heatLevel(total)]} ${isToday ? 'ring-2 ring-brand-600' : ''} ${pick === c.ymd ? 'outline outline-2 outline-offset-1 outline-slate-900 dark:outline-white' : ''} ${late ? 'border border-red-500' : 'border border-transparent'}`}
                 >
+                  {off && (
+                    <span
+                      aria-hidden
+                      title={`${t.dash.leave.cellOff}: ${kindTh(off.kind)}`}
+                      className={`absolute right-0.5 top-0.5 rounded px-0.5 text-[9px] leading-none ${STYLE[off.kind].cls}`}
+                    >
+                      {STYLE[off.kind].icon}
+                    </span>
+                  )}
                   <span className={isToday ? 'font-bold' : ''}>{c.day}</span>
                   {total > 0 && (
                     <span className="text-[10px] font-semibold leading-none">

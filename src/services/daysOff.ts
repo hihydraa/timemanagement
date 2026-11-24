@@ -176,3 +176,26 @@ export async function deleteDayOff(db: Db, userId: string, id: string) {
   await getOwnedDay(db, userId, id);
   await db.delete(daysOff).where(and(eq(daysOff.id, id), eq(daysOff.userId, userId)));
 }
+
+/** ภาพรวมวันหยุดสำหรับแดชบอร์ด: วันนี้หยุดไหม, สรุปปีนี้, 5 วันหยุดถัดไป (60 วัน), วันหยุดของเดือนที่แสดงอยู่ */
+export async function leaveOverview(
+  db: Db,
+  userId: string,
+  today: string,
+  monthStart: string,
+  monthEnd: string,
+) {
+  const year = today.slice(0, 4);
+  const [yearly, upcoming, month] = await Promise.all([
+    listDaysOff(db, userId, `${year}-01-01`, `${year}-12-31`),
+    listDaysOff(db, userId, today, addDays(today, 60)),
+    listDaysOff(db, userId, monthStart, monthEnd),
+  ]);
+  return {
+    year: Number(year),
+    today: yearly.daysOff.find((d) => d.date === today) ?? null,
+    summary: yearly.summary,
+    upcoming: upcoming.daysOff.slice(0, 5),
+    month: month.daysOff,
+  };
+}

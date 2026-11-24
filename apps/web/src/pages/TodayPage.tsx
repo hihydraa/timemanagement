@@ -7,6 +7,7 @@ import { CountdownChip, ImportanceChip, UrgencyText } from '../components/TaskCh
 import Mascot from '../components/Mascot';
 import ReviewCard from '../components/today/ReviewCard';
 import AttentionPanel from '../components/dashboard/AttentionPanel';
+import DaysOffPanel from '../components/dashboard/DaysOffPanel';
 import ImportantList from '../components/dashboard/ImportantList';
 import KpiStrip from '../components/dashboard/KpiStrip';
 import MonthDeadlines from '../components/dashboard/MonthDeadlines';
@@ -21,6 +22,7 @@ import { useToast } from '../components/UndoToast';
 import { snoozeRevertPayload, TASKS_CHANGED } from '../lib/undo';
 import { URGENCY_COLORS } from '../lib/colors';
 import { dayLabel } from '../lib/dates';
+import { STYLE, kindTh } from '../lib/daysOffStyle';
 import { t } from '../lib/i18n';
 import {
   buildTimeline,
@@ -345,6 +347,16 @@ export default function TodayPage() {
         </p>
       )}
 
+      {dash?.leave.today && (
+        <p
+          role="status"
+          className="rounded-xl bg-sky-100 p-2 text-sm text-sky-950 dark:bg-sky-900 dark:text-sky-50"
+        >
+          <span aria-hidden>{STYLE[dash.leave.today.kind].icon} </span>
+          {t.dash.leave.banner.replace('{k}', kindTh(dash.leave.today.kind))}
+        </p>
+      )}
+
       <ReviewCard now={now} onOpen={() => goTo('me', 'review')} />
 
       {dash ? (
@@ -549,6 +561,7 @@ export default function TodayPage() {
               onSchedule={schedule}
             />
             <WorkloadStrip d={dash} onGo={() => goTo('plan')} onOpen={openById} />
+            <DaysOffPanel d={dash} onChanged={load} onGo={() => goTo('me', 'daysoff')} />
             <AttentionPanel
               d={dash}
               onOpen={setQuick}

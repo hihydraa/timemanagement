@@ -1,25 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, ApiClientError } from '../lib/api';
 import { dayLabel } from '../lib/dates';
+import { KINDS, STYLE, kindTh } from '../lib/daysOffStyle';
 import { monthGrid, monthTitle, shiftMonth } from '../lib/dashboard';
 import { t } from '../lib/i18n';
 import { todayYmd } from '../lib/time';
 import type { DayOff, DayOffKind, DaysOffList } from '../lib/types';
 
-const KINDS: DayOffKind[] = ['vacation', 'sick', 'personal', 'holiday', 'other'];
-/** ไอคอน+สีต่อประเภท (ไม่พึ่งสีอย่างเดียว: ไอคอนและชื่อประเภทอยู่ใน aria-label/รายการด้วย) */
-const STYLE: Record<DayOffKind, { icon: string; cls: string }> = {
-  vacation: { icon: '🏖', cls: 'bg-sky-200 text-sky-950 dark:bg-sky-800 dark:text-sky-50' },
-  sick: { icon: '🤒', cls: 'bg-rose-200 text-rose-950 dark:bg-rose-800 dark:text-rose-50' },
-  personal: { icon: '📝', cls: 'bg-amber-200 text-amber-950 dark:bg-amber-700 dark:text-amber-50' },
-  holiday: {
-    icon: '🎌',
-    cls: 'bg-emerald-200 text-emerald-950 dark:bg-emerald-800 dark:text-emerald-50',
-  },
-  other: { icon: '•', cls: 'bg-slate-300 text-slate-900 dark:bg-slate-600 dark:text-slate-50' },
-};
 const WEEK = ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา'];
-const kindTh = (k: string) => t.daysOff.kinds[k] ?? k;
 
 const field =
   'w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800';

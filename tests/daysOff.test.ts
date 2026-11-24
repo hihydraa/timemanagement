@@ -147,6 +147,46 @@ describe('วันหยุดงาน', () => {
     expect((await b.call('GET', '/api/cockpit')).json.dayOff).toBe(false);
   });
 
+  it('dashboard.leave: วันนี้หยุดไหม, สรุปปีนี้, วันหยุดถัดไป (ไม่เกิน 5), วันหยุดของเดือนที่แสดง, แยกบัญชี', async () => {
+    await add(a, { from: '2026-11-12', kind: 'sick', note: 'ไข้' }); // วันนี้
+    for (const d of [
+      '2026-11-16',
+      '2026-11-17',
+      '2026-11-18',
+      '2026-11-19',
+      '2026-11-20',
+      '2026-11-23',
+    ])
+      await add(a, { from: d, kind: 'vacation' });
+    await add(a, { from: '2026-01-05', kind: 'personal' });
+    await add(a, { from: '2026-12-01', kind: 'holiday' });
+    await add(b, { from: '2026-11-13', kind: 'other' });
+    const l = (await a.call('GET', '/api/dashboard')).json.leave;
+    expect(l.year).toBe(2026);
+    expect(l.today).toMatchObject({ date: '2026-11-12', kind: 'sick', note: 'ไข้' });
+    expect(l.summary.total).toBe(9);
+    expect(l.summary.byKind).toMatchObject({
+      vacation: 6,
+      sick: 1,
+      personal: 1,
+      holiday: 1,
+      other: 0,
+    });
+    expect(l.upcoming.map((x: { date: string }) => x.date)).toEqual([
+      '2026-11-12',
+      '2026-11-16',
+      '2026-11-17',
+      '2026-11-18',
+      '2026-11-19',
+    ]);
+    expect(l.month).toHaveLength(7); // เฉพาะพฤศจิกายน
+    const dec = (await a.call('GET', '/api/dashboard?month=2026-12')).json.leave;
+    expect(dec.month.map((x: { date: string }) => x.date)).toEqual(['2026-12-01']);
+    const lb = (await b.call('GET', '/api/dashboard')).json.leave;
+    expect(lb.today).toBeNull();
+    expect(lb.summary.total).toBe(1);
+  });
+
   it('ส่งออก JSON/ICS มีวันหยุด', async () => {
     await add(a, { from: '2026-11-12', kind: 'sick', note: 'ไข้' });
     const json = (await a.call('GET', '/api/export?format=json')).json;

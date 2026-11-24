@@ -1,6 +1,6 @@
 import { addDaysYmd } from './dates';
 import type { PlanTask } from './planner';
-import type { Task } from './types';
+import type { DayOff, DayOffKind, Task } from './types';
 
 export interface DayCount {
   open: number;
@@ -32,6 +32,14 @@ export interface DashboardData {
   week: PlanTask[];
   /** วันหยุดที่บันทึกไว้ใน 7 วันข้างหน้า */
   daysOff: string[];
+  /** ภาพรวมวันหยุด: วันนี้หยุดไหม / สรุปปีนี้ / วันหยุดถัดไป / วันหยุดของเดือนที่แสดง */
+  leave: {
+    year: number;
+    today: DayOff | null;
+    summary: { total: number; byKind: Record<DayOffKind, number> };
+    upcoming: DayOff[];
+    month: DayOff[];
+  };
   attention: {
     stalled: Task[];
     /** งานเลยกำหนดที่เก่าสุด (สูงสุด 5) / งานที่ยังไม่ตั้งวันล่าสุด (สูงสุด 5) */
