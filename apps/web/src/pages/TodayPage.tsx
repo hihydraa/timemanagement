@@ -114,7 +114,12 @@ export default function TodayPage() {
     const mine = pending.filter((x) => (x.dueDate ?? x.startAt?.slice(0, 10)) === data.date);
     const scheduled = [...data.today, ...mine, ...data.dueToday, ...data.doneToday];
     const open = [...data.overdue, ...data.dueToday, ...data.today];
-    const load = dayLoad(data.date, data.work, scheduled);
+    // วันหยุดที่บันทึกไว้ = ไม่นับเป็นวันทำงาน (ไม่ตีเป็นเกินภาระ)
+    const load = dayLoad(
+      data.date,
+      data.dayOff ? { ...data.work, days: [] } : data.work,
+      scheduled,
+    );
     const ins = buildInsight({
       today: data.date,
       tasks: scheduled,

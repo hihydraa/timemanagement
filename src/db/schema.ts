@@ -323,3 +323,19 @@ export const avatar2dProfiles = sqliteTable('avatar2d_profiles', {
   look: text('look').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
+
+/** วันหยุดงานที่ผู้ใช้บันทึก (ลาพักร้อน/ป่วย/กิจ/หยุดบริษัท): 1 แถวต่อวัน (date = YYYY-MM-DD เวลาไทย) */
+export const daysOff = sqliteTable(
+  'days_off',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    date: text('date').notNull(),
+    kind: text('kind', { enum: ['vacation', 'sick', 'personal', 'holiday', 'other'] })
+      .notNull()
+      .default('vacation'),
+    note: text('note').notNull().default(''),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [uniqueIndex('days_off_user_date_idx').on(t.userId, t.date)],
+);

@@ -4,6 +4,7 @@ import { focusSessions, tasks, userSettings } from '../db/schema';
 import { computeUrgency } from '../lib/urgency';
 import { addDays, bangkokDate, fromBangkok } from '../lib/time';
 import { parseWorkDays } from '../lib/work';
+import { daysOffBetween } from './daysOff';
 import { withTags, type TaskDto } from './tasks';
 
 /**
@@ -302,6 +303,7 @@ export async function dashboard(db: Db, userId: string, at: Date, monthParam?: s
   const overdueTasks = overdueRows.length ? await withTags(db, overdueRows) : [];
   const unscheduledTasks = unscheduledRows.length ? await withTags(db, unscheduledRows) : [];
 
+  const off = await daysOffBetween(db, userId, today, addDays(today, 6));
   const s = await db.select().from(userSettings).where(eq(userSettings.userId, userId)).get();
   return {
     today,
@@ -331,6 +333,8 @@ export async function dashboard(db: Db, userId: string, at: Date, monthParam?: s
       focusMinutesWeek: Number(focus?.m ?? 0),
     },
     week,
+    /** วันหยุดที่บันทึกไว้ใน 7 วันข้างหน้า (นับเป็น "วันหยุด" ในภาระงาน) */
+    daysOff: off,
     attention: {
       stalled,
       overdueTasks,

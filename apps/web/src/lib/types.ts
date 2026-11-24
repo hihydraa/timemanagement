@@ -136,6 +136,8 @@ export interface CockpitData {
   date: string;
   now: string;
   work: WorkSettings;
+  /** วันนี้เป็นวันหยุดที่บันทึกไว้ */
+  dayOff: boolean;
   overdue: Task[];
   dueToday: Task[];
   today: Task[];
@@ -245,4 +247,19 @@ export interface CalendarFeed {
   enabled: boolean;
   url: string | null;
   webcalUrl: string | null;
+}
+
+export type { DayOffKind } from '../../../../src/lib/daysOff';
+export interface DayOff {
+  id: string;
+  date: string;
+  kind: import('../../../../src/lib/daysOff').DayOffKind;
+  note: string;
+}
+export interface DaysOffList {
+  daysOff: DayOff[];
+  summary: {
+    total: number;
+    byKind: Record<import('../../../../src/lib/daysOff').DayOffKind, number>;
+  };
 }

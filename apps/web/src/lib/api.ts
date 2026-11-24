@@ -4,6 +4,9 @@ import type { AvatarLook } from './avatarLook';
 import type { DashboardData } from './dashboard';
 import type { GameState, Honorific } from './game';
 import type {
+  DayOff,
+  DayOffKind,
+  DaysOffList,
   CalendarFeed,
   Alarm,
   Attachment,
@@ -192,6 +195,18 @@ export const api = {
   ) => req<SettingsView>('PATCH', '/api/settings', p),
   importTasks: (tasks: unknown[]) =>
     req<{ imported: number; skipped: number }>('POST', '/api/import/tasks', { tasks }),
+  listDaysOff: (from?: string, to?: string) =>
+    req<DaysOffList>('GET', `/api/days-off${from && to ? `?from=${from}&to=${to}` : ''}`),
+  addDaysOff: (p: {
+    from: string;
+    to?: string;
+    kind: DayOffKind;
+    note: string;
+    onlyWorkDays: boolean;
+  }) => req<DaysOffList & { created: number; updated: number }>('POST', '/api/days-off', p),
+  patchDayOff: (id: string, p: { kind?: DayOffKind; note?: string }) =>
+    req<{ dayOff: DayOff }>('PATCH', `/api/days-off/${id}`, p).then((r) => r.dayOff),
+  deleteDayOff: (id: string) => req<{ ok: true }>('DELETE', `/api/days-off/${id}`),
   getAvatar2d: () => req<Avatar2dState>('GET', '/api/avatar2d'),
   saveAvatarLook: (look: AvatarLook) => req<Avatar2dState>('PUT', '/api/avatar2d/look', look),
   buyAvatarItem: (itemId: string) => req<Avatar2dState>('POST', '/api/avatar2d/buy', { itemId }),

@@ -9,8 +9,9 @@ import type { MeTab } from '../lib/route';
 const ReviewPage = lazy(() => import('./ReviewPage'));
 const StatsPage = lazy(() => import('./StatsPage'));
 const AvatarPage = lazy(() => import('./AvatarPage'));
+const DaysOffPage = lazy(() => import('./DaysOffPage'));
 
-const TABS: MeTab[] = ['overview', 'avatar', 'review', 'stats'];
+const TABS: MeTab[] = ['overview', 'daysoff', 'avatar', 'review', 'stats'];
 
 /** แท็บ "ฉัน": Dobby + ตั้งค่า (เวลาทำงาน, LINE, Google, ส่งออก) + สรุปสัปดาห์ + สถิติ */
 export default function MePage({ tab }: { tab: MeTab }) {
@@ -212,6 +213,7 @@ export default function MePage({ tab }: { tab: MeTab }) {
       <Suspense fallback={<p role="status">{t.loading}</p>}>
         {tab === 'review' && <ReviewPage />}
         {tab === 'avatar' && <AvatarPage />}
+        {tab === 'daysoff' && <DaysOffPage />}
         {tab === 'stats' && <StatsPage />}
       </Suspense>
     </div>

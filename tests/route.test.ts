@@ -15,6 +15,11 @@ describe('เส้นทางมาตรฐาน (3 แท็บ)', () => {
     });
     expect(r('#/me/review').route).toEqual({ view: 'me', me: 'review' });
     expect(r('#/me/stats').route).toEqual({ view: 'me', me: 'stats' });
+    expect(r('#/me/daysoff')).toEqual({
+      route: { view: 'me', me: 'daysoff' },
+      hash: '#/me/daysoff',
+      redirected: false,
+    });
     expect(r('#/focus')).toEqual({ route: { view: 'focus' }, hash: '#/focus', redirected: false });
     expect(r('#/plan/matrix').route).toEqual({ view: 'plan', plan: 'matrix' });
     expect(r('#/today/unscheduled').route).toEqual({ view: 'today', anchor: 'unscheduled' });

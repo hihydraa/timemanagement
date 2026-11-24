@@ -30,6 +30,8 @@ export interface DashboardData {
     focusMinutesWeek: number;
   };
   week: PlanTask[];
+  /** วันหยุดที่บันทึกไว้ใน 7 วันข้างหน้า */
+  daysOff: string[];
   attention: {
     stalled: Task[];
     /** งานเลยกำหนดที่เก่าสุด (สูงสุด 5) / งานที่ยังไม่ตั้งวันล่าสุด (สูงสุด 5) */

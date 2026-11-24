@@ -3,12 +3,14 @@ import type { Db } from '../db/client';
 import {
   attachments,
   categories,
+  daysOff,
   focusSessions,
   subtasks,
   taskTags,
   tasks,
   users,
 } from '../db/schema';
+import { DAY_OFF_TH, type DayOffKind } from '../lib/daysOff';
 import { bangkokDate, bangkokHm, nowIso, toBangkokIso } from '../lib/time';
 
 type TaskRow = typeof tasks.$inferSelect;
@@ -22,6 +24,7 @@ export interface ExportData {
     subtasks: { title: string; done: boolean }[];
     attachments: { filename: string; mime: string; sizeBytes: number }[];
   })[];
+  daysOff: { date: string; kind: string; note: string }[];
   focusSessions: {
     taskId: string | null;
     startedAt: string;
@@ -44,6 +47,11 @@ export async function gatherExport(db: Db, userId: string): Promise<ExportData> 
     const ids = rows.slice(i, i + 50).map((r) => r.id);
     tagRows.push(...(await db.select().from(taskTags).where(inArray(taskTags.taskId, ids))));
   }
+  const offRows = await db
+    .select()
+    .from(daysOff)
+    .where(eq(daysOff.userId, userId))
+    .orderBy(daysOff.date);
   const subRows = await db.select().from(subtasks).where(eq(subtasks.userId, userId));
   const attRows = await db.select().from(attachments).where(eq(attachments.userId, userId));
   const fs = await db
@@ -76,6 +84,7 @@ export async function gatherExport(db: Db, userId: string): Promise<ExportData> 
         sizeBytes: a.sizeBytes,
       })),
     })),
+    daysOff: offRows.map((d) => ({ date: d.date, kind: d.kind, note: d.note })),
     focusSessions: fs.map((f) => ({
       taskId: f.taskId,
       startedAt: f.startedAt,
@@ -262,6 +271,22 @@ export function toIcs(d: ExportData, baseUrl: string): string {
     }
     ev.push('END:VEVENT');
     L.push(...ev);
+  }
+  // วันหยุดงานที่บันทึกไว้ → เหตุการณ์ทั้งวัน
+  for (const o of d.daysOff) {
+    const next = new Date(`${o.date}T00:00:00Z`);
+    next.setUTCDate(next.getUTCDate() + 1);
+    const label = DAY_OFF_TH[o.kind as DayOffKind] ?? o.kind;
+    L.push(
+      'BEGIN:VEVENT',
+      `UID:dayoff-${o.date}@dobby`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART;VALUE=DATE:${ymdCompact(o.date)}`,
+      `DTEND;VALUE=DATE:${ymdCompact(next.toISOString().slice(0, 10))}`,
+      `SUMMARY:${icsText(`🏖 หยุด: ${label}${o.note ? ` (${o.note})` : ''}`)}`,
+      'TRANSP:TRANSPARENT',
+      'END:VEVENT',
+    );
   }
   L.push('END:VCALENDAR');
   return `${L.map(foldLine).join('\r\n')}\r\n`;

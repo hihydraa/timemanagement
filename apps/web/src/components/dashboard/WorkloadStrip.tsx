@@ -34,7 +34,9 @@ export default function WorkloadStrip({
   const [picked, setPicked] = useState<string | null>(null);
   const days = Array.from({ length: 7 }, (_, i) => addDaysYmd(d.today, i)).map((ymd) => {
     const items = d.week.filter((x) => scheduledOn(x, ymd));
-    return { ymd, items, load: dayLoad(ymd, d.work, items) };
+    // วันหยุดที่บันทึกไว้ = วันหยุด (ไม่นับเป็นวันทำงาน)
+    const work = d.daysOff.includes(ymd) ? { ...d.work, days: [] } : d.work;
+    return { ymd, items, load: dayLoad(ymd, work, items) };
   });
   const sel = days.find((x) => x.ymd === (picked ?? d.today)) ?? days[0]!;
   const over = days.filter((x) => x.load.status === 'over');

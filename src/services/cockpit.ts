@@ -3,6 +3,7 @@ import type { Db } from '../db/client';
 import { focusSessions, tasks, userSettings } from '../db/schema';
 import { addDays, bangkokDate, fromBangkok, nowIso } from '../lib/time';
 import { parseWorkDays } from '../lib/work';
+import { daysOffBetween } from './daysOff';
 import { CARRY_MAX, inboxTasks, todayBuckets, withTags, type TaskDto } from './tasks';
 
 /**
@@ -44,6 +45,7 @@ export async function cockpit(db: Db, userId: string, at: Date) {
     .get();
 
   const s = await db.select().from(userSettings).where(eq(userSettings.userId, userId)).get();
+  const off = await daysOffBetween(db, userId, b.date, b.date);
   return {
     date: b.date,
     now: at.toISOString(),
@@ -52,6 +54,8 @@ export async function cockpit(db: Db, userId: string, at: Date) {
       end: s?.workEnd ?? '18:00',
       days: parseWorkDays(s?.workDays),
     },
+    /** วันนี้เป็นวันหยุดที่บันทึกไว้ (ไม่นับเป็นวันทำงาน) */
+    dayOff: off.length > 0,
     overdue: b.overdue,
     dueToday: b.dueToday,
     today: b.today,
