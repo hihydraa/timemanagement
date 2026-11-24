@@ -50,8 +50,35 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(16px) scale(.9)' },
           '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
         },
+        'toast-in': {
+          '0%': { opacity: '0', transform: 'translateY(28px) scale(.9)' },
+          '60%': { opacity: '1', transform: 'translateY(-5px) scale(1.02)' },
+          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        'check-pop': {
+          '0%': { transform: 'scale(0) rotate(-35deg)' },
+          '60%': { transform: 'scale(1.3) rotate(8deg)' },
+          '100%': { transform: 'scale(1) rotate(0)' },
+        },
+        'ring-out': {
+          '0%': { transform: 'scale(.7)', opacity: '.65' },
+          '100%': { transform: 'scale(2.1)', opacity: '0' },
+        },
+        spark: {
+          '0%': { transform: 'rotate(var(--a)) translateY(0) scale(0)', opacity: '1' },
+          '65%': { opacity: '1' },
+          '100%': { transform: 'rotate(var(--a)) translateY(-26px) scale(1)', opacity: '0' },
+        },
+        'toast-timer': { from: { transform: 'scaleX(1)' }, to: { transform: 'scaleX(0)' } },
       },
-      animation: { bob: 'bob 2.4s ease-in-out infinite', pop: 'pop .28s ease-out both' },
+      animation: {
+        bob: 'bob 2.4s ease-in-out infinite',
+        pop: 'pop .28s ease-out both',
+        'toast-in': 'toast-in .5s cubic-bezier(.2,.9,.3,1.2) both',
+        'check-pop': 'check-pop .5s .12s cubic-bezier(.2,.9,.3,1.3) both',
+        'ring-out': 'ring-out .8s .12s ease-out both',
+        spark: 'spark .7s .18s ease-out both',
+      },
     },
   },
 };

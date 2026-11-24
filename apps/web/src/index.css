@@ -167,8 +167,17 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .animate-bob,
-  .animate-pop {
+  .animate-pop,
+  .animate-toast-in,
+  .animate-check-pop,
+  .animate-ring-out,
+  .animate-spark,
+  .toast-timer {
     animation: none;
+  }
+  .animate-ring-out,
+  .animate-spark {
+    display: none;
   }
 }
 @media (max-width: 1023px) {
@@ -178,4 +187,10 @@
   .fc .fc-toolbar-title {
     font-size: 1rem;
   }
+}
+
+/* แถบเวลานับถอยหลังของ toast (เลิกทำได้ภายในเวลานี้) */
+.toast-timer {
+  transform-origin: left center;
+  animation: toast-timer var(--ms, 6500ms) linear forwards;
 }

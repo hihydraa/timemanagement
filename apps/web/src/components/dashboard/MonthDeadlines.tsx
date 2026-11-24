@@ -14,11 +14,12 @@ import type { Task } from '../../lib/types';
 import { CountdownChip, ImportanceChip, UrgencyText } from '../TaskChips';
 import { URGENCY_COLORS } from '../../lib/colors';
 
+/** สีตามความหนาแน่น (ไล่ระดับเขียวแบรนด์ แยกชัดทั้งโหมดสว่าง/มืด; ไม่พึ่งสีอย่างเดียว: มีจุดนับงานและตัวเลขใน aria-label ด้วย) */
 const HEAT = [
-  'bg-slate-50 dark:bg-slate-900',
-  'bg-brand-100 dark:bg-brand-900',
-  'bg-brand-300 dark:bg-brand-700',
-  'bg-brand-500 text-white dark:bg-brand-500',
+  'bg-slate-100 dark:bg-slate-900',
+  'bg-brand-200 text-brand-950 dark:bg-brand-700 dark:text-white',
+  'bg-brand-400 text-brand-950 dark:bg-brand-500 dark:text-white',
+  'bg-brand-700 text-white dark:bg-brand-300 dark:text-brand-950',
 ];
 
 /** เดดไลน์ทั้งเดือน: ปฏิทินความหนาแน่น (กดวันเพื่อกรอง) + รายการเรียงตามวัน */
@@ -39,6 +40,25 @@ export default function MonthDeadlines({
   const grid = useMemo(() => monthGrid(month), [month]);
   const offByDate = useMemo(() => new Map(d.leave.month.map((x) => [x.date, x])), [d.leave.month]);
   const w = t.dash.month;
+  const days = useMemo(
+    () => grid.flat().filter((c): c is { ymd: string; day: number } => !!c.ymd),
+    [grid],
+  );
+  const stats = useMemo(() => {
+    let total = 0;
+    let done = 0;
+    let max = 1;
+    let busiest: { ymd: string; n: number } | null = null;
+    for (const { ymd } of days) {
+      const n = d.deadlines.perDay[ymd] ?? { open: 0, done: 0 };
+      const sum = n.open + n.done;
+      total += sum;
+      done += n.done;
+      if (sum > max) max = sum;
+      if (sum > 0 && (!busiest || sum > busiest.n)) busiest = { ymd, n: sum };
+    }
+    return { total, done, max, busiest };
+  }, [days, d.deadlines.perDay]);
   const shown = pick ? d.deadlines.tasks.filter((x) => deadlineYmd(x) === pick) : d.deadlines.tasks;
   const groups = useMemo(() => {
     const m = new Map<string, Task[]>();
@@ -132,9 +152,15 @@ export default function MonthDeadlines({
                   )}
                   <span className={isToday ? 'font-bold' : ''}>{c.day}</span>
                   {total > 0 && (
-                    <span className="text-[10px] font-semibold leading-none">
-                      {late && <span aria-hidden>⚠</span>}
-                      {n.open > 0 ? n.open : '✓'}
+                    <span aria-hidden className="mt-0.5 flex h-2 items-center gap-px leading-none">
+                      {late && <span className="mr-0.5 text-[10px]">⚠</span>}
+                      {Array.from({ length: Math.min(total, 5) }, (_, k) => (
+                        <span
+                          key={k}
+                          className={`h-1.5 w-1.5 rounded-full border border-current ${k < n.open ? 'bg-current' : ''}`}
+                        />
+                      ))}
+                      {total > 5 && <span className="ml-0.5 text-[9px]">+</span>}
                     </span>
                   )}
                 </button>
@@ -142,7 +168,77 @@ export default function MonthDeadlines({
             })}
           </div>
         ))}
+        <ul
+          aria-label={w.levelsTitle}
+          className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-700 dark:text-slate-200"
+        >
+          {w.levels.map((label, k) => (
+            <li key={label} className="flex items-center gap-1">
+              <span
+                aria-hidden
+                className={`inline-block h-3.5 w-3.5 rounded ${HEAT[k]} border border-slate-300 dark:border-slate-600`}
+              />
+              {label}
+            </li>
+          ))}
+          <li>{w.dots}</li>
+          <li>{w.dotsDone}</li>
+          <li>{w.dotsLate}</li>
+        </ul>
         <p className="mt-1 text-[11px] text-slate-600 dark:text-slate-300">{w.legend}</p>
+
+        <div className="mt-3">
+          <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-3 text-xs">
+            <strong>{w.perDay}</strong>
+            <span className="text-slate-600 dark:text-slate-300">
+              {w.monthTotal.replace('{n}', String(stats.total)).replace('{d}', String(stats.done))}
+              {stats.busiest &&
+                ` · ${w.busiest.replace('{d}', dayLabel(stats.busiest.ymd)).replace('{n}', String(stats.busiest.n))}`}
+            </span>
+          </div>
+          <div
+            role="group"
+            aria-label={w.perDay}
+            className="flex h-16 items-end gap-px rounded-lg bg-slate-100 px-1 pb-0.5 pt-1 dark:bg-slate-900"
+          >
+            {days.map(({ ymd, day }) => {
+              const n = d.deadlines.perDay[ymd] ?? { open: 0, done: 0 };
+              const total = n.open + n.done;
+              const late = n.open > 0 && ymd < d.today;
+              const h = total === 0 ? 2 : Math.max(8, Math.round((total / stats.max) * 100));
+              return (
+                <button
+                  key={ymd}
+                  type="button"
+                  disabled={total === 0}
+                  onClick={() => setPick(pick === ymd ? null : ymd)}
+                  aria-pressed={pick === ymd}
+                  aria-label={w.perDayLabel
+                    .replace('{d}', dayLabel(ymd))
+                    .replace('{o}', String(n.open))
+                    .replace('{c}', String(n.done))}
+                  title={`${day}: ${total}`}
+                  className="group flex h-full min-w-0 flex-1 items-end"
+                >
+                  <span
+                    className={`block w-full rounded-t-sm transition-[height] ${total === 0 ? 'bg-slate-300 dark:bg-slate-700' : late ? 'bg-red-600' : n.open > 0 ? 'bg-brand-600 dark:bg-brand-300' : 'bg-slate-400 dark:bg-slate-500'} ${ymd === d.today ? 'outline outline-2 outline-offset-1 outline-gold-500' : ''} ${pick === ymd ? 'ring-2 ring-slate-900 dark:ring-white' : ''}`}
+                    style={{ height: `${h}%` }}
+                  />
+                </button>
+              );
+            })}
+          </div>
+          <div
+            aria-hidden
+            className="mt-0.5 flex px-1 text-[10px] tabular-nums text-slate-600 dark:text-slate-300"
+          >
+            {days.map(({ ymd, day }) => (
+              <span key={ymd} className="min-w-0 flex-1 text-center">
+                {day === 1 || day % 7 === 1 ? day : ''}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
       {d.deadlines.truncated && (
