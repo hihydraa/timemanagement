@@ -219,6 +219,7 @@ export default function TaskDrawer({
     try {
       if (task) {
         await api.updateTask(taskId ?? task.id, payload);
+        toast.success(`${t.toast.saved}: ${payload.title ?? task.title}`);
         onSaved();
         return;
       }
@@ -239,6 +240,10 @@ export default function TaskDrawer({
           warning ??= `${t.attach.partial}: ${t.subtasks.title}`;
         }
       }
+      toast.undo(`${t.quick.added}: ${created.title}`, async () => {
+        await api.deleteTask(created.id);
+        notifyTasksChanged();
+      });
       onSaved(warning);
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : t.error.generic);

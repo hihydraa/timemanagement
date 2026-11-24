@@ -9,17 +9,25 @@ export function pickCelebrateMessage(call: string | null): string {
   return call ? m.replace('{name}', call) : m;
 }
 
-/** ข้อความฉลองเมื่อทำงานเสร็จ (รับ event จาก api.completeTask/updateTask) แสดง ~2.6 วินาทีแล้วเป็น null */
-export function useCelebrateMessage(call: string | null): string | null {
+/** เวลาที่กล่องคำพูดฉลองค้างอยู่ (ms) — เดิม 2.6 วินาทีสั้นเกินไปจนอ่านไม่ทัน */
+export const CELEBRATE_MS = 4500;
+
+/**
+ * ข้อความฉลองเมื่อเพิ่ม/ทำงานเสร็จ (รับ event จาก api) ค้างอยู่ CELEBRATE_MS แล้วเป็น null
+ * tick นับจำนวนครั้งที่ฉลอง (ใช้เป็น key ให้เอฟเฟกต์เล่นใหม่ทุกครั้ง)
+ */
+export function useCelebrate(call: string | null): { msg: string | null; tick: number } {
   const callRef = useRef(call);
   callRef.current = call;
   const [msg, setMsg] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
   useEffect(() => {
     let timer: number | undefined;
     const on = () => {
       setMsg(pickCelebrateMessage(callRef.current));
+      setTick((n) => n + 1);
       window.clearTimeout(timer);
-      timer = window.setTimeout(() => setMsg(null), 2600);
+      timer = window.setTimeout(() => setMsg(null), CELEBRATE_MS);
     };
     window.addEventListener(CELEBRATE_EVENT, on);
     return () => {
@@ -27,5 +35,5 @@ export function useCelebrateMessage(call: string | null): string | null {
       window.clearTimeout(timer);
     };
   }, []);
-  return msg;
+  return { msg, tick };
 }

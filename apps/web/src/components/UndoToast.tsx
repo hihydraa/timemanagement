@@ -25,6 +25,8 @@ interface ToastApi {
   /** ทำทันทีแล้วแจ้ง + ปุ่ม "เลิกทำ" ค้างไว้ ~6 วินาที */
   undo: (message: string, onUndo: () => void | Promise<void>, ms?: number) => void;
   info: (message: string, ms?: number) => void;
+  /** แจ้งสำเร็จ (ติ๊กถูก+เอฟเฟกต์) โดยไม่มีปุ่มเลิกทำ */
+  success: (message: string, ms?: number) => void;
 }
 
 const Ctx = createContext<ToastApi | null>(null);
@@ -60,6 +62,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     () => ({
       undo: (message, onUndo, ms = 6500) => push({ message, onUndo, tone: 'success' }, ms),
       info: (message, ms = 4000) => push({ message, tone: 'info' }, ms),
+      success: (message, ms = 4500) => push({ message, tone: 'success' }, ms),
     }),
     [push],
   );

@@ -2,7 +2,8 @@ import { useEffect } from 'react';
 import { api } from '../../lib/api';
 import { useApp } from '../../lib/appContext';
 import { isCornerVisible, setAvatarLook, useAvatarLook } from '../../lib/avatarLook';
-import { useCelebrateMessage } from '../../lib/celebrate';
+import { useCelebrate } from '../../lib/celebrate';
+import Confetti from '../Confetti';
 import { t } from '../../lib/i18n';
 import Avatar2D from './Avatar2D';
 
@@ -13,7 +14,7 @@ import Avatar2D from './Avatar2D';
 export default function AvatarCorner() {
   const { goTo, route, call } = useApp();
   const look = useAvatarLook();
-  const msg = useCelebrateMessage(call);
+  const { msg, tick } = useCelebrate(call);
 
   useEffect(() => {
     let alive = true;
@@ -36,7 +37,7 @@ export default function AvatarCorner() {
         <p
           role="status"
           aria-live="polite"
-          className="pointer-events-none absolute bottom-full right-0 mb-1 w-max max-w-[12rem] animate-pop rounded-2xl rounded-br-sm border border-brand-200 bg-white px-3 py-2 text-sm font-semibold text-brand-700 shadow-soft dark:border-brand-700 dark:bg-slate-800 dark:text-brand-300"
+          className="glow-success pointer-events-none absolute bottom-full right-0 mb-2 w-max max-w-[14rem] animate-pop rounded-2xl rounded-br-sm border-2 border-gold-500 bg-white px-4 py-2.5 text-base font-semibold leading-snug text-brand-700 shadow-soft dark:bg-slate-800 dark:text-brand-300"
         >
           {msg}
         </p>
@@ -48,6 +49,7 @@ export default function AvatarCorner() {
         title={t.me.avatar}
         className="block rounded-2xl p-1 transition hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600"
       >
+        {tick > 0 && <Confetti key={tick} count={22} radius={110} />}
         <Avatar2D
           look={look}
           label=""

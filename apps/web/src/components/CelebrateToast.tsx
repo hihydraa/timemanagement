@@ -1,6 +1,7 @@
 import { useApp } from '../lib/appContext';
 import { isCornerVisible, useAvatarLook } from '../lib/avatarLook';
-import { useCelebrateMessage } from '../lib/celebrate';
+import { useCelebrate } from '../lib/celebrate';
+import Confetti from './Confetti';
 import Mascot from './Mascot';
 
 /**
@@ -11,7 +12,7 @@ import Mascot from './Mascot';
 export default function CelebrateToast() {
   const { call, route } = useApp();
   const look = useAvatarLook();
-  const msg = useCelebrateMessage(call);
+  const { msg, tick } = useCelebrate(call);
   const withAvatar = isCornerVisible(route, look);
   const pos = withAvatar
     ? 'bottom-24 right-[7rem] md:bottom-4 md:right-40'
@@ -22,11 +23,12 @@ export default function CelebrateToast() {
         <p
           role="status"
           aria-live="polite"
-          className="absolute bottom-full right-0 mb-1 w-max max-w-[12rem] animate-pop rounded-2xl rounded-br-sm border border-brand-200 bg-white px-3 py-2 text-sm font-semibold text-brand-700 shadow-soft dark:border-brand-700 dark:bg-slate-800 dark:text-brand-300"
+          className="glow-success absolute bottom-full right-0 mb-2 w-max max-w-[14rem] animate-pop rounded-2xl rounded-br-sm border-2 border-gold-500 bg-white px-4 py-2.5 text-base font-semibold leading-snug text-brand-700 shadow-soft dark:bg-slate-800 dark:text-brand-300"
         >
           {msg}
         </p>
       )}
+      {tick > 0 && !withAvatar && <Confetti key={tick} count={22} radius={110} />}
       <Mascot
         pose={msg ? 'done' : 'hello'}
         height={withAvatar ? 72 : 88}

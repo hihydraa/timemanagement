@@ -85,7 +85,7 @@ function gotPoints(points: number | undefined) {
   }
 }
 
-/** แจ้ง UI ว่ามีงานเสร็จ (CelebrateToast ฟัง event นี้) */
+/** แจ้ง UI ว่าเพิ่ม/ทำงานสำเร็จ (ตัวละครมุมขวาล่างฟัง event นี้) */
 function celebrate() {
   try {
     window.dispatchEvent(new Event('dobby:celebrate'));
@@ -120,6 +120,7 @@ export const api = {
   createTask: (p: TaskPayload, src?: 'quick') =>
     req<{ task: Task; points?: number }>('POST', `/api/tasks${src ? `?src=${src}` : ''}`, p).then(
       (r) => {
+        celebrate(); // ตัวละครมุมขวาล่างฉลองตอนเพิ่มงานด้วย
         gotPoints(r.points);
         return r.task;
       },
