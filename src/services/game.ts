@@ -19,7 +19,8 @@ import { bangkokDate, fromBangkok, now, nowIso } from '../lib/time';
 
 export const profileInput = z
   .object({
-    characterId: z.enum(CHARACTERS.map((c) => c.id) as [string, ...string[]]),
+    /** ระบบตัวละครเดิมถูกแทนด้วยอวตาร 3D แล้ว — ไม่ส่ง = ใช้ค่าเริ่มต้น */
+    characterId: z.enum(CHARACTERS.map((c) => c.id) as [string, ...string[]]).optional(),
     displayName: z.string().trim().max(30).default(''),
     honorific: z.enum(HONORIFICS as [string, ...string[]]),
   })
@@ -94,7 +95,7 @@ export async function saveProfile(db: Db, userId: string, input: z.infer<typeof 
   const cur = await db.select().from(gameProfiles).where(eq(gameProfiles.userId, userId)).get();
   const row = {
     userId,
-    characterId: input.characterId,
+    characterId: input.characterId ?? cur?.characterId ?? CHARACTERS[0]!.id,
     displayName: input.honorific === 'master' ? input.displayName : input.displayName,
     honorific: input.honorific as 'name' | 'master' | 'both',
     updatedAt: ts,
@@ -119,6 +120,11 @@ export async function saveProfile(db: Db, userId: string, input: z.infer<typeof 
 export async function buy(db: Db, userId: string, itemId: string) {
   const item = getItem(itemId);
   if (!item) throw new ApiError(404, 'not_found', 'ไม่พบไอเท็มนี้');
+  await purchase(db, userId, itemId, item.price);
+}
+
+/** หักแต้มแล้วใส่ของเข้าคลัง (ใช้ร่วมกันทั้งไอเท็มเดิมและการปลดล็อกอวตาร) */
+export async function purchase(db: Db, userId: string, itemId: string, price: number) {
   const owned = await db
     .select()
     .from(gameInventory)
@@ -126,16 +132,16 @@ export async function buy(db: Db, userId: string, itemId: string) {
     .get();
   if (owned) throw new ApiError(409, 'already_owned', 'มีไอเท็มนี้แล้ว');
   const balance = await balanceOf(db, userId);
-  if (balance < item.price)
-    throw new ApiError(409, 'not_enough_points', `แต้มไม่พอ (ต้องใช้ ${item.price} มี ${balance})`);
+  if (balance < price)
+    throw new ApiError(409, 'not_enough_points', `แต้มไม่พอ (ต้องใช้ ${price} มี ${balance})`);
   const ts = nowIso();
   let paid = false;
   try {
     // ตรวจแต้มในคำสั่ง SQL เอง (กันซื้อซ้อนพร้อมกันจนแต้มติดลบ); unique(user,kind,ref) กันหักซ้ำ
     const res = (await db.run(
       sql`INSERT INTO game_ledger (id, user_id, kind, ref, points, created_at)
-          SELECT ${crypto.randomUUID()}, ${userId}, 'buy', ${itemId}, ${-item.price}, ${ts}
-          WHERE (SELECT COALESCE(SUM(points), 0) FROM game_ledger WHERE user_id = ${userId}) >= ${item.price}`,
+          SELECT ${crypto.randomUUID()}, ${userId}, 'buy', ${itemId}, ${-price}, ${ts}
+          WHERE (SELECT COALESCE(SUM(points), 0) FROM game_ledger WHERE user_id = ${userId}) >= ${price}`,
     )) as unknown as { meta?: { changes?: number } };
     paid = (res.meta?.changes ?? 0) > 0;
   } catch {

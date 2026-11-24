@@ -1,6 +1,11 @@
 import { clearApiCache } from './pwa';
 import { t } from './i18n';
 import type { AvatarState, BodyId, HairId, OutfitId } from './avatarModels';
+/** ของที่ปลดล็อกแล้ว (เช่น 'hair:bob', 'outfit:ghost-a') และแต้มคงเหลือ */
+export interface AvatarShop {
+  owned: string[];
+  balance: number;
+}
 import type { DashboardData } from './dashboard';
 import type { GameState, Honorific } from './game';
 import type {
@@ -181,8 +186,9 @@ export const api = {
   ) => req<SettingsView>('PATCH', '/api/settings', p),
   importTasks: (tasks: unknown[]) =>
     req<{ imported: number; skipped: number }>('POST', '/api/import/tasks', { tasks }),
-  getAvatar: () =>
-    req<{ avatar: AvatarState | null }>('GET', '/api/avatar').then((r) => r.avatar),
+  getAvatar: () => req<AvatarShop & { avatar: AvatarState | null }>('GET', '/api/avatar'),
+  unlockAvatarItem: (kind: 'hair' | 'outfit', id: string) =>
+    req<AvatarShop>('POST', '/api/avatar/unlock', { kind, id }),
   saveAvatar: (p: {
     body: BodyId;
     hair: HairId | null;
@@ -190,7 +196,7 @@ export const api = {
     snapshot?: string | null;
   }) => req<{ avatar: AvatarState }>('PUT', '/api/avatar', p).then((r) => r.avatar),
   getGame: () => req<GameState>('GET', '/api/game'),
-  saveProfile: (p: { characterId: string; displayName: string; honorific: Honorific }) =>
+  saveProfile: (p: { characterId?: string; displayName: string; honorific: Honorific }) =>
     req<GameState>('PUT', '/api/game/profile', p),
   buyItem: (itemId: string) => req<GameState>('POST', '/api/game/buy', { itemId }),
   equipItem: (itemId: string, equipped: boolean) =>

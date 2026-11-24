@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { deadlineYmd, heatLevel, monthGrid, monthTitle, shiftMonth, trend } from '../apps/web/src/lib/dashboard';
+import {
+  deadlineYmd,
+  heatLevel,
+  monthGrid,
+  monthTitle,
+  shiftMonth,
+  trend,
+} from '../apps/web/src/lib/dashboard';
 
 describe('lib/dashboard', () => {
   it('shiftMonth ข้ามปี', () => {
@@ -17,7 +24,11 @@ describe('lib/dashboard', () => {
     expect(g.flat().filter((c) => c.ymd)).toHaveLength(30);
     const feb = monthGrid('2026-02'); // 1 ก.พ. 2026 = อาทิตย์, 28 วัน
     expect(feb.flat().filter((c) => c.ymd)).toHaveLength(28);
-    expect(monthGrid('2024-02').flat().filter((c) => c.ymd)).toHaveLength(29);
+    expect(
+      monthGrid('2024-02')
+        .flat()
+        .filter((c) => c.ymd),
+    ).toHaveLength(29);
     expect(monthGrid('2026-06')[0]![0]!.ymd).toBe('2026-06-01'); // จันทร์
   });
   it('heatLevel / trend / deadlineYmd', () => {

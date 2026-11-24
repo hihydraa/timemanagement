@@ -19,7 +19,7 @@ export default function AvatarCorner() {
     api
       .getAvatar()
       .then((a) => {
-        if (alive) setAvatarSnapshot(a?.snapshot ?? null);
+        if (alive) setAvatarSnapshot(a.avatar?.snapshot ?? null);
       })
       .catch(() => undefined);
     return () => {

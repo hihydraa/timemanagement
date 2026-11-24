@@ -57,6 +57,15 @@ describe('แคตาล็อก', () => {
 });
 
 describe('ตัวละคร', () => {
+  it('ตั้งชื่อโดยไม่ส่ง characterId ได้ (หน้าสร้างตัวละครเดิมถูกแทนด้วยอวตาร 3D) และได้แต้มต้อนรับ', async () => {
+    const r = await profile(a, { displayName: 'แฮม', honorific: 'both' });
+    expect(r.status).toBe(200);
+    expect((await state(a)).profile).toMatchObject({ displayName: 'แฮม', honorific: 'both' });
+    expect((await state(a)).balance).toBe(30);
+    expect((await profile(a, { displayName: '', honorific: 'name' })).status).toBe(400);
+    expect((await profile(a, { displayName: '', honorific: 'master' })).status).toBe(200);
+  });
+
   it('ยังไม่มี → profile null; สร้างแล้วได้แต้มต้อนรับครั้งเดียว; แก้ได้โดยไม่ได้แต้มซ้ำ', async () => {
     expect((await state(a)).profile).toBeNull();
     const r = await profile(a, { characterId: 'hermione', displayName: 'ก้อง', honorific: 'both' });
