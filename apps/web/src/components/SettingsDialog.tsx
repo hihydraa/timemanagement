@@ -5,6 +5,7 @@ import DeleteAccount from './DeleteAccount';
 import TimeField24 from './form/TimeField24';
 import WebPushSettings from './WebPushSettings';
 import ModeSwitch from './ModeSwitch';
+import { motionFull, setMotionFull } from '../lib/motion';
 import type { NotificationSettings, PushStatus, WorkSettings } from '../lib/types';
 
 interface Props {
@@ -22,6 +23,7 @@ export default function SettingsDialog({ onClose, onOpenLine, onSaved }: Props) 
   const [work, setWork] = useState<WorkSettings | null>(null);
   const [push, setPush] = useState<PushStatus | null>(null);
   const [optOut, setOptOut] = useState(false);
+  const [motion, setMotion] = useState(motionFull);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
@@ -316,6 +318,23 @@ export default function SettingsDialog({ onClose, onOpenLine, onSaved }: Props) 
       <WebPushSettings />
       <section className="space-y-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
         <ModeSwitch />
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4 accent-brand-600"
+            checked={motion}
+            onChange={(e) => {
+              setMotion(e.target.checked);
+              setMotionFull(e.target.checked);
+            }}
+          />
+          <span>
+            <strong className="block">{t.privacy.motionFull}</strong>
+            <span className="text-xs text-slate-600 dark:text-slate-300">
+              {t.privacy.motionHint}
+            </span>
+          </span>
+        </label>
         <label className="flex items-start gap-2 text-sm">
           <input
             type="checkbox"

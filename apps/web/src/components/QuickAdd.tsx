@@ -1,4 +1,5 @@
-import { useMemo, useState, type RefObject } from 'react';
+import { useEffect, useMemo, useState, type RefObject } from 'react';
+import Confetti from './Confetti';
 import { api, ApiClientError } from '../lib/api';
 import { dayLabel, todayYmd, tomorrow } from '../lib/dates';
 import { t } from '../lib/i18n';
@@ -47,6 +48,15 @@ export default function QuickAdd({
 }) {
   const toast = useToast();
   const [text, setText] = useState('');
+  /** นับครั้งที่บันทึกสำเร็จ: ใช้เล่นเอฟเฟกต์ (วงแสงรอบช่องพิมพ์ + กระดาษสีจากปุ่มเพิ่ม) */
+  const [burst, setBurst] = useState(0);
+  const [flash, setFlash] = useState(false);
+  useEffect(() => {
+    if (burst === 0) return;
+    setFlash(true);
+    const id = window.setTimeout(() => setFlash(false), 1100);
+    return () => window.clearTimeout(id);
+  }, [burst]);
   const [over, setOver] = useState<QuickOverrides>({});
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -79,6 +89,7 @@ export default function QuickAdd({
       const created = await api.createTask(r.payload, 'quick');
       onSettled(tmp.id);
       onCreated();
+      setBurst((n) => n + 1); // วงแสงรอบช่องพิมพ์ + กระดาษสี
       toast.undo(`${t.quick.added}: ${created.title}`, async () => {
         await api.deleteTask(created.id);
         onCreated();
@@ -125,15 +136,18 @@ export default function QuickAdd({
             if (e.key === 'Enter' && e.nativeEvent.isComposing) e.preventDefault();
           }}
           placeholder={t.quick.placeholder}
-          className="min-w-0 flex-1 rounded-2xl border-2 border-brand-300 bg-white px-4 py-3 text-base shadow-sm focus:border-brand-600 focus-visible:outline-none dark:border-brand-700 dark:bg-slate-800"
+          className={`min-w-0 flex-1 rounded-2xl border-2 border-brand-300 bg-white px-4 py-3 text-base shadow-sm focus:border-brand-600 focus-visible:outline-none dark:border-brand-700 dark:bg-slate-800 ${flash ? 'glow-success' : ''}`}
         />
-        <button
-          type="submit"
-          disabled={busy || !text.trim()}
-          className="rounded-2xl bg-brand-600 px-5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-50"
-        >
-          {t.quick.add}
-        </button>
+        <span className="relative flex">
+          {burst > 0 && <Confetti key={burst} count={14} radius={70} />}
+          <button
+            type="submit"
+            disabled={busy || !text.trim()}
+            className="rounded-2xl bg-brand-600 px-5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-50"
+          >
+            {t.quick.add}
+          </button>
+        </span>
       </form>
 
       {showChips && (

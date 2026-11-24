@@ -64,11 +64,6 @@ export default {
           '0%': { transform: 'scale(.7)', opacity: '.65' },
           '100%': { transform: 'scale(2.1)', opacity: '0' },
         },
-        spark: {
-          '0%': { transform: 'rotate(var(--a)) translateY(0) scale(0)', opacity: '1' },
-          '65%': { opacity: '1' },
-          '100%': { transform: 'rotate(var(--a)) translateY(-26px) scale(1)', opacity: '0' },
-        },
         'toast-timer': { from: { transform: 'scaleX(1)' }, to: { transform: 'scaleX(0)' } },
       },
       animation: {
@@ -77,7 +72,6 @@ export default {
         'toast-in': 'toast-in .5s cubic-bezier(.2,.9,.3,1.2) both',
         'check-pop': 'check-pop .5s .12s cubic-bezier(.2,.9,.3,1.3) both',
         'ring-out': 'ring-out .8s .12s ease-out both',
-        spark: 'spark .7s .18s ease-out both',
       },
     },
   },

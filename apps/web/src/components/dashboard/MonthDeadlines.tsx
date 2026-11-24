@@ -40,25 +40,6 @@ export default function MonthDeadlines({
   const grid = useMemo(() => monthGrid(month), [month]);
   const offByDate = useMemo(() => new Map(d.leave.month.map((x) => [x.date, x])), [d.leave.month]);
   const w = t.dash.month;
-  const days = useMemo(
-    () => grid.flat().filter((c): c is { ymd: string; day: number } => !!c.ymd),
-    [grid],
-  );
-  const stats = useMemo(() => {
-    let total = 0;
-    let done = 0;
-    let max = 1;
-    let busiest: { ymd: string; n: number } | null = null;
-    for (const { ymd } of days) {
-      const n = d.deadlines.perDay[ymd] ?? { open: 0, done: 0 };
-      const sum = n.open + n.done;
-      total += sum;
-      done += n.done;
-      if (sum > max) max = sum;
-      if (sum > 0 && (!busiest || sum > busiest.n)) busiest = { ymd, n: sum };
-    }
-    return { total, done, max, busiest };
-  }, [days, d.deadlines.perDay]);
   const shown = pick ? d.deadlines.tasks.filter((x) => deadlineYmd(x) === pick) : d.deadlines.tasks;
   const groups = useMemo(() => {
     const m = new Map<string, Task[]>();
@@ -186,59 +167,6 @@ export default function MonthDeadlines({
           <li>{w.dotsLate}</li>
         </ul>
         <p className="mt-1 text-[11px] text-slate-600 dark:text-slate-300">{w.legend}</p>
-
-        <div className="mt-3">
-          <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-3 text-xs">
-            <strong>{w.perDay}</strong>
-            <span className="text-slate-600 dark:text-slate-300">
-              {w.monthTotal.replace('{n}', String(stats.total)).replace('{d}', String(stats.done))}
-              {stats.busiest &&
-                ` · ${w.busiest.replace('{d}', dayLabel(stats.busiest.ymd)).replace('{n}', String(stats.busiest.n))}`}
-            </span>
-          </div>
-          <div
-            role="group"
-            aria-label={w.perDay}
-            className="flex h-16 items-end gap-px rounded-lg bg-slate-100 px-1 pb-0.5 pt-1 dark:bg-slate-900"
-          >
-            {days.map(({ ymd, day }) => {
-              const n = d.deadlines.perDay[ymd] ?? { open: 0, done: 0 };
-              const total = n.open + n.done;
-              const late = n.open > 0 && ymd < d.today;
-              const h = total === 0 ? 2 : Math.max(8, Math.round((total / stats.max) * 100));
-              return (
-                <button
-                  key={ymd}
-                  type="button"
-                  disabled={total === 0}
-                  onClick={() => setPick(pick === ymd ? null : ymd)}
-                  aria-pressed={pick === ymd}
-                  aria-label={w.perDayLabel
-                    .replace('{d}', dayLabel(ymd))
-                    .replace('{o}', String(n.open))
-                    .replace('{c}', String(n.done))}
-                  title={`${day}: ${total}`}
-                  className="group flex h-full min-w-0 flex-1 items-end"
-                >
-                  <span
-                    className={`block w-full rounded-t-sm transition-[height] ${total === 0 ? 'bg-slate-300 dark:bg-slate-700' : late ? 'bg-red-600' : n.open > 0 ? 'bg-brand-600 dark:bg-brand-300' : 'bg-slate-400 dark:bg-slate-500'} ${ymd === d.today ? 'outline outline-2 outline-offset-1 outline-gold-500' : ''} ${pick === ymd ? 'ring-2 ring-slate-900 dark:ring-white' : ''}`}
-                    style={{ height: `${h}%` }}
-                  />
-                </button>
-              );
-            })}
-          </div>
-          <div
-            aria-hidden
-            className="mt-0.5 flex px-1 text-[10px] tabular-nums text-slate-600 dark:text-slate-300"
-          >
-            {days.map(({ ymd, day }) => (
-              <span key={ymd} className="min-w-0 flex-1 text-center">
-                {day === 1 || day % 7 === 1 ? day : ''}
-              </span>
-            ))}
-          </div>
-        </div>
       </div>
 
       {d.deadlines.truncated && (

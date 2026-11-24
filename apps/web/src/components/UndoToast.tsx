@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { t } from '../lib/i18n';
+import Confetti from './Confetti';
 
 interface ToastItem {
   id: number;
@@ -78,7 +79,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           return (
             <div
               key={x.id}
-              className="pointer-events-auto relative w-[min(26rem,calc(100vw-1.5rem))] animate-toast-in overflow-hidden rounded-2xl bg-slate-900 text-sm text-white shadow-xl ring-1 ring-white/10 dark:bg-slate-100 dark:text-slate-900 dark:ring-slate-900/10"
+              className={`pointer-events-auto relative w-[min(26rem,calc(100vw-1.5rem))] animate-toast-in rounded-2xl ${x.tone === 'success' ? 'glow-success' : ''} bg-slate-900 text-sm text-white shadow-xl ring-1 ring-white/10 dark:bg-slate-100 dark:text-slate-900 dark:ring-slate-900/10`}
             >
               <div className="flex items-start gap-3 py-3 pl-3 pr-2">
                 <span
@@ -88,19 +89,26 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   {x.tone === 'success' && (
                     <>
                       <span className="animate-ring-out absolute inset-0 rounded-full bg-emerald-400/60" />
-                      {[0, 60, 120, 180, 240, 300].map((a) => (
-                        <span
-                          key={a}
-                          className="animate-spark absolute left-1/2 top-1/2 -ml-[3px] -mt-[3px] h-1.5 w-1.5 rounded-full bg-gold-400"
-                          style={{ ['--a' as string]: `${a}deg` }}
-                        />
-                      ))}
+                      <Confetti count={18} radius={90} />
                     </>
                   )}
                   <span
                     className={`animate-check-pop relative flex h-8 w-8 items-center justify-center rounded-full text-base font-bold ${x.tone === 'success' ? 'bg-emerald-500 text-white' : 'bg-sky-500 text-white'}`}
                   >
-                    {x.tone === 'success' ? '✓' : 'i'}
+                    {x.tone === 'success' ? (
+                      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden>
+                        <path
+                          className="check-draw"
+                          d="M5 12.5l4.5 4.5L19 7"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ) : (
+                      'i'
+                    )}
                   </span>
                 </span>
                 <div className="min-w-0 flex-1 self-center">
@@ -137,11 +145,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   ×
                 </button>
               </div>
-              <div
-                aria-hidden
-                className="toast-timer h-1 w-full bg-emerald-400/80"
-                style={{ ['--ms' as string]: `${x.ms}ms` }}
-              />
+              <div aria-hidden className="overflow-hidden rounded-b-2xl">
+                <div
+                  className="toast-timer h-1 w-full bg-emerald-400/80"
+                  style={{ ['--ms' as string]: `${x.ms}ms` }}
+                />
+              </div>
             </div>
           );
         })}
