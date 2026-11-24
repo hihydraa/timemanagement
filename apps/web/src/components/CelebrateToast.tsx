@@ -6,8 +6,9 @@ import Mascot from './Mascot';
 
 /**
  * Dobby ประจำมุมขวาล่าง: อยู่ค้างตลอดทุกหน้า
- * - ไม่มีตัวละครอวตารที่มุมนั้น: Dobby อยู่มุมขวาล่าง ทำงานเสร็จ = เปลี่ยนท่า + กล่องคำพูดฉลอง ~2.6 วินาที
- * - มีตัวละครอวตาร (ดู avatar/AvatarCorner): Dobby ยืนข้างตัวละคร (ซ้ายมือ) ส่วนกล่องคำพูดฉลองเป็นของตัวละคร
+ * - เพิ่ม/ทำงานเสร็จ: Dobby เปลี่ยนท่า + กล่องคำพูดฉลอง + กระดาษสีกระจาย (Dobby เป็นคนพูดเสมอ)
+ * - ไม่มีตัวละครอวตารที่มุมนั้น: Dobby อยู่มุมขวาล่าง
+ * - มีตัวละครอวตาร (ดู avatar/AvatarCorner): Dobby ยืนข้างตัวละคร (ซ้ายมือ) ตัวละครแค่เด้งตอบรับ
  */
 export default function CelebrateToast() {
   const { call, route } = useApp();
@@ -19,7 +20,7 @@ export default function CelebrateToast() {
     : 'bottom-24 right-3 md:bottom-4 md:right-4';
   return (
     <div className={`pointer-events-none fixed z-30 ${pos}`}>
-      {msg && !withAvatar && (
+      {msg && (
         <p
           role="status"
           aria-live="polite"
@@ -28,7 +29,7 @@ export default function CelebrateToast() {
           {msg}
         </p>
       )}
-      {tick > 0 && !withAvatar && <Confetti key={tick} count={22} radius={110} />}
+      {tick > 0 && <Confetti key={tick} count={22} radius={110} />}
       <Mascot
         pose={msg ? 'done' : 'hello'}
         height={withAvatar ? 72 : 88}
