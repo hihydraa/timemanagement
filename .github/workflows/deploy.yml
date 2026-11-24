@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          lfs: true # โมเดล 3D (.glb) เก็บใน Git LFS
+          lfs: false # เว็บไม่ใช้ไฟล์ .glb แล้ว (กลับมาใช้ตัวละคร 2D) จึงไม่ดึง LFS ~560 MB ทุกครั้งที่ deploy
       - uses: actions/setup-node@v4
         with:
           node-version: 22
