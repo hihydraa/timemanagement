@@ -1,3 +1,4 @@
+import { avatarImageApi, avatarImagePublic } from './routes/avatarImage';
 import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
@@ -90,11 +91,13 @@ app.route('/', legal);
 app.route('/auth', auth);
 app.route('/webhook/line', lineWebhook);
 app.route('/ics', calendarFeedPublic);
+app.route('/public', avatarImagePublic);
 
 const api = new Hono<AppEnv>();
 // JSON ของ API เล็กเสมอ (รายละเอียดงาน ≤ 5,000 ตัวอักษร): จำกัด 256 KB; การอัปโหลดไฟล์มีเพดานของตัวเอง
 const isUpload = (method: string, path: string) =>
-  method === 'POST' && /^\/api\/tasks\/[^/]+\/attachments$/.test(path);
+  (method === 'POST' && /^\/api\/tasks\/[^/]+\/attachments$/.test(path)) ||
+  (method === 'PUT' && path === '/api/avatar2d/image');
 const jsonLimit = bodyLimit({
   maxSize: 256 * 1024,
   onError: (c) => c.json(errorBody('request_too_large', 'ขนาดคำขอใหญ่เกินกำหนด'), 413),
@@ -129,6 +132,7 @@ api.route('/', subtasksRoutes);
 api.route('/', focusRoutes);
 api.route('/', exportRoutes);
 api.route('/', statsRoutes);
+api.route('/', avatarImageApi);
 app.route('/api', api);
 
 app.onError((err, c) => {
@@ -146,7 +150,8 @@ app.notFound((c) => {
     p.startsWith('/api/') ||
     p.startsWith('/auth/') ||
     p.startsWith('/webhook/') ||
-    p.startsWith('/ics/')
+    p.startsWith('/ics/') ||
+    p.startsWith('/public/')
   ) {
     return c.json(errorBody('not_found', 'ไม่พบเส้นทางนี้'), 404);
   }

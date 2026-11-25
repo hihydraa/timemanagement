@@ -12,6 +12,9 @@ export class FakeR2 {
     if (!o) return null;
     return { body: new Response(o.data).body, httpMetadata: { contentType: o.contentType } };
   }
+  async head(key: string) {
+    return this.store.has(key) ? { key } : null;
+  }
   async delete(keys: string | string[]) {
     if (this.failDeleteOnce) {
       this.failDeleteOnce = false;

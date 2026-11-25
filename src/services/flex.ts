@@ -135,6 +135,16 @@ const mascotHero = (baseUrl: string, pose: MascotPose) => ({
   backgroundColor: '#F6ECD6',
 });
 
+/** ภาพตัวละครของผู้ใช้บนหัวการ์ด (PNG พื้นโปร่งใส วางบนพื้นครีมเดียวกับมาสคอต) */
+const avatarHero = (url: string) => ({
+  type: 'image',
+  url,
+  size: 'full',
+  aspectRatio: '20:13',
+  aspectMode: 'fit',
+  backgroundColor: '#F6ECD6',
+});
+
 /** การ์ดยืนยันหลังสร้างงาน: มีปุ่ม เสร็จ / แก้ไข / ลบ */
 export function taskCard(
   t: TaskDto,
@@ -228,6 +238,8 @@ export function listCard(
   pose?: MascotPose,
   /** บรรทัดสรุปเล็ก ๆ ท้ายการ์ด (เช่น จำนวนงานค้าง) */
   footnote?: string,
+  /** ภาพตัวละครของผู้ใช้ (https สาธารณะ): ถ้ามีจะใช้เป็นภาพหัวการ์ดแทนมาสคอต */
+  avatarImageUrl?: string,
 ): { message: LineMessage; ids: string[] } {
   const ids: string[] = [];
   const rows: unknown[] = [];
@@ -295,7 +307,11 @@ export function listCard(
       altText: clip(`${heading}: ${total} งาน`, 380),
       contents: {
         type: 'bubble',
-        ...(pose && baseUrl.startsWith('https://') ? { hero: mascotHero(baseUrl, pose) } : {}),
+        ...(avatarImageUrl?.startsWith('https://')
+          ? { hero: avatarHero(avatarImageUrl) }
+          : pose && baseUrl.startsWith('https://')
+            ? { hero: mascotHero(baseUrl, pose) }
+            : {}),
         body: {
           type: 'box',
           layout: 'vertical',

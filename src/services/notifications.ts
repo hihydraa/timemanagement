@@ -18,6 +18,7 @@ import { pushMessage, type LineMessage } from './line';
 import { voiceOf } from './game';
 import { daysOffBetween } from './daysOff';
 import { sayDobby } from '../lib/dobbyVoice';
+import { avatarKey, avatarUrl } from '../lib/avatarImage';
 import { setList } from './lineBot';
 import { isVirtualId, loadSeriesInstances, virtualId } from './series';
 import { todayBuckets, withTags, type TaskDto } from './tasks';
@@ -110,6 +111,17 @@ export async function loadQuota(env: Env, db: Db, at: Date): Promise<Quota> {
 export const quotaExhausted = (q: Quota) => !q.limitConfigured || q.blocked || q.used >= q.limit;
 
 // ---------------------------------------------------------------- sending
+/** ลิงก์ภาพตัวละครของผู้ใช้สำหรับใส่ในการ์ด (ว่าง = ยังไม่เคยอัปโหลด หรือไม่ใช่ https) */
+async function avatarHeroUrl(env: Env, base: string, userId: string): Promise<string | undefined> {
+  if (!base.startsWith('https://')) return undefined;
+  try {
+    if (!(await env.FILES.head(avatarKey(userId)))) return undefined;
+    return await avatarUrl(base, env.SESSION_SECRET, userId);
+  } catch {
+    return undefined; // R2/secret ขัดข้อง: ใช้มาสคอตตามเดิม ไม่ให้กระทบการส่งแจ้งเตือน
+  }
+}
+
 interface RunCtx {
   env: Env;
   db: Db;
@@ -425,6 +437,7 @@ async function runDaily(rc: RunCtx, t: Target, kind: Kind): Promise<SendResult |
       ]
         .filter(Boolean)
         .join('\n'),
+      await avatarHeroUrl(rc.env, base, t.userId),
     );
     const r = await send(rc, t, kind, message, `n=${planned};overdue=${b.overdue.length}`);
     if (r === 'sent') await setList(db, t.lineUserId, ids); // ให้ตอบ "เสร็จ 1" ได้ทันที

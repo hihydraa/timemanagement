@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, ApiClientError } from '../lib/api';
 import { useApp } from '../lib/appContext';
+import { useAvatarLook } from '../lib/avatarLook';
 import { t } from '../lib/i18n';
+import { renderShareCard, shareOrDownload } from '../lib/shareCard';
+import { sayDobby } from '../../../../src/lib/dobbyVoice';
 import type { ProgressState } from '../lib/progress';
 
 /** เลเวล สตรีค ภารกิจวันนี้ และตรารางวัล (หน้า "ฉัน") */
 export default function ProgressCard() {
-  const { reloadGame } = useApp();
+  const { reloadGame, call, dobby, tone } = useApp();
+  const look = useAvatarLook();
+  const [shareMsg, setShareMsg] = useState('');
   const [p, setP] = useState<ProgressState | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
@@ -30,6 +35,29 @@ export default function ProgressCard() {
       load();
     } catch (e) {
       setError(e instanceof ApiClientError ? e.message : t.progress.claimFailed);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const share = async () => {
+    if (!p) return;
+    setBusy('share');
+    setShareMsg('');
+    try {
+      const dash = await api.dashboard();
+      const done = dash.performance.doneThisWeek;
+      const blob = await renderShareCard(look, {
+        dobby,
+        title: p.level.title,
+        level: p.level.level,
+        doneThisWeek: done,
+        streak: p.streak,
+        line: sayDobby(done > 0 ? 'complete' : 'greet_morning', { you: call, dobby, n: 0 }, tone),
+      });
+      setShareMsg((await shareOrDownload(blob)) === 'shared' ? '' : t.progress.shareSaved);
+    } catch {
+      setShareMsg(t.progress.shareFailed);
     } finally {
       setBusy('');
     }
@@ -114,6 +142,22 @@ export default function ProgressCard() {
           <p role="alert" className="mt-1 text-xs text-red-700 dark:text-red-300">
             {error}
           </p>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          disabled={busy === 'share'}
+          onClick={() => void share()}
+          className="rounded-full border border-brand-600 px-4 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-50 dark:text-brand-300 dark:hover:bg-slate-700"
+        >
+          {busy === 'share' ? t.progress.sharing : t.progress.share}
+        </button>
+        {shareMsg && (
+          <span role="status" className="text-xs text-slate-600 dark:text-slate-300">
+            {shareMsg}
+          </span>
         )}
       </div>
 

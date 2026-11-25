@@ -1,10 +1,25 @@
 import { useEffect } from 'react';
 import { api } from '../../lib/api';
 import { useApp } from '../../lib/appContext';
+import type { AvatarLook } from '../../lib/avatarLook';
 import { isCornerVisible, setAvatarLook, useAvatarLook } from '../../lib/avatarLook';
 import { useCelebrating } from '../../lib/celebrate';
 import { t } from '../../lib/i18n';
+import { renderLineHeroPng } from '../../lib/avatarPng';
 import Avatar2D from './Avatar2D';
+
+const SYNC_KEY = 'dobby.avatarPng';
+/** ส่งภาพตัวละครให้เซิร์ฟเวอร์เก็บไว้ใช้ในการ์ด LINE เฉพาะเมื่อหน้าตาเปลี่ยน (จำค่าล่าสุดต่ออุปกรณ์) */
+async function syncLineImage(look: AvatarLook) {
+  const sig = JSON.stringify(look);
+  try {
+    if (localStorage.getItem(SYNC_KEY) === sig) return;
+    await api.uploadAvatarImage(await renderLineHeroPng(look));
+    localStorage.setItem(SYNC_KEY, sig);
+  } catch {
+    /* เงียบ: ภาพนี้แค่เสริมการ์ด LINE ไว้ลองใหม่ครั้งหน้า */
+  }
+}
 
 /**
  * ตัวละครมุมขวาล่าง: ตัวละคร 2D ที่บันทึกไว้ในบัญชี (ยังไม่เคยบันทึก = ไม่แสดงอะไร) กดแล้วไปแท็บตัวละคร
@@ -21,7 +36,9 @@ export default function AvatarCorner() {
     api
       .getAvatar2d()
       .then((a) => {
-        if (alive) setAvatarLook(a.look);
+        if (!alive) return;
+        setAvatarLook(a.look);
+        if (a.look) void syncLineImage(a.look);
       })
       .catch(() => undefined);
     return () => {

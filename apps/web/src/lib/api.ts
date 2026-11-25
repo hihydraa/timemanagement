@@ -221,6 +221,17 @@ export const api = {
     dobbyName: string;
     tone: ToneId;
   }) => req<GameState>('PUT', '/api/game/profile', p),
+  /** อัปโหลดภาพตัวละคร PNG ให้การ์ด LINE ใช้ (ไม่ใช่งานสำคัญ: ผิดพลาดแล้วเงียบ) */
+  uploadAvatarImage: async (png: Blob) => {
+    const res = await fetch('/api/avatar2d/image', {
+      method: 'PUT',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'image/png' },
+      body: png,
+    });
+    if (!res.ok)
+      throw new ApiClientError(res.status, 'upload_failed', 'อัปโหลดภาพตัวละครไม่สำเร็จ');
+  },
   getProgress: () => req<ProgressState>('GET', '/api/game/progress'),
   claimQuest: (questId: string) =>
     req<ClaimResult>('POST', '/api/game/quests/claim', { questId }).then((r) => {
