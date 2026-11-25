@@ -1,4 +1,4 @@
-import type { CelebrateDetail } from './celebrate';
+import type { CelebrateDetail } from './dobbyCelebrate';
 import { clearApiCache } from './pwa';
 import { t } from './i18n';
 import type { AvatarLook } from './avatarLook';

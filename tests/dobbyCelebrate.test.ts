@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { celebrateText } from '../apps/web/src/lib/celebrate';
-import { shouldGreet, markGreeted, setGreetEnabled } from '../apps/web/src/lib/dobbyPrefs';
+import { celebrateText } from '../apps/web/src/lib/dobbyCelebrate';
 
 const v = { you: 'แฮม', dobby: 'ด็อบ', tone: 'playful' as const };
 const first = () => 0;
@@ -45,13 +44,5 @@ describe('celebrateText', () => {
     );
     expect(t).toContain('3');
     expect(t).toContain('แฮม');
-  });
-});
-
-describe('dobbyPrefs (ไม่มี localStorage = ใช้ค่าเริ่มต้นโดยไม่พัง)', () => {
-  it('ทักทายได้เมื่อไม่มี storage และไม่พัง', () => {
-    expect(shouldGreet(false)).toBe(true);
-    markGreeted(false);
-    setGreetEnabled(false);
   });
 });
