@@ -265,6 +265,10 @@ export const gameProfiles = sqliteTable('game_profiles', {
   honorific: text('honorific', { enum: ['name', 'master', 'both'] })
     .notNull()
     .default('name'),
+  /** ชื่อที่ผู้ใช้ตั้งให้ Dobby ('' = ใช้ชื่อ "ดอบบี้") */
+  dobbyName: text('dobby_name').notNull().default(''),
+  /** โทนการพูดของ Dobby (ดู lib/dobbyVoice.ts) */
+  tone: text('tone').notNull().default('playful'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });

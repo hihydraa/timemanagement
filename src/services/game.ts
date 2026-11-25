@@ -14,14 +14,19 @@ import {
   completePoints,
   getItem,
 } from '../lib/game';
+import { DEFAULT_TONE, TONE_IDS, dobbyNameOf, isTone, type ToneId } from '../lib/dobbyVoice';
 import { ApiError } from '../lib/http';
 import { bangkokDate, fromBangkok, now, nowIso } from '../lib/time';
 
 export const profileInput = z
   .object({
-    characterId: z.enum(CHARACTERS.map((c) => c.id) as [string, ...string[]]),
+    /** ตัวละครชุดสะสมเดิม (ไม่แสดงใน UI แล้ว) — ไม่ส่ง = คงค่าเดิม หรือ 'harry' ถ้าเป็นโปรไฟล์ใหม่ */
+    characterId: z.enum(CHARACTERS.map((c) => c.id) as [string, ...string[]]).optional(),
     displayName: z.string().trim().max(30).default(''),
     honorific: z.enum(HONORIFICS as [string, ...string[]]),
+    /** ชื่อที่ตั้งให้ Dobby ('' = "ดอบบี้") */
+    dobbyName: z.string().trim().max(20).default(''),
+    tone: z.enum(TONE_IDS).default(DEFAULT_TONE),
   })
   .strict()
   .refine((v) => v.honorific === 'master' || v.displayName.length > 0, {
@@ -74,6 +79,8 @@ export async function getState(db: Db, userId: string, at = now()) {
           characterId: profile.characterId,
           displayName: profile.displayName,
           honorific: profile.honorific,
+          dobbyName: profile.dobbyName,
+          tone: (isTone(profile.tone) ? profile.tone : DEFAULT_TONE) as ToneId,
         }
       : null,
     balance,
@@ -94,9 +101,11 @@ export async function saveProfile(db: Db, userId: string, input: z.infer<typeof 
   const cur = await db.select().from(gameProfiles).where(eq(gameProfiles.userId, userId)).get();
   const row = {
     userId,
-    characterId: input.characterId,
-    displayName: input.honorific === 'master' ? input.displayName : input.displayName,
+    characterId: input.characterId ?? cur?.characterId ?? 'harry',
+    displayName: input.displayName,
     honorific: input.honorific as 'name' | 'master' | 'both',
+    dobbyName: input.dobbyName,
+    tone: input.tone,
     updatedAt: ts,
   };
   if (cur) await db.update(gameProfiles).set(row).where(eq(gameProfiles.userId, userId));
@@ -258,4 +267,14 @@ export async function awardComplete(
 export async function callNameOf(db: Db, userId: string): Promise<string | null> {
   const p = await db.select().from(gameProfiles).where(eq(gameProfiles.userId, userId)).get();
   return callName(p ? { displayName: p.displayName, honorific: p.honorific } : null);
+}
+
+/** เสียงของ Dobby สำหรับผู้ใช้ (ใช้ในข้อความแจ้งเตือน): ชื่อที่เรียกผู้ใช้ + ชื่อ Dobby + โทน */
+export async function voiceOf(db: Db, userId: string) {
+  const p = await db.select().from(gameProfiles).where(eq(gameProfiles.userId, userId)).get();
+  return {
+    you: callName(p ? { displayName: p.displayName, honorific: p.honorific } : null),
+    dobby: dobbyNameOf(p?.dobbyName),
+    tone: (p && isTone(p.tone) ? p.tone : DEFAULT_TONE) as ToneId,
+  };
 }

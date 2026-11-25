@@ -15,7 +15,9 @@ import {
   type ListSection,
 } from './flex';
 import { pushMessage, type LineMessage } from './line';
-import { callNameOf } from './game';
+import { voiceOf } from './game';
+import { daysOffBetween } from './daysOff';
+import { sayDobby } from '../lib/dobbyVoice';
 import { setList } from './lineBot';
 import { isVirtualId, loadSeriesInstances, virtualId } from './series';
 import { todayBuckets, withTags, type TaskDto } from './tasks';
@@ -398,20 +400,31 @@ async function runDaily(rc: RunCtx, t: Target, kind: Kind): Promise<SendResult |
     const planned = b.dueToday.length + b.today.length;
     const timed = [...b.dueToday, ...b.today].some((x) => !x.allDay && !!x.startAt);
     // วันหยุด (นอกวันทำงาน) ส่งเฉพาะเมื่อมีนัดที่กำหนดเวลา; วันนี้ไม่มีงาน = ไม่ส่ง (ค้างอย่างเดียวไม่พอ)
-    if (!planned || (!workDay(t.s, today) && !timed)) return 'empty';
+    // วันที่ผู้ใช้บันทึกว่าลา/หยุดไว้ถือเป็นวันหยุดเหมือนกัน (ส่งเฉพาะเมื่อมีนัดที่กำหนดเวลา)
+    const dayOff = (await daysOffBetween(db, t.userId, today, today)).length > 0;
+    if (!planned || ((!workDay(t.s, today) || dayOff) && !timed)) return 'empty';
     const sections: ListSection[] = [
       { title: '⏰ เดดไลน์วันนี้', color: '#ea580c', tasks: [...b.dueToday].sort(bySmart) },
       { title: 'งานวันนี้', tasks: [...b.today].sort(bySmart) },
     ];
+    const voice = await voiceOf(db, t.userId);
+    // บรรทัดพูดของ Dobby ท้ายการ์ด (ชื่อ/โทนตามที่ผู้ใช้ตั้ง): ค้างเยอะ = ห่วง, ไม่ค้าง = ทักทายตามเวลา
+    const line = sayDobby(
+      b.overdue.length ? 'overdue' : 'greet_morning',
+      { you: voice.you, dobby: voice.dobby, n: b.overdue.length || planned },
+      voice.tone,
+    );
     const { message, ids } = listCard(
-      `🌅 ${(await callNameOf(db, t.userId)) ?? ''} สรุปงานวันนี้ ${dayLabel(b.date)}`.replace(
-        '🌅  ',
-        '🌅 ',
-      ),
+      `🌅 ${voice.you ?? ''} สรุปงานวันนี้ ${dayLabel(b.date)}`.replace('🌅  ', '🌅 '),
       sections,
       base,
       'morning',
-      b.overdue.length ? `🔴 ค้างอยู่ ${b.overdue.length} งาน (ดูในเว็บ)` : undefined,
+      [
+        b.overdue.length ? `🔴 ค้างอยู่ ${b.overdue.length} งาน (ดูในเว็บ)` : '',
+        `🧚 ${voice.dobby}: ${line}`,
+      ]
+        .filter(Boolean)
+        .join('\n'),
     );
     const r = await send(rc, t, kind, message, `n=${planned};overdue=${b.overdue.length}`);
     if (r === 'sent') await setList(db, t.lineUserId, ids); // ให้ตอบ "เสร็จ 1" ได้ทันที

@@ -26,6 +26,8 @@ export default function MePage({ tab }: { tab: MeTab }) {
     openExport,
     openImport,
     openAlarms,
+    openDobby,
+    dobby,
     openOnboarding,
     logout,
   } = useApp();
@@ -118,6 +120,19 @@ export default function MePage({ tab }: { tab: MeTab }) {
                       {gcalStatus?.needsReconnect && <span aria-hidden>⚠ </span>}
                       {gcalText}
                     </span>
+                  </span>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button type="button" onClick={openDobby} className={row}>
+                <span aria-hidden className="text-2xl">
+                  🧚
+                </span>
+                <span>
+                  <strong className="block">{t.me.dobby.replace('{name}', dobby)}</strong>
+                  <span className="text-sm text-slate-600 dark:text-slate-300">
+                    {t.me.dobbyHint}
                   </span>
                 </span>
               </button>

@@ -3,6 +3,7 @@ import { t } from './i18n';
 import type { AvatarLook } from './avatarLook';
 import type { DashboardData } from './dashboard';
 import type { GameState, Honorific } from './game';
+import type { ToneId } from '../../../../src/lib/dobbyVoice';
 import type {
   DayOff,
   DayOffKind,
@@ -212,8 +213,12 @@ export const api = {
   saveAvatarLook: (look: AvatarLook) => req<Avatar2dState>('PUT', '/api/avatar2d/look', look),
   buyAvatarItem: (itemId: string) => req<Avatar2dState>('POST', '/api/avatar2d/buy', { itemId }),
   getGame: () => req<GameState>('GET', '/api/game'),
-  saveProfile: (p: { characterId: string; displayName: string; honorific: Honorific }) =>
-    req<GameState>('PUT', '/api/game/profile', p),
+  saveProfile: (p: {
+    displayName: string;
+    honorific: Honorific;
+    dobbyName: string;
+    tone: ToneId;
+  }) => req<GameState>('PUT', '/api/game/profile', p),
   buyItem: (itemId: string) => req<GameState>('POST', '/api/game/buy', { itemId }),
   equipItem: (itemId: string, equipped: boolean) =>
     req<GameState>('POST', '/api/game/equip', { itemId, equipped }),

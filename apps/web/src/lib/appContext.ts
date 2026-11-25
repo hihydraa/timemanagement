@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { Route, View } from './route';
 import type { GameState } from './game';
+import type { ToneId } from '../../../../src/lib/dobbyVoice';
 import type { Category, GcalStatus, User } from './types';
 
 export type { View } from './route';
@@ -12,8 +13,13 @@ export interface AppCtx {
   game: GameState | null;
   setGame: (s: GameState) => void;
   reloadGame: () => void;
-  /** ชื่อที่ Dobby ใช้เรียกผู้ใช้ (null = ยังไม่มีตัวละคร) */
+  /** ชื่อที่ Dobby ใช้เรียกผู้ใช้ (null = ยังไม่ได้ตั้ง) */
   call: string | null;
+  /** ชื่อของ Dobby (ผู้ใช้ตั้งเองได้ ค่าเริ่มต้น "ดอบบี้") และโทนการพูด */
+  dobby: string;
+  tone: ToneId;
+  /** เปิดหน้าต่างตั้งค่า Dobby */
+  openDobby: () => void;
   /** โหมดหน้าจอ: simple ซ่อนฟีเจอร์ละเอียด (ไม่ลบ) / full เปิดทั้งหมด */
   uiMode: UiMode;
   setUiMode: (m: UiMode) => void;

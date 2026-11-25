@@ -377,6 +377,8 @@ export const t = {
     gcalOn: 'เชื่อมอยู่',
     gcalOff: 'ยังไม่เชื่อม',
     gcalReconnect: 'ต้องเชื่อมใหม่',
+    dobby: 'ตั้งค่า {name}',
+    dobbyHint: 'ชื่อที่ให้เรียกคุณ ชื่อของเพื่อน และโทนการพูด',
     apple: 'Apple Calendar',
     appleHint: 'สมัครรับงานใน iPhone / Mac',
     export: 'ส่งออกข้อมูล',
@@ -770,6 +772,28 @@ export const t = {
     quotaBanner: 'โควตา push LINE ใกล้เต็ม',
   },
   quickDialog: { edit: 'แก้ไขเต็ม' },
+  dobbyDlg: {
+    title: 'ตั้งค่า Dobby',
+    intro: 'เลือกว่าจะให้เพื่อนตัวน้อยเรียกคุณว่าอะไร ใช้ทั้งในเว็บและข้อความ LINE',
+    callTitle: 'ให้เรียกคุณว่า',
+    call: { name: 'ชื่อของฉัน', master: 'นายท่าน', both: 'นายท่าน + ชื่อ' } as Record<
+      string,
+      string
+    >,
+    yourName: 'ชื่อของคุณ',
+    yourNamePh: 'เช่น แฮม',
+    dobbyName: 'ชื่อของเพื่อนตัวน้อย',
+    dobbyNamePh: 'ดอบบี้',
+    tone: 'โทนการพูด',
+    toneMore: 'โทนอื่น ๆ จะเพิ่มในอนาคต',
+    preview: 'ตัวอย่างที่จะได้ยิน',
+    another: 'สุ่มประโยคอื่น',
+    save: 'บันทึก',
+    saving: 'กำลังบันทึก…',
+    needName: 'กรุณาใส่ชื่อ หรือเลือกให้เรียกว่า "นายท่าน"',
+    firstTime: 'บันทึกครั้งแรกรับแต้มต้อนรับ 30 แต้ม',
+    failed: 'บันทึกไม่สำเร็จ ลองอีกครั้ง',
+  },
   daysOff: {
     title: 'วันหยุดงาน',
     intro:

@@ -719,6 +719,30 @@ describe('กติกาแจ้งเตือนแบบใหม่', () =
     expect(line.pushes).toHaveLength(1);
     expect(pushText()).toContain('นัดวันเสาร์');
   });
+  it('วันที่ผู้ใช้บันทึกว่าลาไว้: ไม่ส่งสรุปเช้าถ้ามีแต่งานทั้งวัน แต่ส่งถ้ามีนัดที่กำหนดเวลา', async () => {
+    await mk(a, { title: 'งานทั้งวัน', allDay: true, dueDate: '2026-11-05' }); // พฤหัส = วันทำงาน
+    await a.call('POST', '/api/days-off', { from: '2026-11-05', kind: 'vacation' });
+    at('07:30', '2026-11-05');
+    await cron();
+    expect(line.pushes).toHaveLength(0);
+    await mk(a, { title: 'นัดระหว่างลา', startAt: iso('10:00', '2026-11-05') });
+    await cron();
+    expect(line.pushes).toHaveLength(1);
+  });
+  it('สรุปเช้ามีบรรทัดพูดของ Dobby ตามชื่อ/โทนที่ตั้งไว้', async () => {
+    await a.call('PUT', '/api/game/profile', {
+      displayName: 'แฮม',
+      honorific: 'name',
+      dobbyName: 'โดโบ',
+      tone: 'playful',
+    });
+    await mk(a, { title: 'งานของวัน', startAt: iso('14:00') });
+    at('07:30');
+    await cron();
+    const t = pushText();
+    expect(t).toContain('🧚 โดโบ:');
+    expect(t).toContain('แฮม');
+  });
   it('วันทำงานที่มีแต่งานค้าง (ไม่มีงานของวันนี้) = ไม่ส่งสรุปเช้า', async () => {
     await mk(a, { title: 'ค้าง', allDay: true, dueDate: '2026-11-01' });
     at('07:30');

@@ -21,6 +21,8 @@ import MiniTimer from './MiniTimer';
 import { BottomTabBar, TopTabs } from './nav/MainNav';
 import type { Category, GcalStatus, PushStatus, User } from '../lib/types';
 import { callName, type GameState } from '../lib/game';
+import { DEFAULT_TONE, dobbyNameOf } from '../../../../src/lib/dobbyVoice';
+import DobbyDialog from './DobbyDialog';
 import { disablePush } from '../lib/webPush';
 import { useOnline } from '../lib/pwa';
 import AlarmsDialog from './AlarmsDialog';
@@ -45,7 +47,7 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
   const [gcal, setGcal] = useState<GcalStatus | null>(null);
   const [push, setPush] = useState<PushStatus | null>(null);
   const [dialog, setDialog] = useState<
-    'line' | 'settings' | 'gcal' | 'export' | 'import' | 'alarms' | null
+    'line' | 'settings' | 'gcal' | 'export' | 'import' | 'alarms' | 'dobby' | null
   >(null);
   const [gcalNotice, setGcalNotice] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const online = useOnline();
@@ -209,6 +211,9 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
       setGame,
       reloadGame,
       call: callName(game?.profile),
+      dobby: dobbyNameOf(game?.profile?.dobbyName),
+      tone: game?.profile?.tone ?? DEFAULT_TONE,
+      openDobby: () => setDialog('dobby'),
       openOnboarding: () => setShowOnboarding(true),
       logout: () => {
         // อุปกรณ์นี้ไม่ควรได้รับแจ้งเตือนของบัญชีเดิมหลังออกจากระบบ
@@ -335,6 +340,7 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
           )}
           {dialog === 'line' && <LineDialog onClose={() => setDialog(null)} />}
           {dialog === 'alarms' && <AlarmsDialog onClose={() => setDialog(null)} />}
+          {dialog === 'dobby' && <DobbyDialog onClose={() => setDialog(null)} />}
           {dialog === 'import' && <ImportDialog onClose={() => setDialog(null)} />}
           {dialog === 'export' && <ExportDialog onClose={() => setDialog(null)} />}
           {dialog === 'settings' && (
