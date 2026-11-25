@@ -239,7 +239,7 @@ export default function QuickAdd({
             type="button"
             aria-pressed={q.important}
             onClick={() => setOver((o) => ({ ...o, important: !q.important }))}
-            className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium ${q.important ? 'border-amber-500 bg-amber-100 text-amber-950' : 'border-slate-300 bg-white hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700'}`}
+            className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium ${q.important ? 'border-amber-500 bg-amber-100 text-amber-950' : 'border-slate-300 bg-white hover:bg-cool-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700'}`}
           >
             <span aria-hidden>{q.important ? '⭐' : '☆'}</span>
             {t.form2.important}

@@ -52,7 +52,7 @@ export default function MiniCalendar({
           type="button"
           aria-label="เดือนก่อนหน้า"
           onClick={() => shift(-1)}
-          className="h-7 w-7 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"
+          className="h-7 w-7 rounded-full hover:bg-cool-100 dark:hover:bg-slate-700"
         >
           ‹
         </button>
@@ -63,7 +63,7 @@ export default function MiniCalendar({
           type="button"
           aria-label="เดือนถัดไป"
           onClick={() => shift(1)}
-          className="h-7 w-7 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"
+          className="h-7 w-7 rounded-full hover:bg-cool-100 dark:hover:bg-slate-700"
         >
           ›
         </button>
@@ -88,7 +88,7 @@ export default function MiniCalendar({
               })}
               aria-current={isToday ? 'date' : undefined}
               onClick={() => onPick(key)}
-              className={`h-7 rounded-md tabular-nums ${isToday ? 'bg-brand-600 font-semibold text-white' : selWeek.has(key) ? 'bg-brand-100 dark:bg-brand-800' : 'hover:bg-slate-100 dark:hover:bg-slate-700'} ${inMonth ? '' : 'text-slate-400'}`}
+              className={`h-7 rounded-md tabular-nums ${isToday ? 'bg-brand-600 font-semibold text-white' : selWeek.has(key) ? 'bg-brand-100 dark:bg-brand-800' : 'hover:bg-cool-100 dark:hover:bg-slate-700'} ${inMonth ? '' : 'text-slate-400'}`}
             >
               {d.getUTCDate()}
             </button>

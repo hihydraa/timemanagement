@@ -112,7 +112,7 @@ export default function SettingsDialog({ onClose, onOpenLine, onSaved }: Props) 
               type="button"
               onClick={onClose}
               aria-label={t.form.close}
-              className="rounded px-2 py-1 text-xl leading-none hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="rounded px-2 py-1 text-xl leading-none hover:bg-cool-100 dark:hover:bg-slate-800"
             >
               ×
             </button>
@@ -145,7 +145,7 @@ export default function SettingsDialog({ onClose, onOpenLine, onSaved }: Props) 
               <p className="-mt-2 text-xs text-slate-500 dark:text-slate-400">
                 {t.settings.windowHint}
               </p>
-              <p className="rounded-lg bg-slate-50 p-2 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+              <p className="rounded-lg bg-cool-50 p-2 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                 {t.settings.whatWeSend}
               </p>
 
@@ -211,7 +211,7 @@ export default function SettingsDialog({ onClose, onOpenLine, onSaved }: Props) 
               </div>
               {push.limitConfigured && (
                 <div
-                  className="h-1.5 overflow-hidden rounded bg-slate-200 dark:bg-slate-700"
+                  className="h-1.5 overflow-hidden rounded bg-cool-200 dark:bg-slate-700"
                   role="progressbar"
                   aria-valuenow={Math.round(pct)}
                   aria-valuemin={0}
@@ -280,7 +280,7 @@ export default function SettingsDialog({ onClose, onOpenLine, onSaved }: Props) 
                             : [...work.days, d].sort();
                           if (days.length) setWork({ ...work, days });
                         }}
-                        className={`h-9 min-w-9 rounded-full border px-2 text-sm ${on ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700'}`}
+                        className={`h-9 min-w-9 rounded-full border px-2 text-sm ${on ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-700'}`}
                       >
                         {name}
                       </button>

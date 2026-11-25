@@ -33,7 +33,7 @@ export default function KpiStrip({ d, onOverdue }: { d: DashboardData; onOverdue
           aria-valuemin={0}
           aria-valuemax={100}
           aria-label={k.completion}
-          className="mt-1 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"
+          className="mt-1 h-2 overflow-hidden rounded-full bg-cool-200 dark:bg-slate-700"
         >
           <div
             className="h-full bg-brand-600"

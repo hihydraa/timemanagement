@@ -12,7 +12,7 @@ const WEEK = ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา'];
 const field =
   'w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800';
 const btn =
-  'rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:hover:bg-slate-800';
+  'rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-cool-100 disabled:opacity-50 dark:border-slate-600 dark:hover:bg-slate-800';
 const primary =
   'rounded-full bg-brand-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50';
 
@@ -202,7 +202,7 @@ export default function DaysOffPage() {
                 onClick={() => openDay(c.ymd!)}
                 aria-pressed={pick === c.ymd}
                 aria-label={`${dayLabel(c.ymd)}${off ? ` — ${t.daysOff.isOff}: ${kindTh(off.kind)}${off.note ? ` (${off.note})` : ''}` : ''}`}
-                className={`flex h-11 flex-col items-center justify-center rounded-lg text-sm ${st ? st.cls : 'hover:bg-slate-100 dark:hover:bg-slate-700'} ${c.ymd === today ? 'ring-2 ring-brand-500' : ''} ${pick === c.ymd ? 'outline outline-2 outline-brand-700' : ''}`}
+                className={`flex h-11 flex-col items-center justify-center rounded-lg text-sm ${st ? st.cls : 'hover:bg-cool-100 dark:hover:bg-slate-700'} ${c.ymd === today ? 'ring-2 ring-brand-500' : ''} ${pick === c.ymd ? 'outline outline-2 outline-brand-700' : ''}`}
               >
                 <span className="tabular-nums">{c.day}</span>
                 {st && (
@@ -217,7 +217,7 @@ export default function DaysOffPage() {
         <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{t.daysOff.legend}</p>
 
         {pick && (
-          <div className="mt-3 space-y-2 rounded-xl bg-slate-50 p-3 dark:bg-slate-900">
+          <div className="mt-3 space-y-2 rounded-xl bg-cool-50 p-3 dark:bg-slate-900">
             <h4 className="text-sm font-semibold">
               {t.daysOff.dayDialog.replace('{d}', dayLabel(pick))}
             </h4>

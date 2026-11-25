@@ -3,7 +3,7 @@ import { dayLabel, nextMonday, todayYmd, tomorrow } from '../../lib/dates';
 import { t } from '../../lib/i18n';
 
 const chip = (on: boolean) =>
-  `rounded-full border px-3 py-1.5 text-sm ${on ? 'border-brand-700 bg-brand-700 text-white' : 'border-slate-300 bg-white hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700'}`;
+  `rounded-full border px-3 py-1.5 text-sm ${on ? 'border-brand-700 bg-brand-700 text-white' : 'border-slate-300 bg-white hover:bg-cool-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700'}`;
 
 /**
  * เลือกวันแบบเร็ว: วันนี้ / พรุ่งนี้ / สัปดาห์หน้า / เลือกวัน… (ช่องวันที่ของเบราว์เซอร์ใช้เมื่อจำเป็นเท่านั้น)

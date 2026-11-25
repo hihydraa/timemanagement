@@ -293,7 +293,7 @@ export default function TodayPage() {
         {[88, 150, 110, 220].map((h) => (
           <div
             key={h}
-            className="animate-pulse rounded-2xl bg-slate-200/70 dark:bg-slate-700/50"
+            className="animate-pulse rounded-2xl bg-cool-200/70 dark:bg-slate-700/50"
             style={{ height: h }}
           />
         ))}
@@ -316,7 +316,7 @@ export default function TodayPage() {
         <button
           type="button"
           onClick={() => setDrawer({ prefill: { allDay: false } })}
-          className="rounded-full border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
+          className="rounded-full border border-slate-300 px-4 py-2 text-sm hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800"
         >
           {t.quick.fullForm}
         </button>
@@ -365,7 +365,7 @@ export default function TodayPage() {
         // จองที่ไว้ก่อน กันเนื้อหาเลื่อนลงเมื่อข้อมูลมาถึง (CLS)
         <div
           aria-hidden
-          className="h-[104px] rounded-2xl bg-slate-200/60 dark:bg-slate-700/40 lg:h-[96px]"
+          className="h-[104px] rounded-2xl bg-cool-200/60 dark:bg-slate-700/40 lg:h-[96px]"
         />
       )}
 
@@ -472,14 +472,14 @@ export default function TodayPage() {
                 <button
                   type="button"
                   onClick={() => void moveAll('today')}
-                  className="rounded-full border border-slate-300 px-3 py-1 text-xs hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700"
+                  className="rounded-full border border-slate-300 px-3 py-1 text-xs hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-700"
                 >
                   {t.cockpit.moveAllToday}
                 </button>
                 <button
                   type="button"
                   onClick={() => void moveAll('tomorrow')}
-                  className="rounded-full border border-slate-300 px-3 py-1 text-xs hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700"
+                  className="rounded-full border border-slate-300 px-3 py-1 text-xs hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-700"
                 >
                   {t.cockpit.moveAllTomorrow}
                 </button>
@@ -539,7 +539,7 @@ export default function TodayPage() {
         </p>
       )}
       {!dash && !dashError && (
-        <div aria-hidden className="h-[640px] rounded-2xl bg-slate-200/60 dark:bg-slate-700/40" />
+        <div aria-hidden className="h-[640px] rounded-2xl bg-cool-200/60 dark:bg-slate-700/40" />
       )}
       {dash && (
         <div className="grid gap-3 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">

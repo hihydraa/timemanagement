@@ -69,7 +69,7 @@ export default function DaysOffPanel({
         <button
           type="button"
           onClick={onGo}
-          className="text-xs text-brand-700 underline dark:text-brand-300"
+          className="text-xs text-iris-600 underline dark:text-iris-400"
         >
           {w.all}
         </button>
@@ -150,14 +150,14 @@ export default function DaysOffPanel({
             setMsg('');
             setOpen(true);
           }}
-          className="mt-3 rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700"
+          className="mt-3 rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-700"
         >
           + {w.add}
         </button>
       ) : (
         <form
           onSubmit={submit}
-          className="mt-3 space-y-2 rounded-xl bg-slate-50 p-3 dark:bg-slate-900"
+          className="mt-3 space-y-2 rounded-xl bg-cool-50 p-3 dark:bg-slate-900"
         >
           <div className="grid gap-2 sm:grid-cols-2">
             <label className="block text-xs">
@@ -228,7 +228,7 @@ export default function DaysOffPanel({
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700"
+              className="rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-700"
             >
               {w.cancel}
             </button>

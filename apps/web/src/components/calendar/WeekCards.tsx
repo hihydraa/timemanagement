@@ -169,7 +169,7 @@ function DayColumn({
             type="button"
             aria-label={`${t.cal.add} ${dayLabel(d.ymd)}`}
             onClick={() => onAdd(d.ymd)}
-            className="h-7 w-7 rounded-full border border-slate-300 text-base leading-none hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700"
+            className="h-7 w-7 rounded-full border border-slate-300 text-base leading-none hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-700"
           >
             +
           </button>

@@ -98,7 +98,7 @@ export default function TaskQuickDialog({
             type="button"
             onClick={onClose}
             aria-label={t.form.close}
-            className="rounded px-2 py-1 text-xl leading-none hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="rounded px-2 py-1 text-xl leading-none hover:bg-cool-100 dark:hover:bg-slate-800"
           >
             ×
           </button>
@@ -123,7 +123,7 @@ export default function TaskQuickDialog({
                 type="button"
                 aria-pressed={status === s}
                 onClick={() => choose(s)}
-                className={`rounded-lg border px-2 py-2 text-sm ${status === s ? 'border-brand-600 bg-brand-600 font-medium text-white' : 'border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800'}`}
+                className={`rounded-lg border px-2 py-2 text-sm ${status === s ? 'border-brand-600 bg-brand-600 font-medium text-white' : 'border-slate-300 hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800'}`}
               >
                 {status === s && <span aria-hidden>✓ </span>}
                 {t.status[s]}
@@ -146,7 +146,7 @@ export default function TaskQuickDialog({
             type="button"
             disabled={busy || status === 'done' || status === 'cancelled'}
             onClick={snooze}
-            className="rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:hover:bg-slate-800"
+            className="rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-cool-100 disabled:opacity-50 dark:border-slate-600 dark:hover:bg-slate-800"
           >
             ⏰ {t.cockpit.snooze}
           </button>

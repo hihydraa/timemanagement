@@ -17,8 +17,8 @@ const page = (title: string, body: string) => `<!doctype html>
 <html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex"><title>${esc(title)} — Dobby</title>
 <style>
-:root{color-scheme:light dark;--bg:#faf7ef;--fg:#23302a;--muted:#4a5649;--brand:#3f6650;--card:#fff;--bd:#e6dfcb}
-@media (prefers-color-scheme:dark){:root{--bg:#1f2b25;--fg:#f1ecdd;--muted:#c9d1c5;--brand:#9dbba8;--card:#26342d;--bd:#3e4f45}}
+:root{color-scheme:light dark;--bg:#fbf8f1;--fg:#14161b;--muted:#5f5b50;--brand:#326349;--card:#fff;--bd:#e8e1d1}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1b19;--fg:#f3eee4;--muted:#b8b1a2;--brand:#86cca6;--card:#262421;--bd:#3d3a35}}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 "Noto Sans Thai",system-ui,sans-serif}
 main{max-width:760px;margin:0 auto;padding:24px 16px 64px}
 h1{font-size:1.6rem;line-height:1.35;color:var(--brand)} h2{font-size:1.1rem;margin-top:2rem;line-height:1.35}

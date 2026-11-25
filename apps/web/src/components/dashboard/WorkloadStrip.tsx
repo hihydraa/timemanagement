@@ -54,7 +54,7 @@ export default function WorkloadStrip({
         <button
           type="button"
           onClick={onGo}
-          className="text-xs text-brand-700 underline dark:text-brand-300"
+          className="text-xs text-iris-600 underline dark:text-iris-400"
         >
           {w.openPlan}
         </button>
@@ -70,13 +70,13 @@ export default function WorkloadStrip({
                 type="button"
                 aria-pressed={sel.ymd === ymd}
                 onClick={() => setPicked(ymd)}
-                className={`flex w-full flex-col items-center gap-1 rounded-lg p-0.5 text-center ${sel.ymd === ymd ? 'bg-brand-50 ring-2 ring-brand-500 dark:bg-brand-950' : 'hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                className={`flex w-full flex-col items-center gap-1 rounded-lg p-0.5 text-center ${sel.ymd === ymd ? 'bg-brand-50 ring-2 ring-brand-500 dark:bg-brand-950' : 'hover:bg-cool-50 dark:hover:bg-slate-700'}`}
               >
                 <span className="text-[10px] text-slate-600 dark:text-slate-300">
                   {dayLabel(ymd).split(' ')[0]}
                 </span>
                 <div
-                  className="flex h-20 w-full items-end overflow-hidden rounded bg-slate-100 dark:bg-slate-900"
+                  className="flex h-20 w-full items-end overflow-hidden rounded bg-cool-100 dark:bg-slate-900"
                   role="img"
                   aria-label={`${dayLabel(ymd)}: ${load.status === 'off' ? w.off : `${w.status[load.status]} — ${fmtDuration(load.planned)} / ${fmtDuration(load.available)}`}`}
                 >
@@ -99,7 +99,7 @@ export default function WorkloadStrip({
           );
         })}
       </ol>
-      <div className="mt-2 rounded-xl bg-slate-50 p-2 dark:bg-slate-900">
+      <div className="mt-2 rounded-xl bg-cool-50 p-2 dark:bg-slate-900">
         <h3 className="text-xs font-semibold">{w.dayTasks.replace('{day}', dayLabel(sel.ymd))}</h3>
         {sel.items.length === 0 ? (
           <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{w.noTasks}</p>
@@ -116,14 +116,14 @@ export default function WorkloadStrip({
                     <button
                       type="button"
                       onClick={() => onOpen(x.id)}
-                      className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700"
+                      className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-sm hover:bg-cool-100 dark:hover:bg-slate-700"
                     >
                       <span className="w-11 shrink-0 text-xs tabular-nums text-slate-600 dark:text-slate-300">
                         {at && !x.allDay ? minToHm(bkMinute(at)) : ''}
                       </span>
                       <span className="min-w-0 flex-1 truncate">{x.title}</span>
                       {isAppointment(x) && (
-                        <span className="shrink-0 rounded-full bg-slate-200 px-1.5 text-[11px] dark:bg-slate-700">
+                        <span className="shrink-0 rounded-full bg-cool-200 px-1.5 text-[11px] dark:bg-slate-700">
                           {w.appt}
                         </span>
                       )}

@@ -161,7 +161,7 @@ export default function AvatarPage() {
             role="tab"
             aria-selected={open === g}
             onClick={() => setOpen(g)}
-            className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${open === g ? 'bg-brand-600 font-medium text-white' : 'border border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800'}`}
+            className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${open === g ? 'bg-brand-600 font-medium text-white' : 'border border-slate-300 hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800'}`}
           >
             {SLOT_TH[g]}
           </button>
@@ -182,7 +182,7 @@ export default function AvatarPage() {
                 delete nextItems[open];
                 change({ ...look, items: nextItems });
               }}
-              className={`flex h-full w-full flex-col items-center justify-center gap-1 rounded-2xl border p-2 text-sm ${!look.items[open] ? 'border-brand-600 bg-brand-50 dark:bg-brand-950' : 'border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'}`}
+              className={`flex h-full w-full flex-col items-center justify-center gap-1 rounded-2xl border p-2 text-sm ${!look.items[open] ? 'border-brand-600 bg-brand-50 dark:bg-brand-950' : 'border-slate-200 hover:bg-cool-50 dark:border-slate-700 dark:hover:bg-slate-800'}`}
             >
               <span aria-hidden className="text-2xl">
                 ∅
@@ -221,7 +221,7 @@ export default function AvatarPage() {
                     type="button"
                     aria-pressed={worn}
                     onClick={() => equip(item)}
-                    className={`rounded-full px-3 py-1 text-xs ${worn ? 'bg-brand-600 text-white' : 'border border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700'}`}
+                    className={`rounded-full px-3 py-1 text-xs ${worn ? 'bg-brand-600 text-white' : 'border border-slate-300 hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-700'}`}
                   >
                     {worn ? `✓ ${t.me.avatarWorn}` : t.me.avatarWear}
                   </button>

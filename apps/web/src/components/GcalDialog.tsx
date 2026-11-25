@@ -147,7 +147,7 @@ export default function GcalDialog({ notice, onClose, onStatusChange }: Props) {
             type="button"
             onClick={onClose}
             aria-label={t.form.close}
-            className="rounded px-2 py-1 text-xl leading-none hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="rounded px-2 py-1 text-xl leading-none hover:bg-cool-100 dark:hover:bg-slate-800"
           >
             ×
           </button>
@@ -223,7 +223,7 @@ export default function GcalDialog({ notice, onClose, onStatusChange }: Props) {
                       type="button"
                       disabled={busy || calId.trim() === st.calendarId}
                       onClick={() => void saveCal()}
-                      className="rounded border border-slate-300 px-3 py-1.5 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:hover:bg-slate-800"
+                      className="rounded border border-slate-300 px-3 py-1.5 hover:bg-cool-100 disabled:opacity-50 dark:border-slate-600 dark:hover:bg-slate-800"
                     >
                       {t.gcal.save}
                     </button>

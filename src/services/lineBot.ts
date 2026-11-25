@@ -331,7 +331,7 @@ async function cmdWeek(ctx: Ctx, user: User) {
     const d = addDays(monday, i);
     sections.push({
       title: `${dayLabel(d)}${d === today ? ' (วันนี้)' : ''}`,
-      color: d === today ? '#3d6552' : undefined,
+      color: d === today ? '#3f7a5c' : undefined,
       tasks: list.filter((t) => taskDate(t) === d),
     });
   }

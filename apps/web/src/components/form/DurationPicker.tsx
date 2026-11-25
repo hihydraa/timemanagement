@@ -4,7 +4,7 @@ import { t } from '../../lib/i18n';
 const label = (m: number) =>
   m < 60 ? `${m} ${t.form2.minShort}` : `${m / 60} ${t.form2.hourShort}`;
 const chip = (on: boolean) =>
-  `rounded-full border px-3 py-1.5 text-sm ${on ? 'border-brand-700 bg-brand-700 text-white' : 'border-slate-300 bg-white hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700'}`;
+  `rounded-full border px-3 py-1.5 text-sm ${on ? 'border-brand-700 bg-brand-700 text-white' : 'border-slate-300 bg-white hover:bg-cool-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700'}`;
 
 /** ระยะเวลา/เวลาประมาณ: 15 น. / 30 น. / 1 ชม. / 2 ชม. + กรอกเอง (นาที) */
 export default function DurationPicker({

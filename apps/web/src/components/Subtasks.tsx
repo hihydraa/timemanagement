@@ -175,7 +175,7 @@ export default function Subtasks({
           type="button"
           disabled={busy || !text.trim()}
           onClick={add}
-          className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:hover:bg-slate-800"
+          className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-cool-100 disabled:opacity-50 dark:border-slate-600 dark:hover:bg-slate-800"
         >
           {t.subtasks.add}
         </button>

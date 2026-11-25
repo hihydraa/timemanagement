@@ -35,7 +35,7 @@ export default function ExportDialog({ onClose }: { onClose: () => void }) {
             type="button"
             onClick={onClose}
             aria-label={t.form.close}
-            className="rounded px-2 py-1 text-xl leading-none hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="rounded px-2 py-1 text-xl leading-none hover:bg-cool-100 dark:hover:bg-slate-800"
           >
             ×
           </button>
@@ -48,7 +48,7 @@ export default function ExportDialog({ onClose }: { onClose: () => void }) {
               <a
                 href={`/api/export?format=${f}`}
                 download
-                className="block rounded border border-slate-300 px-3 py-2 text-sm hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
+                className="block rounded border border-slate-300 px-3 py-2 text-sm hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800"
               >
                 {label}
               </a>

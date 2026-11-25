@@ -154,7 +154,7 @@ export default function StatsPage() {
               type="button"
               aria-pressed={days === r}
               onClick={() => setDays(r)}
-              className={`px-3 py-1.5 text-sm ${days === r ? 'bg-brand-600 text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+              className={`px-3 py-1.5 text-sm ${days === r ? 'bg-brand-600 text-white' : 'hover:bg-cool-100 dark:hover:bg-slate-800'}`}
             >
               {r} {t.stats.days}
             </button>

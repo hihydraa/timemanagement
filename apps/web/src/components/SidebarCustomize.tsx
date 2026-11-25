@@ -32,7 +32,7 @@ export default function SidebarCustomize({
         <button
           type="button"
           onClick={() => onChange(SIDEBAR_DEFAULT)}
-          className="text-xs text-brand-700 underline dark:text-brand-300"
+          className="text-xs text-iris-600 underline dark:text-iris-400"
         >
           {t.filter.reset}
         </button>

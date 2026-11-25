@@ -19,7 +19,7 @@ export default function AttentionPanel({
   const a = d.attention;
   const none = !a.overdue && !a.unscheduled && a.stalled.length === 0;
   const btn =
-    'rounded-full border border-slate-300 px-3 py-1 text-xs hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800';
+    'rounded-full border border-slate-300 px-3 py-1 text-xs hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800';
   const list = (items: Task[], total: number, extra?: (x: Task) => React.ReactNode) => (
     <ul className="mt-1 space-y-1">
       {items.map((x) => (
@@ -27,7 +27,7 @@ export default function AttentionPanel({
           <button
             type="button"
             onClick={() => onOpen(x)}
-            className="flex w-full items-center justify-between gap-2 rounded px-1 text-left hover:bg-slate-100 dark:hover:bg-slate-700"
+            className="flex w-full items-center justify-between gap-2 rounded px-1 text-left hover:bg-cool-100 dark:hover:bg-slate-700"
           >
             <span className="truncate">{x.title}</span>
             <span className="shrink-0 text-xs text-slate-600 dark:text-slate-300">

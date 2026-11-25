@@ -70,7 +70,7 @@ export default function DayTimeline({
             <button
               type="button"
               onClick={() => onOpen(task)}
-              className={`min-w-0 flex-1 rounded-xl border border-l-4 border-slate-200 px-3 py-2 text-left shadow-sm hover:shadow-md dark:border-slate-700 ${e.past && !finished ? 'bg-slate-100 dark:bg-slate-900' : 'bg-white dark:bg-slate-800'}`}
+              className={`min-w-0 flex-1 rounded-xl border border-l-4 border-slate-200 px-3 py-2 text-left shadow-sm hover:shadow-md dark:border-slate-700 ${e.past && !finished ? 'bg-cool-100 dark:bg-slate-900' : 'bg-white dark:bg-slate-800'}`}
               style={{ borderLeftColor: URGENCY_COLORS[task.urgency] }}
             >
               <UrgencyText level={task.urgency} />

@@ -42,7 +42,7 @@ export default function CalToolbar({
         type="button"
         onClick={onToday}
         hidden={mode === 'matrix'}
-        className="h-9 rounded-full border border-slate-300 px-4 text-sm font-medium hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
+        className="h-9 rounded-full border border-slate-300 px-4 text-sm font-medium hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800"
       >
         {t.cal.today}
       </button>
@@ -56,7 +56,7 @@ export default function CalToolbar({
         <button
           type="button"
           onClick={onTray}
-          className="h-9 rounded-full border border-slate-300 px-3 text-sm hover:bg-slate-100 lg:hidden dark:border-slate-600 dark:hover:bg-slate-800"
+          className="h-9 rounded-full border border-slate-300 px-3 text-sm hover:bg-cool-100 lg:hidden dark:border-slate-600 dark:hover:bg-slate-800"
         >
           {t.tray.title} {trayCount ? `(${trayCount})` : ''}
         </button>
@@ -72,7 +72,7 @@ export default function CalToolbar({
             type="button"
             aria-pressed={mode === m}
             onClick={() => onMode(m)}
-            className={`px-3 py-1.5 ${mode === m ? 'bg-brand-700 text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+            className={`px-3 py-1.5 ${mode === m ? 'bg-brand-700 text-white' : 'hover:bg-cool-100 dark:hover:bg-slate-800'}`}
           >
             {t.cal.modes[m]}
           </button>

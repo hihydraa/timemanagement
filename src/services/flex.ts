@@ -391,7 +391,7 @@ export function alertCarousel(items: AlertItem[], baseUrl: string): LineMessage 
           layout: 'vertical',
           flex: 1,
           contents: [
-            txt(label, { size: 'xs', weight: 'bold', color: '#3d6552' }),
+            txt(label, { size: 'xs', weight: 'bold', color: '#3f7a5c' }),
             txt(clip(t.title, 100), { weight: 'bold', size: 'md', margin: 'sm' }),
             txt(`🕒 ${whenText(t)}`, { size: 'sm', margin: 'md' }),
             txt(levelText(t) || ' ', { size: 'xs', color: '#6b7280', margin: 'sm' }),
@@ -509,7 +509,7 @@ export function eveningCard(
 
   const footer: unknown[] = [];
   if (pending.length)
-    footer.push(button('เลื่อนงานค้างไปพรุ่งนี้', pb(`a=carry&d=${date}`), 'primary', '#3d6552'));
+    footer.push(button('เลื่อนงานค้างไปพรุ่งนี้', pb(`a=carry&d=${date}`), 'primary', '#3f7a5c'));
   footer.push(button('เปิดในเว็บ', { type: 'uri', uri: baseUrl }, 'link'));
   return {
     ids,

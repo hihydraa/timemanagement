@@ -54,9 +54,9 @@ export default function AlarmsDialog({ onClose }: { onClose: () => void }) {
     }
   }
   const chip = (on: boolean) =>
-    `h-9 min-w-9 rounded-full border px-2 text-sm ${on ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800'}`;
+    `h-9 min-w-9 rounded-full border px-2 text-sm ${on ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800'}`;
   const small =
-    'rounded-full border border-slate-300 px-3 py-1 text-xs hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800';
+    'rounded-full border border-slate-300 px-3 py-1 text-xs hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800';
 
   return (
     <div
@@ -75,7 +75,7 @@ export default function AlarmsDialog({ onClose }: { onClose: () => void }) {
             type="button"
             onClick={onClose}
             aria-label={t.form.close}
-            className="rounded px-2 py-1 text-xl leading-none hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="rounded px-2 py-1 text-xl leading-none hover:bg-cool-100 dark:hover:bg-slate-800"
           >
             ×
           </button>

@@ -111,7 +111,7 @@ export default function ReviewPage() {
               type="button"
               aria-pressed={week === w}
               onClick={() => setWeek(w)}
-              className={`px-3 py-1.5 ${week === w ? 'bg-brand-600 text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+              className={`px-3 py-1.5 ${week === w ? 'bg-brand-600 text-white' : 'hover:bg-cool-100 dark:hover:bg-slate-800'}`}
             >
               {weekLabel(w, today)}
             </button>
@@ -121,7 +121,7 @@ export default function ReviewPage() {
           type="button"
           aria-label={t.review.prev}
           onClick={() => setWeek(addDaysYmd(week, -7))}
-          className="rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
+          className="rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800"
         >
           ‹
         </button>
@@ -134,7 +134,7 @@ export default function ReviewPage() {
           aria-label={t.review.next}
           disabled={week >= thisMonday}
           onClick={() => setWeek(addDaysYmd(week, 7))}
-          className="rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 disabled:opacity-40 dark:border-slate-600 dark:hover:bg-slate-800"
+          className="rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-cool-100 disabled:opacity-40 dark:border-slate-600 dark:hover:bg-slate-800"
         >
           ›
         </button>

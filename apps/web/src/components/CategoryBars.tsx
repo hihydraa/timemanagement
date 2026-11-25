@@ -26,14 +26,14 @@ export default function CategoryBars({ rows }: { rows: CategoryStat[] }) {
             </span>
           </div>
           <div className="space-y-1" aria-hidden>
-            <div className="h-2 rounded bg-slate-100 dark:bg-slate-800">
+            <div className="h-2 rounded bg-cool-100 dark:bg-slate-800">
               <div
                 className="h-full rounded"
                 style={{ width: `${(r.focusMinutes / max) * 100}%`, background: r.color }}
               />
             </div>
             {r.plannedMinutes !== undefined && (
-              <div className="h-2 rounded bg-slate-100 dark:bg-slate-800">
+              <div className="h-2 rounded bg-cool-100 dark:bg-slate-800">
                 <div
                   className="h-full rounded border-2"
                   style={{ width: `${(r.plannedMinutes / max) * 100}%`, borderColor: r.color }}

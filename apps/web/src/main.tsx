@@ -9,6 +9,10 @@ import '@fontsource/noto-sans-thai/thai-500.css';
 import '@fontsource/noto-sans-thai/thai-600.css';
 import '@fontsource/noto-sans-thai/latin-400.css';
 import '@fontsource/noto-sans-thai/latin-600.css';
+import '@fontsource/anuphan/thai-600.css';
+import '@fontsource/anuphan/thai-700.css';
+import '@fontsource/anuphan/latin-600.css';
+import '@fontsource/anuphan/latin-700.css';
 import './index.css';
 
 applyMotionPref();

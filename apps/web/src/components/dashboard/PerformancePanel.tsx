@@ -73,7 +73,7 @@ export default function PerformancePanel({ d }: { d: DashboardData }) {
                 </span>
               </div>
               <div
-                className="flex h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"
+                className="flex h-2 overflow-hidden rounded-full bg-cool-200 dark:bg-slate-700"
                 style={{ width: `${((c.open + c.done) / catMax) * 100}%` }}
               >
                 <span

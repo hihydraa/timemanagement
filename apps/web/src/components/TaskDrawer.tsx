@@ -301,7 +301,7 @@ export default function TaskDrawer({
             type="button"
             onClick={onClose}
             aria-label={t.form.close}
-            className="rounded px-2 py-1 text-xl leading-none hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="rounded px-2 py-1 text-xl leading-none hover:bg-cool-100 dark:hover:bg-slate-800"
           >
             ×
           </button>
@@ -345,7 +345,7 @@ export default function TaskDrawer({
             setImportance(importance >= 3 ? 2 : 4);
           }}
           title={t.form2.importantHint}
-          className={`flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium ${importance >= 3 ? 'border-amber-500 bg-amber-100 text-amber-950' : 'border-slate-300 bg-white hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700'}`}
+          className={`flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium ${importance >= 3 ? 'border-amber-500 bg-amber-100 text-amber-950' : 'border-slate-300 bg-white hover:bg-cool-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700'}`}
         >
           <span aria-hidden>{importance >= 3 ? '⭐' : '☆'}</span>
           {t.form2.important}
@@ -395,12 +395,12 @@ export default function TaskDrawer({
             <button
               type="button"
               onClick={() => patchWhen({ deadlineOn: true, deadlineDate: when.day || todayYmd() })}
-              className="rounded-full border border-dashed border-slate-400 px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-500 dark:hover:bg-slate-800"
+              className="rounded-full border border-dashed border-slate-400 px-3 py-1.5 text-sm hover:bg-cool-100 dark:border-slate-500 dark:hover:bg-slate-800"
             >
               {t.form2.addDeadline}
             </button>
           ) : (
-            <div className="space-y-2 rounded-xl bg-slate-100 p-2 dark:bg-slate-800">
+            <div className="space-y-2 rounded-xl bg-cool-100 p-2 dark:bg-slate-800">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold">⚑ {t.form2.deadline}</span>
                 <button
@@ -444,7 +444,7 @@ export default function TaskDrawer({
           aria-expanded={showMore}
           aria-controls="more-options"
           onClick={() => setShowMore((v) => !v)}
-          className="flex w-full items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-left text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+          className="flex w-full items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-left text-sm hover:bg-cool-50 dark:border-slate-700 dark:hover:bg-slate-800"
         >
           <span>
             <strong>{showMore ? t.form2.less : t.form2.more}</strong>
@@ -580,7 +580,7 @@ export default function TaskDrawer({
                                   : [...rec.days, d],
                               })
                             }
-                            className={`h-8 w-9 rounded-full border text-xs ${on ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800'}`}
+                            className={`h-8 w-9 rounded-full border text-xs ${on ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800'}`}
                           >
                             {t.series.weekdays[d]}
                           </button>
@@ -685,7 +685,7 @@ export default function TaskDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="rounded px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="rounded px-3 py-2 text-sm hover:bg-cool-100 dark:hover:bg-slate-800"
           >
             {t.form.cancel}
           </button>

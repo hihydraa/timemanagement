@@ -28,7 +28,7 @@ export default function WebPushSettings() {
     }
   }
   const btn =
-    'rounded-full border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100 disabled:opacity-60 dark:border-slate-600 dark:hover:bg-slate-800';
+    'rounded-full border border-slate-300 px-4 py-2 text-sm hover:bg-cool-100 disabled:opacity-60 dark:border-slate-600 dark:hover:bg-slate-800';
 
   return (
     <section className="space-y-2 rounded-xl border border-slate-200 p-3 dark:border-slate-700">

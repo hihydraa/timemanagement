@@ -102,7 +102,7 @@ export default function LineDialog({ onClose }: { onClose: () => void }) {
             type="button"
             onClick={onClose}
             aria-label={t.form.close}
-            className="rounded px-2 py-1 text-xl leading-none hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="rounded px-2 py-1 text-xl leading-none hover:bg-cool-100 dark:hover:bg-slate-800"
           >
             ×
           </button>
@@ -157,7 +157,7 @@ export default function LineDialog({ onClose }: { onClose: () => void }) {
                     <button
                       type="button"
                       onClick={copy}
-                      className="rounded border border-slate-300 px-3 py-1.5 text-xs hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
+                      className="rounded border border-slate-300 px-3 py-1.5 text-xs hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800"
                     >
                       {copied ? t.line.copied : t.line.copy}
                     </button>

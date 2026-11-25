@@ -121,7 +121,7 @@ export default function Attachments({
           type="button"
           disabled={busy}
           onClick={() => inputRef.current?.click()}
-          className="font-medium text-brand-600 underline dark:text-brand-400"
+          className="font-medium text-iris-600 underline dark:text-iris-400"
         >
           {t.attach.choose}
         </button>
@@ -175,7 +175,7 @@ export default function Attachments({
             <a
               href={`/api/attachments/${a.id}`}
               download={a.filename}
-              className="min-w-0 flex-1 truncate text-brand-700 hover:underline dark:text-brand-300"
+              className="min-w-0 flex-1 truncate text-iris-600 hover:underline dark:text-iris-400"
               title={`${t.attach.download}: ${a.filename}`}
             >
               {a.filename}
@@ -228,7 +228,7 @@ export default function Attachments({
         <div className="text-xs text-slate-500 dark:text-slate-400">
           {t.attach.storage}: {formatBytes(storage.usedBytes)} / {formatBytes(storage.quotaBytes)}
           <div
-            className="mt-1 h-1.5 overflow-hidden rounded bg-slate-200 dark:bg-slate-700"
+            className="mt-1 h-1.5 overflow-hidden rounded bg-cool-200 dark:bg-slate-700"
             role="progressbar"
             aria-valuenow={Math.round(pct)}
             aria-valuemin={0}

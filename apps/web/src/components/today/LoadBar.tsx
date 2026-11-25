@@ -29,7 +29,7 @@ export default function LoadBar({
       <div
         role="img"
         aria-label={label}
-        className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"
+        className="h-2 w-full overflow-hidden rounded-full bg-cool-200 dark:bg-slate-700"
       >
         <div
           className="h-full rounded-full transition-[width] duration-300"
@@ -58,7 +58,7 @@ export default function LoadBar({
           <span className="tabular-nums">
             {fmtDuration(load.planned)} / {fmtDuration(load.available)}
           </span>
-          <span className="rounded-full bg-slate-100 px-1.5 font-medium dark:bg-slate-700">
+          <span className="rounded-full bg-cool-100 px-1.5 font-medium dark:bg-slate-700">
             {t.cockpit.loadStatus[load.status]}
           </span>
           {load.appointmentMinutes > 0 && (

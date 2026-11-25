@@ -20,7 +20,7 @@ export default function InsightBar({
   onTimeline: () => void;
 }) {
   const link =
-    'rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700';
+    'rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium hover:bg-cool-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700';
   return (
     <section
       aria-label="Dobby"

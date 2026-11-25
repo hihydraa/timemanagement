@@ -46,7 +46,7 @@ export default function AppleCalendarDialog({ onClose }: { onClose: () => void }
     }
   };
   const btn =
-    'rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:hover:bg-slate-800';
+    'rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-cool-100 disabled:opacity-50 dark:border-slate-600 dark:hover:bg-slate-800';
 
   return (
     <div
@@ -65,7 +65,7 @@ export default function AppleCalendarDialog({ onClose }: { onClose: () => void }
             type="button"
             onClick={onClose}
             aria-label={t.form.close}
-            className="rounded px-2 py-1 text-xl leading-none hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="rounded px-2 py-1 text-xl leading-none hover:bg-cool-100 dark:hover:bg-slate-800"
           >
             ×
           </button>

@@ -123,14 +123,14 @@ export default function TaskTray({
             <button
               type="button"
               onClick={() => onSchedule(x, todayYmd())}
-              className="block w-full rounded-lg px-2 py-1.5 text-left hover:bg-slate-100 dark:hover:bg-slate-700"
+              className="block w-full rounded-lg px-2 py-1.5 text-left hover:bg-cool-100 dark:hover:bg-slate-700"
             >
               {t.tray.today}
             </button>
             <button
               type="button"
               onClick={() => onSchedule(x, addDaysYmd(todayYmd(), 1))}
-              className="block w-full rounded-lg px-2 py-1.5 text-left hover:bg-slate-100 dark:hover:bg-slate-700"
+              className="block w-full rounded-lg px-2 py-1.5 text-left hover:bg-cool-100 dark:hover:bg-slate-700"
             >
               {t.tray.tomorrow}
             </button>
@@ -192,7 +192,7 @@ export default function TaskTray({
           role="dialog"
           aria-label={t.tray.title}
           aria-modal="true"
-          className="absolute inset-x-0 bottom-0 max-h-[75vh] overflow-y-auto rounded-t-2xl bg-slate-50 p-4 shadow-lg dark:bg-slate-900"
+          className="absolute inset-x-0 bottom-0 max-h-[75vh] overflow-y-auto rounded-t-2xl bg-cool-50 p-4 shadow-lg dark:bg-slate-900"
         >
           <div className="mb-2 flex items-center justify-between">
             <h2 className="font-semibold">

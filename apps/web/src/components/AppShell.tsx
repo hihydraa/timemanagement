@@ -270,7 +270,7 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
             {!online && (
               <p
                 role="status"
-                className="mt-2 flex items-center gap-3 rounded-lg bg-slate-100 p-2 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                className="mt-2 flex items-center gap-3 rounded-lg bg-cool-100 p-2 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200"
               >
                 <Mascot pose="rest" height={44} />
                 <span>

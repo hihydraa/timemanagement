@@ -48,7 +48,7 @@ export default function MePage({ tab }: { tab: MeTab }) {
             role="tab"
             aria-selected={tab === k}
             onClick={() => goTo('me', k)}
-            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm ${tab === k ? 'bg-brand-600 font-medium text-white' : 'border border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800'}`}
+            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm ${tab === k ? 'bg-brand-600 font-medium text-white' : 'border border-slate-300 hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800'}`}
           >
             {t.me[k]}
           </button>
@@ -193,15 +193,15 @@ export default function MePage({ tab }: { tab: MeTab }) {
             <button
               type="button"
               onClick={logout}
-              className="rounded-full border border-slate-300 px-4 py-2 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
+              className="rounded-full border border-slate-300 px-4 py-2 hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800"
             >
               {t.me.logout}
             </button>
             <nav aria-label={t.me.legal} className="flex gap-3 text-xs">
-              <a href="/privacy" className="text-brand-700 underline dark:text-brand-300">
+              <a href="/privacy" className="text-iris-600 underline dark:text-iris-400">
                 {t.login.privacy}
               </a>
-              <a href="/terms" className="text-brand-700 underline dark:text-brand-300">
+              <a href="/terms" className="text-iris-600 underline dark:text-iris-400">
                 {t.login.terms}
               </a>
             </nav>

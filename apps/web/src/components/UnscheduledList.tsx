@@ -44,7 +44,7 @@ export default function UnscheduledList({ onChanged }: { onChanged?: () => void 
     run(() => api.updateTask(task.id, { allDay: true, dueDate }));
 
   const btn =
-    'rounded border border-slate-300 px-2.5 py-1.5 text-xs hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800';
+    'rounded border border-slate-300 px-2.5 py-1.5 text-xs hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800';
 
   return (
     <section id="unscheduled" aria-label={t.today2.unscheduled} className="scroll-mt-4 space-y-3">

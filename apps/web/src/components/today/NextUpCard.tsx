@@ -27,7 +27,7 @@ export default function NextUpCard({
 }) {
   const { categories } = useApp();
   const btn =
-    'rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700';
+    'rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-cool-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700';
   if (!next) {
     return (
       <section
@@ -55,10 +55,10 @@ export default function NextUpCard({
   return (
     <section
       aria-label={t.cockpit.nextUp}
-      className="rounded-2xl border border-l-8 border-slate-200 bg-white p-4 shadow-md dark:border-slate-700 dark:bg-slate-800"
+      className="rounded-2xl border border-l-8 border-brand-200 bg-brand-50 p-4 shadow-md dark:border-brand-800 dark:bg-brand-900"
       style={{ borderLeftColor: URGENCY_COLORS[task.urgency] }}
     >
-      <h2 className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+      <h2 className="inline-block rounded-full bg-iris-100 px-2.5 py-0.5 text-xs font-semibold text-iris-700 dark:bg-iris-950 dark:text-iris-300">
         {t.cockpit.nextUp} · {t.cockpit.reason[next.reason]}
       </h2>
       <button

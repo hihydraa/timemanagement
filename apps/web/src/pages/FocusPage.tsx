@@ -273,7 +273,7 @@ export default function FocusPage() {
           <button
             type="button"
             onClick={() => goTo('today')}
-            className="mb-2 ml-auto rounded-full border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
+            className="mb-2 ml-auto rounded-full border border-slate-300 px-3 py-1 text-sm hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800"
           >
             ← {t.nav.backToday}
           </button>
@@ -328,7 +328,7 @@ export default function FocusPage() {
             <button
               type="button"
               onClick={() => void finishFocus(run, Date.now(), false)}
-              className="rounded-full border border-slate-300 px-6 py-2 text-sm hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
+              className="rounded-full border border-slate-300 px-6 py-2 text-sm hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800"
             >
               {t.focus.stop}
             </button>
@@ -337,7 +337,7 @@ export default function FocusPage() {
             <button
               type="button"
               onClick={() => setRun(null)}
-              className="rounded-full border border-slate-300 px-6 py-2 text-sm hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
+              className="rounded-full border border-slate-300 px-6 py-2 text-sm hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800"
             >
               {t.focus.skipBreak}
             </button>
@@ -431,7 +431,7 @@ export default function FocusPage() {
           <button
             type="button"
             onClick={() => void Notification.requestPermission().then(setPerm)}
-            className="text-xs text-brand-600 underline dark:text-brand-400"
+            className="text-xs text-iris-600 underline dark:text-iris-400"
           >
             {t.focus.notify}
           </button>

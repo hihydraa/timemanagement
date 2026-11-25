@@ -42,7 +42,7 @@ function toggle<T>(s: Set<T>, v: T): Set<T> {
 }
 
 const chip = (on: boolean) =>
-  `rounded-full border px-2.5 py-1 text-xs ${on ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'}`;
+  `rounded-full border px-2.5 py-1 text-xs ${on ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 dark:border-slate-600 hover:bg-cool-100 dark:hover:bg-slate-800'}`;
 
 interface Props {
   value: FilterState;
@@ -112,7 +112,7 @@ function ImportancePicker({
               aria-label={`${t.filter.importance}: ${t.importance[l]}`}
               title={t.importance[l]}
               onClick={() => onToggle(l)}
-              className={`flex h-8 items-end gap-0.5 rounded-lg border px-1.5 pb-1 transition ${on ? `border-brand-700 bg-brand-50 dark:bg-brand-950 ${ring}` : 'border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800'}`}
+              className={`flex h-8 items-end gap-0.5 rounded-lg border px-1.5 pb-1 transition ${on ? `border-brand-700 bg-brand-50 dark:bg-brand-950 ${ring}` : 'border-slate-300 hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800'}`}
             >
               {[1, 2, 3, 4].map((i) => (
                 <span
@@ -289,7 +289,7 @@ export default function Filters({ value, onChange, categories, allTags, sections
         <button
           type="button"
           onClick={() => onChange(emptyFilters())}
-          className="text-xs text-brand-700 underline dark:text-brand-300"
+          className="text-xs text-iris-600 underline dark:text-iris-400"
         >
           {t.filter.clear} ({activeCount(value)})
         </button>

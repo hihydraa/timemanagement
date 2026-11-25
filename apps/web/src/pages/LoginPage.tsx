@@ -29,10 +29,10 @@ export default function LoginPage() {
       )}
       <p className="text-xs text-slate-600 dark:text-slate-400">{t.login.hint}</p>
       <nav aria-label="เอกสารทางกฎหมาย" className="flex gap-3 text-xs">
-        <a href="/privacy" className="text-brand-700 underline dark:text-brand-300">
+        <a href="/privacy" className="text-iris-600 underline dark:text-iris-400">
           {t.login.privacy}
         </a>
-        <a href="/terms" className="text-brand-700 underline dark:text-brand-300">
+        <a href="/terms" className="text-iris-600 underline dark:text-iris-400">
           {t.login.terms}
         </a>
       </nav>

@@ -21,7 +21,7 @@ export default function ImportantList({
 }) {
   const w = t.dash.important;
   const btn =
-    'rounded-full border border-slate-300 px-2.5 py-0.5 text-xs hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800';
+    'rounded-full border border-slate-300 px-2.5 py-0.5 text-xs hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800';
   return (
     <section
       aria-label={w.title}

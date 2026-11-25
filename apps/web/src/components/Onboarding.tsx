@@ -87,7 +87,7 @@ export default function Onboarding({
 
   const btn = 'rounded-full px-4 py-2 text-sm font-medium disabled:opacity-60';
   const primary = `${btn} bg-brand-600 text-white hover:bg-brand-700`;
-  const ghost = `${btn} border border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800`;
+  const ghost = `${btn} border border-slate-300 hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800`;
 
   return (
     <div
@@ -145,7 +145,7 @@ export default function Onboarding({
                       const days = on ? work.days.filter((x) => x !== d) : [...work.days, d].sort();
                       if (days.length) setWork({ ...work, days });
                     }}
-                    className={`h-9 min-w-9 rounded-full border px-2 text-sm ${on ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800'}`}
+                    className={`h-9 min-w-9 rounded-full border px-2 text-sm ${on ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800'}`}
                   >
                     {name}
                   </button>

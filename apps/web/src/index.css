@@ -4,16 +4,21 @@
 
 /* Design tokens (docs/UX_REVISION.md หัวข้อ 2) — Tailwind palette ใน tailwind.config.js ใช้ค่าชุดเดียวกัน */
 :root {
-  --bg: #faf7ef;
+  /* พื้นกระดาษอุ่น + เขียวซาจ (A) เสริมด้วยครามและเทาเย็น (C) — ต้องตรงกับ tailwind.config.js */
+  --bg: #fbf8f1;
   --surface: #ffffff;
-  --surface-2: #f3eedf;
-  --border: #e6dfcb;
-  --text: #23302a;
-  /* สเปคเดิม #6b7568 ได้ contrast 4.49/4.14 บน bg/surface-2 (ต่ำกว่า AA) จึงเข้มขึ้นเล็กน้อย */
-  --text-muted: #5f6a5c;
-  --brand: #3f6650;
-  --brand-strong: #2c4a39;
-  --brand-soft: #e4eee7;
+  --surface-2: #f4efe4;
+  --border: #e8e1d1;
+  --text: #14161b;
+  /* #5f5b50 บนพื้นกระดาษ contrast ≈ 6.1 (AA) */
+  --text-muted: #5f5b50;
+  --brand: #3f7a5c;
+  --brand-strong: #326349;
+  --brand-soft: #e6f1ea;
+  --link: #3b5bdb;
+  --focus: #3b5bdb;
+  --info-soft: #e7ecff;
+  --gold: #eea844;
   --urg-4: #d9534f;
   --urg-3: #e8803f;
   --urg-2: #e9be3c;
@@ -24,22 +29,26 @@
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
-  --shadow-sm: 0 1px 2px rgba(35, 48, 42, 0.06);
-  --shadow-md: 0 4px 14px rgba(35, 48, 42, 0.08);
+  --shadow-sm: 0 1px 2px rgba(60, 45, 20, 0.06), 0 6px 16px -8px rgba(60, 45, 20, 0.18);
+  --shadow-md: 0 4px 14px rgba(60, 45, 20, 0.1);
   --space: 4px;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1f2b25;
-    --surface: #26342d;
-    --surface-2: #2e3d35;
-    --border: #3e4f45;
-    --text: #f1ecdd;
-    --text-muted: #b4bdb0;
-    --brand: #6f9a82;
-    --brand-strong: #9dbba8;
-    --brand-soft: #2c4a39;
+    /* ถ่านอุ่น (ไม่มีเขียวผสม): พื้น 1c1b19 / การ์ด 262421 */
+    --bg: #1c1b19;
+    --surface: #262421;
+    --surface-2: #2d2a26;
+    --border: #3d3a35;
+    --text: #f3eee4;
+    --text-muted: #b8b1a2;
+    --brand: #86cca6;
+    --brand-strong: #9ad8b6;
+    --brand-soft: #2a3a31;
+    --link: #8ea2ff;
+    --focus: #8ea2ff;
+    --info-soft: #232a47;
     --urg-4: #e5736f;
     --urg-3: #ee9560;
     --urg-2: #edcb5e;
@@ -54,7 +63,7 @@
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100;
+    @apply bg-slate-50 text-ink dark:bg-slate-900 dark:text-slate-100;
     font-family:
       'Noto Sans Thai',
       system-ui,
@@ -68,24 +77,30 @@
   h2,
   h3 {
     line-height: 1.35;
+    font-family: theme('fontFamily.display');
+    letter-spacing: -0.005em;
   }
-  button {
-    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-500;
+  /* วงโฟกัสเป็นน้ำเงินคราม (สีเสริม) ทั้งแอป: เห็นชัดบนทั้งพื้นสว่างและมืด */
+  button,
+  a,
+  summary,
+  [role='tab'] {
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-iris-600 dark:focus-visible:outline-iris-400;
   }
 }
 
 /* FullCalendar theming (โทน Dobby) */
 .fc {
-  --fc-button-bg-color: #3d6552;
-  --fc-button-border-color: #3d6552;
-  --fc-button-hover-bg-color: #315243;
-  --fc-button-hover-border-color: #315243;
-  --fc-button-active-bg-color: #284237;
-  --fc-button-active-border-color: #284237;
-  --fc-page-bg-color: #fffdf8;
-  --fc-neutral-bg-color: #f3ecdb;
-  --fc-neutral-text-color: #4f6056;
-  --fc-border-color: #e6dcc4;
+  --fc-button-bg-color: #3f7a5c;
+  --fc-button-border-color: #3f7a5c;
+  --fc-button-hover-bg-color: #326349;
+  --fc-button-hover-border-color: #326349;
+  --fc-button-active-bg-color: #264d38;
+  --fc-button-active-border-color: #264d38;
+  --fc-page-bg-color: #ffffff;
+  --fc-neutral-bg-color: #f4efe4;
+  --fc-neutral-text-color: #5f5b50;
+  --fc-border-color: #e8e1d1;
   --fc-today-bg-color: rgba(238, 168, 68, 0.16);
   --fc-now-indicator-color: #c2410c;
 }
@@ -152,17 +167,17 @@
 }
 @media (prefers-color-scheme: dark) {
   .fc {
-    --fc-page-bg-color: #1c2822;
-    --fc-neutral-bg-color: #2a372f;
-    --fc-neutral-text-color: #cfc3a6;
-    --fc-border-color: #3b4a42;
-    --fc-list-event-hover-bg-color: #2a372f;
+    --fc-page-bg-color: #262421;
+    --fc-neutral-bg-color: #2d2a26;
+    --fc-neutral-text-color: #b8b1a2;
+    --fc-border-color: #3d3a35;
+    --fc-list-event-hover-bg-color: #2d2a26;
     --fc-today-bg-color: rgba(238, 168, 68, 0.14);
-    --fc-non-business-color: rgba(18, 27, 23, 0.5);
-    --fc-button-bg-color: #4a7864;
-    --fc-button-border-color: #4a7864;
-    --fc-button-hover-bg-color: #5a8b75;
-    --fc-button-hover-border-color: #5a8b75;
+    --fc-non-business-color: rgba(15, 17, 21, 0.45);
+    --fc-button-bg-color: #3f7a5c;
+    --fc-button-border-color: #3f7a5c;
+    --fc-button-hover-bg-color: #4b8b6b;
+    --fc-button-hover-border-color: #4b8b6b;
   }
 }
 /* ระบบตั้งให้ลดการเคลื่อนไหว (และผู้ใช้ไม่ได้เปิด "แอนิเมชันเต็มรูปแบบ" ในตั้งค่า): ตัดการเด้ง/หมุน/กระจาย

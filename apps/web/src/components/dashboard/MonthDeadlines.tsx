@@ -16,7 +16,7 @@ import { URGENCY_COLORS } from '../../lib/colors';
 
 /** สีตามความหนาแน่น (ไล่ระดับเขียวแบรนด์ แยกชัดทั้งโหมดสว่าง/มืด; ไม่พึ่งสีอย่างเดียว: มีจุดนับงานและตัวเลขใน aria-label ด้วย) */
 const HEAT = [
-  'bg-slate-100 dark:bg-slate-900',
+  'bg-cool-100 dark:bg-slate-900',
   'bg-brand-200 text-brand-950 dark:bg-brand-700 dark:text-white',
   'bg-brand-400 text-brand-950 dark:bg-brand-500 dark:text-white',
   'bg-brand-700 text-white dark:bg-brand-300 dark:text-brand-950',
@@ -47,7 +47,7 @@ export default function MonthDeadlines({
     return [...m];
   }, [shown]);
   const btn =
-    'rounded-full border border-slate-300 px-3 py-1 text-xs hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800';
+    'rounded-full border border-slate-300 px-3 py-1 text-xs hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-800';
 
   return (
     <section

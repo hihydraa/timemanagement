@@ -24,7 +24,7 @@ export function CountdownChip({ task }: { task: Tl }) {
   return (
     <span
       title={t.chips.deadline}
-      className={`inline-flex items-center gap-0.5 rounded-full px-1.5 text-[11px] font-medium leading-4 ${tl.overdue ? 'bg-red-700 text-white' : tl.urgent ? 'bg-amber-200 text-amber-950' : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-100'}`}
+      className={`inline-flex items-center gap-0.5 rounded-full px-1.5 text-[11px] font-medium leading-4 ${tl.overdue ? 'bg-red-700 text-white' : tl.urgent ? 'bg-amber-200 text-amber-950' : 'bg-cool-200 text-slate-700 dark:bg-slate-700 dark:text-slate-100'}`}
     >
       <span aria-hidden>⚑</span>
       {tl.text}

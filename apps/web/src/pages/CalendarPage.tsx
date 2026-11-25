@@ -695,7 +695,7 @@ export default function CalendarPage() {
         )}
         <button
           type="button"
-          className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700"
+          className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs hover:bg-cool-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700"
           aria-expanded={showFilters}
           onClick={() => setShowFilters((v) => !v)}
         >
