@@ -1,5 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Avatar2D from '../components/avatar/Avatar2D';
+import Mascot from '../components/Mascot';
+import { useApp } from '../lib/appContext';
 import { api, ApiClientError, type Avatar2dState } from '../lib/api';
 import {
   AVATAR_ITEMS,
@@ -28,6 +30,7 @@ const swatch = (on: boolean) =>
  * ของฟรีใส่ได้ทันที ที่เหลือปลดล็อกด้วยแต้มจากการทำงานเสร็จ — เลือกแล้วบันทึกทันที (ใช้ได้ทุกเครื่อง)
  */
 export default function AvatarPage() {
+  const { call, dobby, openDobby } = useApp();
   const [state, setState] = useState<Avatar2dState | null>(null);
   const [look, setLook] = useState<AvatarLook>(DEFAULT_LOOK);
   const [status, setStatus] = useState<Status>('idle');
@@ -112,8 +115,24 @@ export default function AvatarPage() {
           ? t.me.avatarSaveFailed
           : '';
 
+  const shownName = call ?? t.me.dobbyNoName;
   return (
     <div className="space-y-4">
+      <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-brand-200 bg-brand-50 p-3 dark:border-brand-800 dark:bg-brand-950">
+        <Mascot pose="hello" height={48} />
+        <p className="min-w-0 flex-1 text-sm">
+          <strong>{t.me.dobbyCalls.replace('{d}', dobby)}</strong>{' '}
+          <span className="font-semibold text-brand-700 dark:text-brand-300">{shownName}</span>
+          <span className="block text-xs text-slate-600 dark:text-slate-300">{t.me.dobbyHint}</span>
+        </p>
+        <button
+          type="button"
+          onClick={openDobby}
+          className="rounded-full bg-brand-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+        >
+          {t.me.dobbyEdit}
+        </button>
+      </section>
       <div className="grid gap-4 md:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
         <div className="space-y-2">
           <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-brand-50 to-white p-3 dark:border-slate-700 dark:from-slate-800 dark:to-slate-900">
