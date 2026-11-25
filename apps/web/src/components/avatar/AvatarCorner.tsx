@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { api } from '../../lib/api';
 import { useApp } from '../../lib/appContext';
 import { isCornerVisible, setAvatarLook, useAvatarLook } from '../../lib/avatarLook';
-import { useCelebrate } from '../../lib/celebrate';
+import { useCelebrating } from '../../lib/celebrate';
 import { t } from '../../lib/i18n';
 import Avatar2D from './Avatar2D';
 
@@ -11,10 +11,10 @@ import Avatar2D from './Avatar2D';
  * เพิ่ม/ทำงานเสร็จ = ตัวละครเด้งตอบรับ (คนพูดฉลองคือ Dobby ดู CelebrateToast)
  */
 export default function AvatarCorner() {
-  const { goTo, route, call } = useApp();
+  const { goTo, route } = useApp();
   const look = useAvatarLook();
   // กล่องคำพูด/กระดาษสีเป็นของ Dobby (CelebrateToast) ตัวละครของผู้ใช้แค่เด้งตอบรับ
-  const { msg } = useCelebrate(call);
+  const msg = useCelebrating();
 
   useEffect(() => {
     let alive = true;

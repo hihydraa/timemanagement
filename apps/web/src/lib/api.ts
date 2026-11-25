@@ -1,3 +1,4 @@
+import type { CelebrateDetail } from './celebrate';
 import { clearApiCache } from './pwa';
 import { t } from './i18n';
 import type { AvatarLook } from './avatarLook';
@@ -87,9 +88,9 @@ function gotPoints(points: number | undefined) {
 }
 
 /** แจ้ง UI ว่าเพิ่ม/ทำงานสำเร็จ (ตัวละครมุมขวาล่างฟัง event นี้) */
-function celebrate() {
+function celebrate(detail?: CelebrateDetail) {
   try {
-    window.dispatchEvent(new Event('dobby:celebrate'));
+    window.dispatchEvent(new CustomEvent('dobby:celebrate', { detail }));
   } catch {
     /* ไม่มี window (เช่นตอน test) */
   }
@@ -121,14 +122,14 @@ export const api = {
   createTask: (p: TaskPayload, src?: 'quick') =>
     req<{ task: Task; points?: number }>('POST', `/api/tasks${src ? `?src=${src}` : ''}`, p).then(
       (r) => {
-        celebrate(); // ตัวละครมุมขวาล่างฉลองตอนเพิ่มงานด้วย
+        celebrate({ kind: 'create' }); // Dobby ฉลองตอนเพิ่มงานด้วย
         gotPoints(r.points);
         return r.task;
       },
     ),
   updateTask: (id: string, p: TaskPayload) =>
     req<{ task: Task; points?: number }>('PATCH', `/api/tasks/${id}`, p).then((r) => {
-      if (p.status === 'done') celebrate();
+      if (p.status === 'done') celebrate({ kind: 'complete', importance: r.task.importance });
       gotPoints(r.points);
       return r.task;
     }),
@@ -163,7 +164,7 @@ export const api = {
   overview: (days: number) => req<OverviewStats>('GET', `/api/stats/overview?days=${days}`),
   completeTask: (id: string) =>
     req<{ task: Task; points?: number }>('POST', `/api/tasks/${id}/complete`).then((r) => {
-      celebrate();
+      celebrate({ kind: 'complete', importance: r.task.importance });
       gotPoints(r.points);
       return r.task;
     }),

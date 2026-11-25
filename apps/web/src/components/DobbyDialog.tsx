@@ -4,6 +4,7 @@ import { useApp } from '../lib/appContext';
 import { callName, MASTER, type Honorific } from '../lib/game';
 import { DEFAULT_DOBBY_NAME, TONES, sayDobby, type ToneId } from '../../../../src/lib/dobbyVoice';
 import { t } from '../lib/i18n';
+import { greetEnabled, setGreetEnabled } from '../lib/dobbyPrefs';
 import Mascot from './Mascot';
 
 const MODES: Honorific[] = ['name', 'master', 'both'];
@@ -16,6 +17,7 @@ export default function DobbyDialog({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState(p?.displayName ?? '');
   const [dobby, setDobby] = useState(p?.dobbyName ?? '');
   const [tone, setTone] = useState<ToneId>(p?.tone ?? 'playful');
+  const [greet, setGreet] = useState(greetEnabled());
   const [seed, setSeed] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -45,6 +47,7 @@ export default function DobbyDialog({ onClose }: { onClose: () => void }) {
       setError(t.dobbyDlg.needName);
       return;
     }
+    setGreetEnabled(greet);
     setBusy(true);
     try {
       setGame(
@@ -156,6 +159,16 @@ export default function DobbyDialog({ onClose }: { onClose: () => void }) {
           </div>
           <p className="text-xs text-slate-600 dark:text-slate-300">{t.dobbyDlg.toneMore}</p>
         </fieldset>
+
+        <label className="flex cursor-pointer items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="accent-brand-600"
+            checked={greet}
+            onChange={(e) => setGreet(e.target.checked)}
+          />
+          {t.dobbyDlg.greet}
+        </label>
 
         <div className="rounded-xl bg-cool-100 p-3 dark:bg-slate-800">
           <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">

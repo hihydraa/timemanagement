@@ -18,6 +18,7 @@ import TaskQuickDialog from '../components/TaskQuickDialog';
 import UnscheduledList from '../components/UnscheduledList';
 import { api, ApiClientError } from '../lib/api';
 import { useApp } from '../lib/appContext';
+import { setDobbyData } from '../lib/dobbyContext';
 import { useToast } from '../components/UndoToast';
 import { snoozeRevertPayload, TASKS_CHANGED } from '../lib/undo';
 import { URGENCY_COLORS } from '../lib/colors';
@@ -110,6 +111,18 @@ export default function TodayPage() {
   }, [month, dashKey]);
 
   const now = useMemo(() => new Date(nowMs), [nowMs]);
+
+  // บอก Dobby ว่าวันนี้เป็นอย่างไร (ไว้ทักทาย/เลือกคำฉลอง/เลือกท่า)
+  useEffect(() => {
+    if (!data) return;
+    setDobbyData({
+      open: data.overdue.length + data.dueToday.length + data.today.length,
+      overdue: data.overdue.length,
+      doneToday: data.doneToday.length,
+      streak: dash?.performance.streak ?? 0,
+      dayOff: !!data.dayOff,
+    });
+  }, [data, dash]);
 
   const view = useMemo(() => {
     if (!data) return null;
