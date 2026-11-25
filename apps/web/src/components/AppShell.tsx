@@ -244,7 +244,7 @@ export default function AppShell({ user, onLogout }: { user: User; onLogout: () 
           >
             {t.skip}
           </a>
-          <header className="border-b border-slate-200 dark:border-slate-700">
+          <header className="border-b border-slate-200 dark:border-slate-800 dark:bg-black">
             <PageContainer className="flex items-center gap-2 pt-2">
               <h1 className="flex items-center gap-1.5 pb-1 text-lg font-bold text-brand-700 dark:text-brand-300">
                 <img

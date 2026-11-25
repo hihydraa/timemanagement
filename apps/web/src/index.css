@@ -61,6 +61,32 @@
   }
 }
 
+/* โหมดมืด: สีหลัก "มิ้นต์" (A) — ปุ่ม/แท็บ/แถบความคืบหน้า/ขอบที่เลือก ใช้พื้นมิ้นต์ ตัวหนังสือเขียวเข้มเกือบดำ
+   (คลาส bg-brand-600 เดิมคือเขียวซาจ+ตัวขาวในโหมดสว่าง จึงสลับค่าที่ระดับ CSS ครั้งเดียวแทนการไล่แก้ทุกคอมโพเนนต์) */
+@media (prefers-color-scheme: dark) {
+  .bg-brand-600,
+  .bg-brand-600.text-white {
+    background-color: #86cca6;
+    color: #10251a;
+  }
+  .hover\:bg-brand-700:hover {
+    background-color: #9ad8b6;
+    color: #10251a;
+  }
+  .border-brand-600 {
+    border-color: #86cca6;
+  }
+  .accent-brand-600 {
+    accent-color: #86cca6;
+  }
+  .stroke-brand-600 {
+    stroke: #86cca6;
+  }
+  .fill-brand-600 {
+    fill: #86cca6;
+  }
+}
+
 @layer base {
   body {
     @apply bg-slate-50 text-ink dark:bg-slate-900 dark:text-slate-100;

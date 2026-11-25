@@ -55,7 +55,7 @@ export function BottomTabBar({
   onNew: () => void;
 }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-2px_12px_rgba(35,48,42,0.08)] backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
+    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-2px_12px_rgba(35,48,42,0.08)] backdrop-blur dark:border-slate-800 dark:bg-black/95">
       <nav aria-label="หน้าหลัก" className="mx-auto grid max-w-md grid-cols-3">
         {TABS.map(({ view: v, icon: Icon }) => {
           const on = view === v;

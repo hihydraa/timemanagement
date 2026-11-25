@@ -39,7 +39,7 @@ export default function ProgressRing({
           strokeDasharray={c}
           strokeDashoffset={c * (1 - pct)}
           transform="rotate(-90 48 48)"
-          className="stroke-brand-600 transition-[stroke-dashoffset] duration-500 dark:stroke-brand-400"
+          className="stroke-brand-600 transition-[stroke-dashoffset] duration-500 dark:stroke-brand-300"
         />
         <text
           x="48"

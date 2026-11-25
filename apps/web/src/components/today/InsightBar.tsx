@@ -24,7 +24,7 @@ export default function InsightBar({
   return (
     <section
       aria-label="Dobby"
-      className="flex items-center gap-3 rounded-2xl border border-brand-200 bg-brand-50 p-3 dark:border-brand-800 dark:bg-brand-950"
+      className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-800"
     >
       <Mascot pose={POSE[insight.mood]} height={84} />
       <div className="min-w-0 flex-1 space-y-2">
