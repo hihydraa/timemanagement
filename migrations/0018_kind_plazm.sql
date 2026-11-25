@@ -1,0 +1,1 @@
+ALTER TABLE `days_off` ADD `minutes` integer DEFAULT 0 NOT NULL;

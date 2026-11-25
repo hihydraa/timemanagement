@@ -207,8 +207,9 @@ export const api = {
     kind: DayOffKind;
     note: string;
     onlyWorkDays: boolean;
+    hours?: number;
   }) => req<DaysOffList & { created: number; updated: number }>('POST', '/api/days-off', p),
-  patchDayOff: (id: string, p: { kind?: DayOffKind; note?: string }) =>
+  patchDayOff: (id: string, p: { kind?: DayOffKind; note?: string; hours?: number | null }) =>
     req<{ dayOff: DayOff }>('PATCH', `/api/days-off/${id}`, p).then((r) => r.dayOff),
   deleteDayOff: (id: string) => req<{ ok: true }>('DELETE', `/api/days-off/${id}`),
   getAvatar2d: () => req<Avatar2dState>('GET', '/api/avatar2d'),

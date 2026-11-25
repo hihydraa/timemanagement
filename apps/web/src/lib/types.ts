@@ -138,6 +138,8 @@ export interface CockpitData {
   work: WorkSettings;
   /** วันนี้เป็นวันหยุดที่บันทึกไว้ */
   dayOff: boolean;
+  /** นาทีที่หยุดบางชั่วโมงวันนี้ (0 = ไม่มี) */
+  dayOffMinutes: number;
   overdue: Task[];
   dueToday: Task[];
   today: Task[];
@@ -255,6 +257,8 @@ export interface DayOff {
   date: string;
   kind: import('../../../../src/lib/daysOff').DayOffKind;
   note: string;
+  /** นาทีที่หยุด: 0 = เต็มวัน */
+  minutes: number;
 }
 export interface DaysOffList {
   daysOff: DayOff[];

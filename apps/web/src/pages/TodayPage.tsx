@@ -23,6 +23,7 @@ import { useToast } from '../components/UndoToast';
 import { snoozeRevertPayload, TASKS_CHANGED } from '../lib/undo';
 import { URGENCY_COLORS } from '../lib/colors';
 import { dayLabel } from '../lib/dates';
+import { offDuration } from '../lib/daysOff';
 import { STYLE, kindTh } from '../lib/daysOffStyle';
 import { t } from '../lib/i18n';
 import {
@@ -134,6 +135,7 @@ export default function TodayPage() {
       data.date,
       data.dayOff ? { ...data.work, days: [] } : data.work,
       scheduled,
+      data.dayOffMinutes ?? 0,
     );
     const ins = buildInsight({
       today: data.date,
@@ -367,7 +369,19 @@ export default function TodayPage() {
         >
           <span aria-hidden>{STYLE[dash.leave.today.kind].icon} </span>
           {t.dash.leave.banner.replace('{k}', kindTh(dash.leave.today.kind))}
+          {dash.leave.today.minutes > 0 && ` · ${offDuration(dash.leave.today.minutes)}`}
         </p>
+      )}
+      {dash && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event('dobby:add-day-off'))}
+            className="rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-cool-100 dark:border-slate-600 dark:hover:bg-slate-700"
+          >
+            🏖 + {t.dash.leave.add}
+          </button>
+        </div>
       )}
 
       <ReviewCard now={now} onOpen={() => goTo('me', 'review')} />

@@ -19,3 +19,19 @@ export const isYmd = (s: string): boolean => {
   const t = new Date(Date.UTC(y, mo - 1, d));
   return t.getUTCFullYear() === y && t.getUTCMonth() === mo - 1 && t.getUTCDate() === d;
 };
+
+/** วันทำงานมาตรฐานสำหรับแปลงชั่วโมงลาเป็น "วัน" ในสรุป (8 ชม.) */
+export const DAY_MINUTES = 480;
+export const MAX_PARTIAL_HOURS = 12;
+
+/** จำนวนวันที่หยุดจริง: เต็มวัน = 1, หยุดบางชั่วโมง = สัดส่วนของ 8 ชม. (ปัดเป็นทีละครึ่งวัน) */
+export const dayFraction = (minutes: number): number =>
+  minutes <= 0 ? 1 : Math.max(0.5, Math.round(Math.min(1, minutes / DAY_MINUTES) * 2) / 2);
+
+/** ข้อความระยะเวลาที่หยุด: '' = เต็มวัน */
+export function offDuration(minutes: number): string {
+  if (minutes <= 0) return '';
+  if (minutes === 240) return 'ครึ่งวัน (4 ชม.)';
+  const h = minutes / 60;
+  return `${Number.isInteger(h) ? h : h.toFixed(1)} ชม.`;
+}

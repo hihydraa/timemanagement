@@ -1,5 +1,8 @@
 import { useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { api, ApiClientError } from '../../lib/api';
+import HoursSelect from '../HoursSelect';
+import { offDuration } from '../../lib/daysOff';
 import type { DashboardData } from '../../lib/dashboard';
 import { dayLabel } from '../../lib/dates';
 import { KINDS, STYLE, kindTh } from '../../lib/daysOffStyle';
@@ -29,6 +32,20 @@ export default function DaysOffPanel({
   const [kind, setKind] = useState<DayOffKind>('vacation');
   const [note, setNote] = useState('');
   const [onlyWork, setOnlyWork] = useState(true);
+  const [hours, setHours] = useState('');
+  const root = useRef<HTMLElement>(null);
+
+  // ปุ่ม "+ เพิ่มวันหยุด" ที่หัวหน้าแดชบอร์ดเปิดฟอร์มนี้และเลื่อนมาที่การ์ด
+  useEffect(() => {
+    const on = () => {
+      setMsg('');
+      setOpen(true);
+      root.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+    window.addEventListener('dobby:add-day-off', on);
+    return () => window.removeEventListener('dobby:add-day-off', on);
+  }, []);
+  const single = !to || to === from;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
@@ -44,11 +61,13 @@ export default function DaysOffPanel({
         kind,
         note: note.trim(),
         onlyWorkDays: onlyWork,
+        ...(single && hours ? { hours: Number(hours) } : {}),
       });
       setMsg(t.daysOff.saved.replace('{c}', String(r.created)).replace('{u}', String(r.updated)));
       setOpen(false);
       setTo('');
       setNote('');
+      setHours('');
       onChanged();
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : t.error.generic);
@@ -60,6 +79,8 @@ export default function DaysOffPanel({
   const kindsWithDays = KINDS.filter((k) => l.summary.byKind[k] > 0);
   return (
     <section
+      ref={root}
+      id="days-off-panel"
       aria-label={w.title}
       className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800"
     >
@@ -82,6 +103,7 @@ export default function DaysOffPanel({
           >
             <span aria-hidden>{STYLE[l.today.kind].icon}</span>
             {w.todayOff.replace('{k}', kindTh(l.today.kind))}
+            {l.today.minutes > 0 && <span> · {offDuration(l.today.minutes)}</span>}
             {l.today.note && <span className="font-normal"> · {l.today.note}</span>}
           </span>
         ) : (
@@ -127,7 +149,10 @@ export default function DaysOffPanel({
                   <span aria-hidden>{STYLE[x.kind].icon}</span>
                   {kindTh(x.kind)}
                 </span>
-                <span className="shrink-0 tabular-nums">{dayLabel(x.date)}</span>
+                <span className="shrink-0 tabular-nums">
+                  {dayLabel(x.date)}
+                  {x.minutes > 0 && ` · ${offDuration(x.minutes)}`}
+                </span>
                 <span className="truncate text-xs text-slate-600 dark:text-slate-300">
                   {x.note}
                 </span>
@@ -181,6 +206,7 @@ export default function DaysOffPanel({
               />
             </label>
           </div>
+          <HoursSelect value={hours} onChange={setHours} disabled={!single} className={field} />
           <label className="block text-xs">
             {t.daysOff.kind}
             <select

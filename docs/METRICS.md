@@ -3,16 +3,16 @@
 ตาราง `usage_events(id, user_id, name, props_json, created_at)` เก็บ **เฉพาะชื่อเหตุการณ์ + ตัวเลข/หมวดสั้น ๆ** (`a-z0-9_` ≤ 24 ตัว)
 ห้ามเก็บชื่องาน รายละเอียด ข้อความ LINE ผู้ใช้ปิดการเก็บได้ที่ "ฉัน → ตั้งค่า → ความเป็นส่วนตัว" (ปิดแล้วลบของเดิมด้วย) และลบเมื่อลบบัญชี
 
-| เหตุการณ์ | เกิดเมื่อ | props |
-|---|---|---|
-| `signup` | สมัครครั้งแรก (ครั้งเดียว) | – |
-| `first_task_created` | งานแรก (ครั้งเดียว) | `seconds_since_signup`, `source` |
-| `task_created` | สร้างงาน | `source` = `web_quick` / `web_form` / `line` |
-| `task_completed` | เปลี่ยนเป็นเสร็จ | – |
-| `morning_plan_opened` | เปิดหน้า "วันนี้" (วันละครั้ง) | – |
-| `auto_plan_previewed/applied/undone` | (Step 5) | – |
-| `gcal_connected` | เชื่อม Google (ครั้งเดียว) | – |
-| `ui_mode_changed` | สลับโหมด | `to` = `simple` / `full` |
+| เหตุการณ์                            | เกิดเมื่อ                      | props                                        |
+| ------------------------------------ | ------------------------------ | -------------------------------------------- |
+| `signup`                             | สมัครครั้งแรก (ครั้งเดียว)     | –                                            |
+| `first_task_created`                 | งานแรก (ครั้งเดียว)            | `seconds_since_signup`, `source`             |
+| `task_created`                       | สร้างงาน                       | `source` = `web_quick` / `web_form` / `line` |
+| `task_completed`                     | เปลี่ยนเป็นเสร็จ               | –                                            |
+| `morning_plan_opened`                | เปิดหน้า "วันนี้" (วันละครั้ง) | –                                            |
+| `auto_plan_previewed/applied/undone` | (Step 5)                       | –                                            |
+| `gcal_connected`                     | เชื่อม Google (ครั้งเดียว)     | –                                            |
+| `ui_mode_changed`                    | สลับโหมด                       | `to` = `simple` / `full`                     |
 
 รันกับ D1: `npx wrangler d1 execute dobby --remote --command "<SQL>"`
 

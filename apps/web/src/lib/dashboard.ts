@@ -32,6 +32,8 @@ export interface DashboardData {
   week: PlanTask[];
   /** วันหยุดที่บันทึกไว้ใน 7 วันข้างหน้า */
   daysOff: string[];
+  /** วัน → นาทีที่หยุดบางชั่วโมง */
+  partialOff: Record<string, number>;
   /** ภาพรวมวันหยุด: วันนี้หยุดไหม / สรุปปีนี้ / วันหยุดถัดไป / วันหยุดของเดือนที่แสดง */
   leave: {
     year: number;

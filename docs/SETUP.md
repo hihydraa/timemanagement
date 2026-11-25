@@ -120,6 +120,7 @@ curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=*/5+*+*+*+*"
 2. ตั้งเป็น secret: `npx wrangler secret put VAPID_PUBLIC_KEY` และ `npx wrangler secret put VAPID_PRIVATE_KEY` (วางค่าที่ได้) — **อย่า commit/แชร์** (local ใส่ใน `.dev.vars`)
 3. รัน migration `npm run db:migrate:remote` (ตาราง `push_subscriptions`) แล้ว `npm run deploy`
 4. ผู้ใช้เปิดที่ "ฉัน → ตั้งค่า → แจ้งเตือนในเว็บ" ต่ออุปกรณ์ (มือถือ: เปิดเว็บแล้ว "เพิ่มไปยังหน้าจอโฮม" ก่อน โดยเฉพาะ iPhone/iPad ต้องติดตั้งเป็นแอปจึงจะรองรับ)
+
 - ส่งสรุปเช้า / เตือนก่อนนัดที่กำหนดเวลา / สรุปเย็น (ถ้าเปิด) ตามเวลาที่ตั้ง + quiet hours เดียวกับ LINE; ไม่ตั้ง VAPID = ฟีเจอร์ปิด (หน้าตั้งค่าบอกว่ายังไม่ได้ตั้งค่า)
 - รับได้เฉพาะ push service ของ Chrome/Edge (FCM), Firefox, Safari, Windows; ลบ subscription อัตโนมัติเมื่อ push service ตอบว่าใช้ไม่ได้แล้ว
 

@@ -1,8 +1,14 @@
-import { and, asc, eq, gte, lte } from 'drizzle-orm';
+import { and, asc, eq, gt, gte, lte } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
 import { daysOff, userSettings } from '../db/schema';
-import { DAY_OFF_KINDS, isYmd, type DayOffKind } from '../lib/daysOff';
+import {
+  DAY_OFF_KINDS,
+  MAX_PARTIAL_HOURS,
+  dayFraction,
+  isYmd,
+  type DayOffKind,
+} from '../lib/daysOff';
 import { ApiError } from '../lib/http';
 import { addDays, nowIso } from '../lib/time';
 import { parseWorkDays } from '../lib/work';
@@ -25,13 +31,27 @@ export const addInput = z
     note: note.default(''),
     /** ช่วงหลายวัน: ข้ามวันที่ไม่ใช่วันทำงาน (เช่น เสาร์-อาทิตย์) — วันเดียวบันทึกเสมอ */
     onlyWorkDays: z.boolean().default(true),
+    /** หยุดแค่กี่ชั่วโมงในวันนั้น (ไม่ส่ง = เต็มวัน) — ใช้ได้กับวันเดียวเท่านั้น */
+    hours: z.number().min(0.5).max(MAX_PARTIAL_HOURS).multipleOf(0.5).optional(),
   })
-  .strict();
+  .strict()
+  .refine((v) => v.hours === undefined || v.to === undefined || v.to === v.from, {
+    message: 'hours: หยุดเป็นชั่วโมงได้เฉพาะวันเดียว',
+    path: ['hours'],
+  });
 
 export const patchInput = z
-  .object({ kind: z.enum(DAY_OFF_KINDS).optional(), note: note.optional() })
+  .object({
+    kind: z.enum(DAY_OFF_KINDS).optional(),
+    note: note.optional(),
+    /** ชั่วโมงที่หยุด; null = เปลี่ยนเป็นหยุดเต็มวัน */
+    hours: z.number().min(0.5).max(MAX_PARTIAL_HOURS).multipleOf(0.5).nullable().optional(),
+  })
   .strict()
-  .refine((v) => v.kind !== undefined || v.note !== undefined, 'ไม่มีอะไรให้แก้');
+  .refine(
+    (v) => v.kind !== undefined || v.note !== undefined || v.hours !== undefined,
+    'ไม่มีอะไรให้แก้',
+  );
 
 export const listQuery = z.object({ from: ymd.optional(), to: ymd.optional() });
 
@@ -47,18 +67,26 @@ export interface DayOffDto {
   date: string;
   kind: DayOffKind;
   note: string;
+  /** นาทีที่หยุด: 0 = เต็มวัน */
+  minutes: number;
 }
 const toDto = (r: typeof daysOff.$inferSelect): DayOffDto => ({
   id: r.id,
   date: r.date,
   kind: r.kind,
   note: r.note,
+  minutes: r.minutes,
 });
 
 export function summarize(list: DayOffDto[]) {
   const byKind = Object.fromEntries(DAY_OFF_KINDS.map((k) => [k, 0])) as Record<DayOffKind, number>;
-  for (const d of list) byKind[d.kind]++;
-  return { total: list.length, byKind };
+  let total = 0;
+  for (const d of list) {
+    const f = dayFraction(d.minutes);
+    byKind[d.kind] += f;
+    total += f;
+  }
+  return { total, byKind };
 }
 
 /** รายการวันหยุดในช่วง from–to (รวมปลายทั้งสอง) เรียงตามวัน */
@@ -75,7 +103,7 @@ export async function listDaysOff(db: Db, userId: string, from: string, to: stri
   return { daysOff: list, summary: summarize(list) };
 }
 
-/** วันที่หยุดในช่วง (ใช้คำนวณภาระงาน: วันหยุด = ไม่นับเป็นวันทำงาน) */
+/** วันที่หยุดเต็มวันในช่วง (ใช้คำนวณภาระงาน/สตรีค: วันหยุดเต็มวัน = ไม่นับเป็นวันทำงาน) */
 export async function daysOffBetween(
   db: Db,
   userId: string,
@@ -85,12 +113,41 @@ export async function daysOffBetween(
   const rows = await db
     .select({ d: daysOff.date })
     .from(daysOff)
-    .where(and(eq(daysOff.userId, userId), gte(daysOff.date, from), lte(daysOff.date, to)));
+    .where(
+      and(
+        eq(daysOff.userId, userId),
+        eq(daysOff.minutes, 0),
+        gte(daysOff.date, from),
+        lte(daysOff.date, to),
+      ),
+    );
   return rows.map((r) => r.d).sort();
+}
+
+/** วันที่หยุดบางชั่วโมงในช่วง → นาทีที่หยุด (วันนั้นยังเป็นวันทำงาน แต่เวลาว่างลดลง) */
+export async function partialOffBetween(
+  db: Db,
+  userId: string,
+  from: string,
+  to: string,
+): Promise<Record<string, number>> {
+  const rows = await db
+    .select({ d: daysOff.date, m: daysOff.minutes })
+    .from(daysOff)
+    .where(
+      and(
+        eq(daysOff.userId, userId),
+        gt(daysOff.minutes, 0),
+        gte(daysOff.date, from),
+        lte(daysOff.date, to),
+      ),
+    );
+  return Object.fromEntries(rows.map((r) => [r.d, r.m]));
 }
 
 export async function addDaysOff(db: Db, userId: string, input: z.infer<typeof addInput>) {
   const to = input.to ?? input.from;
+  const minutes = input.hours ? Math.round(input.hours * 60) : 0;
   if (to < input.from) throw new ApiError(400, 'validation_error', 'to: ต้องไม่ก่อน from');
   const span = dayDiff(input.from, to) + 1;
   if (span > MAX_RANGE_DAYS)
@@ -131,12 +188,13 @@ export async function addDaysOff(db: Db, userId: string, input: z.infer<typeof a
         date,
         kind: input.kind,
         note: input.note,
+        minutes,
         createdAt: ts,
       })
       // บันทึกซ้ำวันเดิม = แก้ประเภท/โน้ตของวันนั้น (1 วันมีได้รายการเดียว)
       .onConflictDoUpdate({
         target: [daysOff.userId, daysOff.date],
-        set: { kind: input.kind, note: input.note },
+        set: { kind: input.kind, note: input.note, minutes },
       }),
   );
   for (let i = 0; i < stmts.length; i += 50)
@@ -165,6 +223,8 @@ export async function patchDayOff(
   const set: Partial<typeof daysOff.$inferInsert> = {};
   if (patch.kind !== undefined) set.kind = patch.kind;
   if (patch.note !== undefined) set.note = patch.note;
+  if (patch.hours !== undefined)
+    set.minutes = patch.hours === null ? 0 : Math.round(patch.hours * 60);
   await db
     .update(daysOff)
     .set(set)

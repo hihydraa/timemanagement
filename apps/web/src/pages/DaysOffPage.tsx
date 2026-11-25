@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, ApiClientError } from '../lib/api';
 import { dayLabel } from '../lib/dates';
+import HoursSelect from '../components/HoursSelect';
+import { offDuration } from '../lib/daysOff';
 import { KINDS, STYLE, kindTh } from '../lib/daysOffStyle';
 import { monthGrid, monthTitle, shiftMonth } from '../lib/dashboard';
 import { t } from '../lib/i18n';
@@ -32,6 +34,9 @@ export default function DaysOffPage() {
   const [kind, setKind] = useState<DayOffKind>('vacation');
   const [note, setNote] = useState('');
   const [onlyWork, setOnlyWork] = useState(true);
+  const [hours, setHours] = useState('');
+  const [pickHours, setPickHours] = useState('');
+  const single = !to || to === from;
 
   const load = useCallback(() => {
     api
@@ -69,6 +74,7 @@ export default function DaysOffPage() {
     setPick(ymd);
     setPickKind(cur?.kind ?? 'vacation');
     setPickNote(cur?.note ?? '');
+    setPickHours(cur && cur.minutes > 0 ? String(cur.minutes / 60) : '');
     setNotice('');
   };
   const savePick = () =>
@@ -79,6 +85,7 @@ export default function DaysOffPage() {
         kind: pickKind,
         note: pickNote.trim(),
         onlyWorkDays: false,
+        ...(pickHours ? { hours: Number(pickHours) } : {}),
       });
       setPick(null);
     });
@@ -98,12 +105,14 @@ export default function DaysOffPage() {
         kind,
         note: note.trim(),
         onlyWorkDays: onlyWork,
+        ...(single && hours ? { hours: Number(hours) } : {}),
       });
       setNotice(
         t.daysOff.saved.replace('{c}', String(r.created)).replace('{u}', String(r.updated)),
       );
       setMonth(from.slice(0, 7));
       setNote('');
+      setHours('');
     });
   };
 
@@ -221,6 +230,7 @@ export default function DaysOffPage() {
             <h4 className="text-sm font-semibold">
               {t.daysOff.dayDialog.replace('{d}', dayLabel(pick))}
             </h4>
+            <HoursSelect value={pickHours} onChange={setPickHours} className={field} />
             <label className="block text-xs">
               {t.daysOff.kind}
               <select
@@ -289,6 +299,7 @@ export default function DaysOffPage() {
               onChange={(e) => setTo(e.target.value)}
             />
           </label>
+          <HoursSelect value={hours} onChange={setHours} disabled={!single} className={field} />
           <label className="block text-xs">
             {t.daysOff.kind}
             <select
@@ -357,7 +368,10 @@ export default function DaysOffPage() {
                   <span aria-hidden>{STYLE[d.kind].icon}</span>
                   {kindTh(d.kind)}
                 </span>
-                <span className="shrink-0 tabular-nums">{dayLabel(d.date)}</span>
+                <span className="shrink-0 tabular-nums">
+                  {dayLabel(d.date)}
+                  {d.minutes > 0 && ` · ${offDuration(d.minutes)}`}
+                </span>
                 <span className="truncate text-slate-600 dark:text-slate-300">{d.note}</span>
               </button>
               <button

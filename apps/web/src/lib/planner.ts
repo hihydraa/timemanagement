@@ -130,7 +130,13 @@ export function plannedMinutes(tasks: PlanTask[]): number {
  * ภาระงานของวัน ymd: available = ชั่วโมงทำงาน − นัดตายตัว, planned = estimate ของงานที่ยังไม่เสร็จ
  * (tasks = งานที่ "กำหนดไว้ในวันนั้น" รวมนัด) วันที่ไม่ใช่วันทำงาน = status 'off' (ไม่ตีเป็นเกินภาระ)
  */
-export function dayLoad(ymd: string, work: WorkHours, tasks: PlanTask[]): DayLoad {
+export function dayLoad(
+  ymd: string,
+  work: WorkHours,
+  tasks: PlanTask[],
+  /** นาทีที่หยุดบางชั่วโมงในวันนี้ (ลดเวลาว่าง แต่ยังเป็นวันทำงาน) */
+  offMinutes = 0,
+): DayLoad {
   const ws = hmToMin(work.start);
   const we = Math.max(ws, hmToMin(work.end));
   const planned = plannedMinutes(tasks);
@@ -150,11 +156,11 @@ export function dayLoad(ymd: string, work: WorkHours, tasks: PlanTask[]): DayLoa
     (n, [a, b]) => n + Math.max(0, Math.min(b, we) - Math.max(a, ws)),
     0,
   );
-  const available = Math.max(0, we - ws - blocked);
+  const available = Math.max(0, we - ws - blocked - offMinutes);
   const ratio = available > 0 ? planned / available : planned > 0 ? Infinity : 0;
   return {
     workDay,
-    workMinutes: we - ws,
+    workMinutes: Math.max(0, we - ws - offMinutes),
     appointmentMinutes: blocked,
     available,
     planned,

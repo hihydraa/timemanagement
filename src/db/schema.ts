@@ -341,6 +341,8 @@ export const daysOff = sqliteTable(
       .notNull()
       .default('vacation'),
     note: text('note').notNull().default(''),
+    /** นาทีที่หยุดในวันนั้น: 0 = หยุดเต็มวัน, >0 = หยุดบางชั่วโมง (เช่น ครึ่งวัน = 240) */
+    minutes: integer('minutes').notNull().default(0),
     createdAt: text('created_at').notNull(),
   },
   (t) => [uniqueIndex('days_off_user_date_idx').on(t.userId, t.date)],

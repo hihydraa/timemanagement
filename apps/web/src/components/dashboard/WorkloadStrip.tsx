@@ -36,7 +36,7 @@ export default function WorkloadStrip({
     const items = d.week.filter((x) => scheduledOn(x, ymd));
     // วันหยุดที่บันทึกไว้ = วันหยุด (ไม่นับเป็นวันทำงาน)
     const work = d.daysOff.includes(ymd) ? { ...d.work, days: [] } : d.work;
-    return { ymd, items, load: dayLoad(ymd, work, items) };
+    return { ymd, items, load: dayLoad(ymd, work, items, d.partialOff?.[ymd] ?? 0) };
   });
   const sel = days.find((x) => x.ymd === (picked ?? d.today)) ?? days[0]!;
   const over = days.filter((x) => x.load.status === 'over');
