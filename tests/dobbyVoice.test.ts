@@ -61,9 +61,7 @@ describe('เสียงของ Dobby', () => {
     );
     const anon = sayDobby('complete', {}, 'playful', () => 0);
     expect(anon).toContain('คุณ');
-    expect(sayDobby('created', { dobby: '  ' }, 'playful', () => 0)).toContain(
-      DEFAULT_DOBBY_NAME,
-    );
+    expect(sayDobby('created', { dobby: '  ' }, 'playful', () => 0)).toContain(DEFAULT_DOBBY_NAME);
     expect(dobbyNameOf(' ลูกชิ้น ')).toBe('ลูกชิ้น');
     expect(dobbyNameOf('')).toBe(DEFAULT_DOBBY_NAME);
   });

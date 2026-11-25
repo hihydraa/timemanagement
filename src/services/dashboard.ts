@@ -120,13 +120,21 @@ export function weeklyDone(doneDays: string[], today: string, n = WEEKS): WeekBu
   return out;
 }
 
-/** วันติดกันที่มีงานเสร็จ ≥ 1 (ถ้าวันนี้ยังไม่มี นับต่อจากเมื่อวานได้ — ไม่ตัดสตรีคกลางวัน) */
-export function streak(doneDays: string[], today: string): number {
+/**
+ * วันติดกันที่มีงานเสร็จ ≥ 1 (ถ้าวันนี้ยังไม่มี นับต่อจากเมื่อวานได้ — ไม่ตัดสตรีคกลางวัน)
+ * `off` = วันหยุดที่บันทึกไว้: ข้ามไปโดยไม่ทำให้สตรีคขาด (และไม่นับเป็นวัน)
+ */
+export function streak(
+  doneDays: string[],
+  today: string,
+  off: ReadonlySet<string> = new Set(),
+): number {
   const days = new Set(doneDays);
   let d = days.has(today) ? today : addDays(today, -1);
   let n = 0;
-  while (days.has(d)) {
-    n++;
+  for (let guard = 0; guard < 4000; guard++) {
+    if (days.has(d)) n++;
+    else if (!off.has(d)) break;
     d = addDays(d, -1);
   }
   return n;
@@ -217,6 +225,7 @@ export async function dashboard(db: Db, userId: string, at: Date, monthParam?: s
     .where(and(eq(tasks.userId, userId), eq(tasks.status, 'done'), gte(tasks.completedAt, since)))
     .limit(3000);
   const doneDays = doneRows.filter((x) => x.c).map((x) => bangkokDate(new Date(x.c!)));
+  const pastOff = new Set(await daysOffBetween(db, userId, addDays(today, -90), today));
   const weekly = weeklyDone(doneDays, today);
   const focus = await db
     .select({ m: sql<number>`coalesce(sum(${focusSessions.minutes}), 0)` })
@@ -331,7 +340,7 @@ export async function dashboard(db: Db, userId: string, at: Date, monthParam?: s
       weekly,
       doneThisWeek: weekly[weekly.length - 1]?.done ?? 0,
       doneLastWeek: weekly[weekly.length - 2]?.done ?? 0,
-      streak: streak(doneDays, today),
+      streak: streak(doneDays, today, pastOff),
       focusMinutesWeek: Number(focus?.m ?? 0),
     },
     week,

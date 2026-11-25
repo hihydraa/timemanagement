@@ -11,7 +11,12 @@ r.get('/avatar', async (c) =>
   c.json({ avatar: await getAvatar(getDb(c.env.DB), c.get('userId')) }),
 );
 
-const limit = rateLimit({ scope: 'avatar', limit: 60, windowSec: 600, key: (c) => c.get('userId') });
+const limit = rateLimit({
+  scope: 'avatar',
+  limit: 60,
+  windowSec: 600,
+  key: (c) => c.get('userId'),
+});
 r.put('/avatar', limit, async (c) => {
   const input = await parseJson(c, avatarInput);
   return c.json({ avatar: await saveAvatar(getDb(c.env.DB), c.get('userId'), input) });

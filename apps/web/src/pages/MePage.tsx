@@ -2,6 +2,7 @@ import { lazy, Suspense, useState } from 'react';
 import AppleCalendarDialog from '../components/AppleCalendarDialog';
 import Mascot from '../components/Mascot';
 import ModeSwitch from '../components/ModeSwitch';
+import ProgressCard from '../components/ProgressCard';
 import { useApp } from '../lib/appContext';
 import { t } from '../lib/i18n';
 import type { MeTab } from '../lib/route';
@@ -69,6 +70,8 @@ export default function MePage({ tab }: { tab: MeTab }) {
               <p className="truncate text-sm text-slate-600 dark:text-slate-300">{user.email}</p>
             </div>
           </section>
+
+          <ProgressCard />
 
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
             <ModeSwitch />

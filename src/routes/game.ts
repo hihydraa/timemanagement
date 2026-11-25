@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getDb } from '../db/client';
 import { parseJson } from '../lib/http';
 import { rateLimit } from '../lib/rateLimit';
+import { claimQuest, getProgress } from '../services/progress';
 import { buy, equip, getState, profileInput, saveProfile } from '../services/game';
 import type { AppEnv } from '../types';
 
@@ -28,6 +29,12 @@ r.post('/game/equip', limit, async (c) => {
   const b = await parseJson(c, itemBody.extend({ equipped: z.boolean() }).strict());
   await equip(db, c.get('userId'), b.itemId, b.equipped);
   return c.json(await getState(db, c.get('userId')));
+});
+
+r.get('/game/progress', async (c) => c.json(await getProgress(getDb(c.env.DB), c.get('userId'))));
+r.post('/game/quests/claim', limit, async (c) => {
+  const b = await parseJson(c, z.object({ questId: z.string().min(1).max(40) }).strict());
+  return c.json(await claimQuest(getDb(c.env.DB), c.get('userId'), b.questId));
 });
 
 export default r;

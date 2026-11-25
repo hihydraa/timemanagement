@@ -4,6 +4,7 @@ import { t } from './i18n';
 import type { AvatarLook } from './avatarLook';
 import type { DashboardData } from './dashboard';
 import type { GameState, Honorific } from './game';
+import type { ClaimResult, ProgressState } from './progress';
 import type { ToneId } from '../../../../src/lib/dobbyVoice';
 import type {
   DayOff,
@@ -220,6 +221,17 @@ export const api = {
     dobbyName: string;
     tone: ToneId;
   }) => req<GameState>('PUT', '/api/game/profile', p),
+  getProgress: () => req<ProgressState>('GET', '/api/game/progress'),
+  claimQuest: (questId: string) =>
+    req<ClaimResult>('POST', '/api/game/quests/claim', { questId }).then((r) => {
+      gotPoints(r.reward);
+      celebrate(
+        r.levelUp
+          ? { kind: 'voice', voice: 'level_up', ctx: { level: r.levelUp } }
+          : { kind: 'voice', voice: 'quest_done' },
+      );
+      return r;
+    }),
   buyItem: (itemId: string) => req<GameState>('POST', '/api/game/buy', { itemId }),
   equipItem: (itemId: string, equipped: boolean) =>
     req<GameState>('POST', '/api/game/equip', { itemId, equipped }),

@@ -193,7 +193,7 @@ export const setReward = (obj: object, points: number) => {
   if (points > 0) rewards.set(obj, points);
 };
 
-async function countToday(db: Db, userId: string, kind: 'create' | 'complete', at: Date) {
+export async function countToday(db: Db, userId: string, kind: 'create' | 'complete', at: Date) {
   const r = await db
     .select({ n: sql<number>`count(*)` })
     .from(gameLedger)

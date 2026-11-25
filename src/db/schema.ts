@@ -289,7 +289,9 @@ export const gameLedger = sqliteTable(
   {
     id: text('id').primaryKey(),
     userId: text('user_id').notNull(),
-    kind: text('kind', { enum: ['welcome', 'create', 'complete', 'daily', 'buy'] }).notNull(),
+    kind: text('kind', {
+      enum: ['welcome', 'create', 'complete', 'daily', 'buy', 'quest'],
+    }).notNull(),
     ref: text('ref').notNull(),
     points: integer('points').notNull(),
     createdAt: text('created_at').notNull(),
